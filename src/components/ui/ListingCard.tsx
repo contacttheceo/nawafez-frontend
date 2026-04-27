@@ -73,7 +73,7 @@ export function ListingCard({ listing }: Props) {
             </span>
             <span className="flex items-center gap-1">
               <Clock size={11} />
-              {formatDistanceToNow(listing.created_at, locale)}
+              {formatDistanceToNow(listing.created_at ?? '', locale)}
             </span>
             <span className="flex items-center gap-1">
               <Eye size={11} /> {listing.views_count}

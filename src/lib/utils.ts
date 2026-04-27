@@ -5,7 +5,8 @@ export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
 }
 
-export function formatDistanceToNow(dateStr: string, locale: string): string {
+export function formatDistanceToNow(dateStr: string | undefined | null, locale: string): string {
+  if (!dateStr) return ''
   const date = new Date(dateStr)
   const now = new Date()
   const diffMs = now.getTime() - date.getTime()
@@ -28,6 +29,7 @@ export function formatDistanceToNow(dateStr: string, locale: string): string {
   }
 }
 
-export function formatPrice(price: number, locale: string): string {
-  return price.toLocaleString(locale === 'ar' ? 'ar-SA' : 'en-US')
+export function formatPrice(price: number | null | undefined, locale: string): string {
+  if (price == null) return ''
+  return price.toLocaleString(locale === 'ar' ? 'ar-SA' : 'en-US') + ' ر.س'
 }
