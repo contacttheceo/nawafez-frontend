@@ -5,27 +5,31 @@ import { useForm } from 'react-hook-form'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import toast from 'react-hot-toast'
-import Cookies from 'js-cookie'
 import { authApi } from '@/lib/api'
+import { useAuthStore } from '@/store/auth'
 
 type FormData = { email: string; password: string }
 
 export default function LoginPage() {
-  const t = useTranslations('auth')
-  const te = useTranslations('errors')
+  const t      = useTranslations('auth')
+  const te     = useTranslations('errors')
   const locale = useLocale()
   const router = useRouter()
+  const setAuth = useAuthStore((s) => s.setAuth)
 
   const { register, handleSubmit, formState: { errors, isSubmitting } } = useForm<FormData>()
 
   const onSubmit = async (data: FormData) => {
     try {
       const res = await authApi.login(data)
-      Cookies.set('nawafez_token', res.data.token, { expires: 30 })
+      // api.ts unwraps response.data → res = { token, user }
+      setAuth(res.user, res.token)
+      localStorage.setItem('nawafez_token', res.token)
       toast.success(locale === 'ar' ? 'مرحباً بك!' : 'Welcome back!')
       router.push(`/${locale}/dashboard`)
-    } catch {
-      toast.error(te('server_error'))
+    } catch (err: any) {
+      const msg = err?.response?.data?.message ?? te('server_error')
+      toast.error(msg)
     }
   }
 

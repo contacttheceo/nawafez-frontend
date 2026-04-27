@@ -10,14 +10,14 @@ interface Props {
   listing: Listing
 }
 
-export default function ListingCard({ listing }: Props) {
+export function ListingCard({ listing }: Props) {
   const locale = useLocale()
   const t = useTranslations('listings')
   const tb = useTranslations('badges')
   const isRTL = locale === 'ar'
 
-  const title = isRTL ? listing.title_ar : listing.title_en
-  const sellerName = isRTL ? listing.user.name_ar : listing.user.name_en
+  const title = isRTL ? (listing.title_ar ?? listing.title_en) : (listing.title_en ?? listing.title_ar)
+  const sellerName = isRTL ? (listing.user?.name_ar ?? '') : (listing.user?.name_en ?? '')
 
   const sectionEmoji: Record<string, string> = {
     ma: '🏢', fleet: '🚛', contracts: '📄', jobs: '💼', forum: '💬',
@@ -95,15 +95,15 @@ export default function ListingCard({ listing }: Props) {
           <div className="flex items-center gap-2 text-xs text-gray-500">
             <div className="w-6 h-6 rounded-full bg-navy flex items-center justify-center
                             text-white text-[10px] font-bold flex-shrink-0">
-              {sellerName.charAt(0)}
+              {sellerName.charAt(0) || '?'}
             </div>
             <span className="truncate max-w-[100px]">{sellerName}</span>
           </div>
           <div className="flex gap-1.5">
-            {listing.user.is_trusted_payer && (
+            {listing.user?.is_trusted_payer && (
               <span className="badge-gold text-[10px]">🎖️ {tb('trusted')}</span>
             )}
-            {listing.user.role === 'business' && (
+            {listing.user?.role === 'business' && (
               <span className="badge-emerald text-[10px]">✔ {tb('verified')}</span>
             )}
           </div>
@@ -112,3 +112,4 @@ export default function ListingCard({ listing }: Props) {
     </Link>
   )
 }
+
