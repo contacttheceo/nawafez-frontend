@@ -50,8 +50,10 @@ export interface Listing {
   city: string
   region: string | null
   price: number | null
+  price_type?: string | null
   currency: 'SAR'
   status: ListingStatus
+  rejection_reason?: string | null
   dynamic_data: Record<string, unknown>
   media: MediaItem[]
   is_featured: boolean
@@ -59,9 +61,9 @@ export interface Listing {
   is_ready_to_operate: boolean
   expires_at: string
   views_count: number
-  user: ListingUser
-  created_at: string
-  updated_at: string
+  user?: ListingUser
+  created_at?: string
+  updated_at?: string
 }
 
 export interface MediaItem {
