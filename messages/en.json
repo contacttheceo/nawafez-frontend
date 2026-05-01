@@ -77,6 +77,7 @@
     "phone": "Phone Number",
     "login_btn": "Sign In",
     "register_btn": "Create Account",
+    "register": "Register",
     "forgot": "Forgot password?",
     "no_account": "Don't have an account?",
     "have_account": "Already have an account?",
