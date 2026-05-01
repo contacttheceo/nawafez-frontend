@@ -4,12 +4,12 @@ import { useTranslations, useLocale } from 'next-intl'
 import Link from 'next/link'
 
 const sections = [
-  { key: 'ma',        emoji: '🏢', href: 'ma',        count: '148', iconBg: 'bg-indigo-50' },
-  { key: 'fleet',     emoji: '🚛', href: 'fleet',     count: '412', iconBg: 'bg-emerald-bg' },
-  { key: 'contracts', emoji: '📄', href: 'contracts', count: '87',  iconBg: 'bg-amber-50' },
-  { key: 'jobs',      emoji: '👷', href: 'jobs',      count: '63',  iconBg: 'bg-purple-50' },
-  { key: 'forum',     emoji: '💬', href: 'forum',     count: '234', iconBg: 'bg-red-50' },
-  { key: 'tools',     emoji: '🧮', href: 'tools',     count: '5',   iconBg: 'bg-sky-50' },
+  { key: 'ma',        emoji: '🏢', href: 'listings?section=ma',        count: '148', iconBg: 'bg-indigo-50' },
+  { key: 'fleet',     emoji: '🚛', href: 'listings?section=fleet',     count: '412', iconBg: 'bg-emerald-bg' },
+  { key: 'contracts', emoji: '📄', href: 'listings?section=contracts', count: '87',  iconBg: 'bg-amber-50' },
+  { key: 'jobs',      emoji: '👷', href: 'listings?section=jobs',      count: '63',  iconBg: 'bg-purple-50' },
+  { key: 'forum',     emoji: '💬', href: 'listings?section=forum',     count: '234', iconBg: 'bg-red-50' },
+  { key: 'tools',     emoji: '🧮', href: 'listings',                   count: '5',   iconBg: 'bg-sky-50' },
 ]
 
 export default function SectionsGrid() {

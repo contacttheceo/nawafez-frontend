@@ -21,11 +21,11 @@ export default function Navbar() {
   }
 
   const navLinks = [
-    { href: `/${locale}/ma`,        label: t('ma') },
-    { href: `/${locale}/fleet`,     label: t('fleet') },
-    { href: `/${locale}/contracts`, label: t('contracts') },
-    { href: `/${locale}/jobs`,      label: t('jobs') },
-    { href: `/${locale}/forum`,     label: t('forum') },
+    { href: `/${locale}/listings?section=ma`,        label: t('ma') },
+    { href: `/${locale}/listings?section=fleet`,     label: t('fleet') },
+    { href: `/${locale}/listings?section=contracts`, label: t('contracts') },
+    { href: `/${locale}/listings?section=jobs`,      label: t('jobs') },
+    { href: `/${locale}/listings?section=forum`,     label: t('forum') },
   ]
 
   return (
@@ -79,7 +79,7 @@ export default function Navbar() {
               {t('login')}
             </Link>
             <Link
-              href={`/${locale}/post`}
+              href={`/${locale}/listings/create`}
               className="bg-emerald hover:bg-emerald-dark text-white px-4 py-2
                          rounded-lg text-sm font-semibold transition-colors flex items-center gap-1.5"
             >
@@ -130,7 +130,7 @@ export default function Navbar() {
               {t('login')}
             </Link>
             <Link
-              href={`/${locale}/post`}
+              href={`/${locale}/listings/create`}
               className="flex-1 text-center bg-emerald text-white py-2 rounded-lg
                          text-sm font-semibold"
             >

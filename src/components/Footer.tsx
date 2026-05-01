@@ -28,7 +28,7 @@ export default function Footer() {
             <h4 className="text-white font-bold text-sm mb-4">{t('sections')}</h4>
             <div className="flex flex-col gap-2 text-sm">
               {['ma', 'fleet', 'contracts', 'jobs', 'forum'].map((sec) => (
-                <Link key={sec} href={`/${locale}/${sec}`}
+                <Link key={sec} href={`/${locale}/listings?section=${sec}`}
                   className="hover:text-white transition-colors">
                   {ts(`${sec}_title` as Parameters<typeof ts>[0])}
                 </Link>
