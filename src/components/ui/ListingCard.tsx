@@ -13,6 +13,7 @@ import { useRouter } from 'next/navigation'
 
 interface Props {
   listing: Listing
+  mode?: 'grid' | 'list'
 }
 
 const LISTING_TYPE_LABELS: Record<string, { ar: string; en: string; color: string }> = {
@@ -22,7 +23,7 @@ const LISTING_TYPE_LABELS: Record<string, { ar: string; en: string; color: strin
   offering:  { ar: 'معروض',    en: 'Offering',   color: 'bg-green-100 text-green-700' },
 }
 
-export function ListingCard({ listing }: Props) {
+export function ListingCard({ listing, mode = 'grid' }: Props) {
   const locale   = useLocale()
   const t        = useTranslations('listings')
   const tb       = useTranslations('badges')
