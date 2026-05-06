@@ -185,4 +185,13 @@ export const userApi = {
     api.delete('/user/account', { data: { password } }),
 };
 
+// ─── Stats ────────────────────────────────────────────────────────────────────
+export const statsApi = {
+  get: (): Promise<{
+    total_listings: number;
+    total_users: number;
+    sections: Record<string, number>;
+  }> => api.get('/stats'),
+};
+
 export default api;

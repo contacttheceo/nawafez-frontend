@@ -1,12 +1,14 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { useLocale } from 'next-intl';
 import Link from 'next/link';
 import {
-  MapPin, Calendar, Eye, Star, Shield, Truck,
-  DollarSign, Phone, MessageSquare, Bookmark, Flag, ArrowRight, MessageCircle
+  MapPin, Calendar, Eye, Shield, Truck,
+  DollarSign, Phone, MessageSquare, Bookmark, Flag,
+  ArrowRight, MessageCircle, ChevronLeft, ChevronRight,
+  Share2, Check, AlertTriangle, Clock, BadgeCheck,
 } from 'lucide-react';
 import { listingsApi, interactionsApi } from '@/lib/api';
 import { useAuthStore } from '@/store/auth';
@@ -14,17 +16,51 @@ import { formatPrice, formatDistanceToNow } from '@/lib/utils';
 import type { Listing } from '@/types';
 import toast from 'react-hot-toast';
 import Navbar from '@/components/Navbar';
+import Footer from '@/components/Footer';
 import Lightbox from '@/components/ui/Lightbox';
 import ReportModal from '@/components/ui/ReportModal';
 import { ListingCard } from '@/components/ui/ListingCard';
 
-const SECTION_LABELS: Record<string, { ar: string; en: string }> = {
-  ma:        { ar: 'الاستحواذ والدمج', en: 'M&A'       },
-  fleet:     { ar: 'الأسطول',          en: 'Fleet'     },
-  contracts: { ar: 'العقود',            en: 'Contracts' },
-  jobs:      { ar: 'الوظائف',          en: 'Jobs'      },
-  forum:     { ar: 'المنتدى',          en: 'Forum'     },
+/* ── Static maps ─────────────────────────────────────────────────────────── */
+
+const SECTION_META: Record<string, { ar: string; en: string; emoji: string; color: string }> = {
+  ma:        { ar: 'الاستحواذ والدمج', en: 'M&A',       emoji: '🏢', color: 'bg-indigo-100 text-indigo-700'  },
+  fleet:     { ar: 'الأسطول',          en: 'Fleet',     emoji: '🚛', color: 'bg-emerald-100 text-emerald-700' },
+  contracts: { ar: 'العقود',            en: 'Contracts', emoji: '📄', color: 'bg-amber-100 text-amber-700'    },
+  jobs:      { ar: 'الوظائف',          en: 'Jobs',      emoji: '💼', color: 'bg-purple-100 text-purple-700'  },
+  forum:     { ar: 'المنتدى',          en: 'Forum',     emoji: '💬', color: 'bg-red-100 text-red-700'        },
 };
+
+const LISTING_TYPE_MAP: Record<string, { ar: string; en: string; color: string }> = {
+  for_sale:    { ar: 'للبيع',    en: 'For Sale',   color: 'bg-blue-100 text-blue-700'    },
+  for_rent:    { ar: 'للإيجار', en: 'For Rent',   color: 'bg-amber-100 text-amber-700'  },
+  wanted:      { ar: 'مطلوب',   en: 'Wanted',     color: 'bg-purple-100 text-purple-700' },
+  offering:    { ar: 'معروض',   en: 'Offering',   color: 'bg-green-100 text-green-700'  },
+  job:         { ar: 'وظيفة',   en: 'Job',        color: 'bg-purple-100 text-purple-700' },
+  discussion:  { ar: 'نقاش',    en: 'Discussion', color: 'bg-red-100 text-red-700'      },
+  acquisition: { ar: 'استحواذ', en: 'Acquisition',color: 'bg-indigo-100 text-indigo-700'},
+};
+
+const FIELD_LABELS: Record<string, { ar: string; en: string }> = {
+  vehicle_type:     { ar: 'نوع المركبة',       en: 'Vehicle Type'      },
+  condition:        { ar: 'الحالة',             en: 'Condition'         },
+  year:             { ar: 'سنة الصنع',          en: 'Year'              },
+  mileage:          { ar: 'عداد الكيلومترات',   en: 'Mileage (km)'      },
+  capacity:         { ar: 'الحمولة',            en: 'Capacity'          },
+  contract_type:    { ar: 'نوع العقد',          en: 'Contract Type'     },
+  duration:         { ar: 'مدة العقد',          en: 'Duration'          },
+  employment_type:  { ar: 'نوع التوظيف',        en: 'Employment Type'   },
+  experience_years: { ar: 'سنوات الخبرة',       en: 'Experience'        },
+  salary_type:      { ar: 'نوع الراتب',         en: 'Salary Type'       },
+  salary_min:       { ar: 'الراتب الأدنى',      en: 'Min Salary'        },
+  salary_max:       { ar: 'الراتب الأقصى',      en: 'Max Salary'        },
+  company_type:     { ar: 'نوع الشركة',         en: 'Company Type'      },
+  employees_count:  { ar: 'عدد الموظفين',       en: 'Employees'         },
+  annual_revenue:   { ar: 'الإيرادات السنوية',  en: 'Annual Revenue'    },
+  job_title:        { ar: 'المسمى الوظيفي',     en: 'Job Title'         },
+};
+
+/* ── Component ──────────────────────────────────────────────────────────────  */
 
 export default function ListingDetailPage() {
   const { id }                    = useParams<{ id: string }>();
@@ -44,6 +80,7 @@ export default function ListingDetailPage() {
   const [bidAmount,  setBidAmount]  = useState('');
   const [bidMsg,     setBidMsg]     = useState('');
   const [submitting, setSubmitting] = useState(false);
+  const [copied,     setCopied]     = useState(false);
 
   /* ── Load listing ── */
   useEffect(() => {
@@ -54,17 +91,13 @@ export default function ListingDetailPage() {
         setListing(data);
         listingsApi.recordView(Number(id)).catch(() => {});
 
-        // Fetch similar listings
         if (data.section) {
-          listingsApi.getAll({
-            section: data.section,
-            city: data.city,
-            limit: 5,
-            page: 1,
-          }).then(r => {
-            const all: Listing[] = r.data ?? r;
-            setSimilar(all.filter((l: Listing) => l.id !== data.id).slice(0, 4));
-          }).catch(() => {});
+          listingsApi.getAll({ section: data.section, city: data.city, limit: 5, page: 1 })
+            .then((r: any) => {
+              const all: Listing[] = r.data ?? r;
+              setSimilar(all.filter((l: Listing) => l.id !== data.id).slice(0, 4));
+            })
+            .catch(() => {});
         }
       } catch {
         router.push(`/${locale}/listings`);
@@ -75,6 +108,17 @@ export default function ListingDetailPage() {
     load();
   }, [id]);
 
+  /* ── Keyboard navigation for gallery ── */
+  useEffect(() => {
+    if (lightbox || !listing) return;
+    const handler = (e: KeyboardEvent) => {
+      if (e.key === 'ArrowLeft')  setActiveImg(i => (i - 1 + imageUrls.length) % imageUrls.length);
+      if (e.key === 'ArrowRight') setActiveImg(i => (i + 1) % imageUrls.length);
+    };
+    window.addEventListener('keydown', handler);
+    return () => window.removeEventListener('keydown', handler);
+  }, [lightbox, listing]);
+
   /* ── Bookmark ── */
   const handleBookmark = async () => {
     if (!isAuthenticated) { router.push(`/${locale}/auth/login`); return; }
@@ -82,15 +126,31 @@ export default function ListingDetailPage() {
       if (bookmarked) {
         await interactionsApi.removeBookmark(Number(id));
         setBookmarked(false);
-        toast.success(isRTL ? 'تمت إزالة الإعلان من المفضلة' : 'Removed from bookmarks');
+        toast.success(isRTL ? 'تمت الإزالة من المفضلة' : 'Removed from bookmarks');
       } else {
         await interactionsApi.bookmark(Number(id));
         setBookmarked(true);
-        toast.success(isRTL ? 'تمت إضافة الإعلان للمفضلة' : 'Added to bookmarks');
+        toast.success(isRTL ? '✓ تمت الإضافة للمفضلة' : '✓ Added to bookmarks');
       }
     } catch {
       toast.error(isRTL ? 'حدث خطأ' : 'Something went wrong');
     }
+  };
+
+  /* ── Share ── */
+  const handleShare = async () => {
+    const url = window.location.href;
+    const title = isRTL ? listing?.title_ar : listing?.title_en;
+    try {
+      if (navigator.share) {
+        await navigator.share({ title: title ?? '', url });
+      } else {
+        await navigator.clipboard.writeText(url);
+        setCopied(true);
+        toast.success(isRTL ? 'تم نسخ الرابط ✓' : 'Link copied ✓');
+        setTimeout(() => setCopied(false), 2000);
+      }
+    } catch {}
   };
 
   /* ── Bid ── */
@@ -104,7 +164,7 @@ export default function ListingDetailPage() {
     setSubmitting(true);
     try {
       await interactionsApi.submitBid(Number(id), { amount: Number(bidAmount), message: bidMsg });
-      toast.success(isRTL ? 'تم تقديم عرض السعر بنجاح' : 'Bid submitted successfully');
+      toast.success(isRTL ? 'تم تقديم عرض السعر بنجاح ✓' : 'Bid submitted ✓');
       setShowBid(false); setBidAmount(''); setBidMsg('');
     } catch (err: any) {
       toast.error(err?.response?.data?.message ?? (isRTL ? 'حدث خطأ' : 'Error'));
@@ -125,26 +185,35 @@ export default function ListingDetailPage() {
   };
 
   /* ── WhatsApp ── */
-  const handleWhatsApp = () => {
+  const handleWhatsApp = useCallback(() => {
     if (!listing?.contact_phone) return;
-    const title = isRTL ? (listing.title_ar ?? listing.title_en) : (listing.title_en ?? listing.title_ar);
-    const text = encodeURIComponent(
+    const title = isRTL ? listing.title_ar : (listing.title_en ?? listing.title_ar);
+    const text  = encodeURIComponent(
       isRTL
         ? `مرحباً، رأيت إعلانك "${title}" على نوافذ وأود الاستفسار.`
         : `Hi, I saw your listing "${title}" on Nawafez and I'm interested.`
     );
-    const phone = listing.contact_phone.replace(/\D/g, '');
-    window.open(`https://wa.me/${phone}?text=${text}`, '_blank');
-  };
+    window.open(`https://wa.me/${listing.contact_phone.replace(/\D/g, '')}?text=${text}`, '_blank');
+  }, [listing, isRTL]);
 
   /* ── Loading ── */
   if (isLoading) {
     return (
       <div className="min-h-screen bg-gray-50">
-        <div className="max-w-5xl mx-auto px-4 py-10 space-y-4">
-          <div className="skeleton h-72 rounded-2xl" />
-          <div className="skeleton h-6 w-2/3" />
-          <div className="skeleton h-4 w-1/3" />
+        <Navbar />
+        <div className="max-w-5xl mx-auto px-4 py-10">
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            <div className="lg:col-span-2 space-y-4 animate-pulse">
+              <div className="h-72 bg-gray-200 rounded-2xl" />
+              <div className="h-6 bg-gray-200 rounded w-2/3" />
+              <div className="h-4 bg-gray-200 rounded w-1/2" />
+              <div className="h-32 bg-gray-200 rounded-xl" />
+            </div>
+            <div className="space-y-4 animate-pulse">
+              <div className="h-48 bg-gray-200 rounded-2xl" />
+              <div className="h-28 bg-gray-200 rounded-2xl" />
+            </div>
+          </div>
         </div>
       </div>
     );
@@ -152,308 +221,500 @@ export default function ListingDetailPage() {
 
   if (!listing) return null;
 
-  const title      = isRTL ? (listing.title_ar ?? listing.title_en) : (listing.title_en ?? listing.title_ar);
-  const desc       = isRTL ? listing.description_ar : listing.description_en;
-  const section    = SECTION_LABELS[listing.section] ?? { ar: listing.section, en: listing.section };
-  const sellerName = isRTL ? listing.user?.name_ar : listing.user?.name_en;
+  const title       = isRTL ? (listing.title_ar ?? listing.title_en) : (listing.title_en ?? listing.title_ar);
+  const desc        = isRTL ? listing.description_ar : (listing.description_en ?? listing.description_ar);
+  const sellerName  = isRTL ? listing.user?.name_ar : listing.user?.name_en;
+  const sectionMeta = SECTION_META[listing.section] ?? { ar: listing.section, en: listing.section, emoji: '📋', color: 'bg-gray-100 text-gray-700' };
+  const typeMeta    = listing.listing_type ? LISTING_TYPE_MAP[listing.listing_type] : null;
+  const isOwner     = isAuthenticated && user?.id === listing.user_id;
+  const canContact  = !isOwner && (listing.contact_phone || !isOwner);
 
   /* Build image URLs */
-  const rawImages  = listing.media?.filter((m: any) => m.type === 'image') ?? [];
-  const imageUrls  = rawImages.length > 0
+  const rawImages = listing.media?.filter((m: any) => m.type === 'image') ?? [];
+  const imageUrls = rawImages.length > 0
     ? rawImages.map((img: any) => `${process.env.NEXT_PUBLIC_API_URL}/uploads/${img.path}`)
     : (listing.images ?? []);
 
+  /* Dynamic data entries */
+  const dynEntries = listing.dynamic_data ? Object.entries(listing.dynamic_data).filter(([, v]) => v !== null && v !== '' && v !== undefined) : [];
+
   return (
-    <div className="min-h-screen bg-gray-50 pb-16">
+    <div className="min-h-screen bg-gray-50 flex flex-col">
       <Navbar />
 
-      <div className="max-w-5xl mx-auto px-4 pt-8">
-        {/* Breadcrumb */}
-        <nav className="flex items-center gap-2 text-sm text-gray-500 mb-6">
-          <Link href={`/${locale}`} className="hover:text-emerald">{isRTL ? 'الرئيسية' : 'Home'}</Link>
-          <ArrowRight size={14} className={isRTL ? 'rotate-180' : ''} />
-          <Link href={`/${locale}/listings`} className="hover:text-emerald">{isRTL ? 'الإعلانات' : 'Listings'}</Link>
-          <ArrowRight size={14} className={isRTL ? 'rotate-180' : ''} />
-          <span className="text-gray-700 truncate max-w-xs">{title}</span>
-        </nav>
+      <main className="flex-1">
+        <div className="max-w-5xl mx-auto px-4 pt-6 pb-24 lg:pb-10">
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          {/* ── Left: images + details ── */}
-          <div className="lg:col-span-2 space-y-6">
-
-            {/* Images */}
-            {imageUrls.length > 0 ? (
-              <div className="space-y-3">
-                <div
-                  className="rounded-2xl overflow-hidden aspect-video bg-gray-100 cursor-zoom-in relative group"
-                  onClick={() => setLightbox(true)}
-                >
-                  <img
-                    src={imageUrls[activeImg]}
-                    alt={title ?? ''}
-                    className="w-full h-full object-cover"
-                  />
-                  <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition flex items-center justify-center">
-                    <span className="opacity-0 group-hover:opacity-100 transition bg-black/50 text-white text-xs px-3 py-1.5 rounded-full">
-                      {isRTL ? 'انقر للتكبير' : 'Click to zoom'}
-                    </span>
-                  </div>
-                  {imageUrls.length > 1 && (
-                    <span className="absolute bottom-3 end-3 bg-black/50 text-white text-xs px-2.5 py-1 rounded-full">
-                      {activeImg + 1} / {imageUrls.length}
-                    </span>
-                  )}
-                </div>
-
-                {imageUrls.length > 1 && (
-                  <div className="flex gap-2 overflow-x-auto">
-                    {imageUrls.map((url: string, i: number) => (
-                      <button
-                        key={i}
-                        onClick={() => setActiveImg(i)}
-                        className={`shrink-0 w-20 h-14 rounded-lg overflow-hidden border-2 transition
-                                    ${i === activeImg ? 'border-emerald' : 'border-transparent opacity-60 hover:opacity-100'}`}
-                      >
-                        <img src={url} alt={`${title} — ${isRTL ? 'صورة' : 'image'} ${i + 1}`} className="w-full h-full object-cover" />
-                      </button>
-                    ))}
-                  </div>
+          {/* Status Banner — for non-active listings */}
+          {listing.status === 'pending_review' && (
+            <div className="mb-4 flex items-center gap-3 bg-amber-50 border border-amber-200
+                            rounded-xl px-4 py-3 text-amber-700 text-sm font-medium">
+              <Clock size={16} className="shrink-0" />
+              {isRTL
+                ? 'هذا الإعلان قيد المراجعة من قِبل الفريق وسيُنشر قريباً.'
+                : 'This listing is pending review by our team and will be published soon.'}
+            </div>
+          )}
+          {listing.status === 'rejected' && (
+            <div className="mb-4 flex items-start gap-3 bg-red-50 border border-red-200
+                            rounded-xl px-4 py-3 text-red-700 text-sm">
+              <AlertTriangle size={16} className="shrink-0 mt-0.5" />
+              <div>
+                <p className="font-semibold">{isRTL ? 'تم رفض هذا الإعلان' : 'This listing was rejected'}</p>
+                {listing.rejection_reason && (
+                  <p className="text-xs mt-0.5 text-red-600">{listing.rejection_reason}</p>
                 )}
-              </div>
-            ) : (
-              <div className="rounded-2xl aspect-video bg-gradient-to-br from-navy/10 to-emerald/10 flex items-center justify-center">
-                <Truck className="w-20 h-20 text-navy/20" />
-              </div>
-            )}
-
-            {/* Title + meta */}
-            <div>
-              <div className="flex flex-wrap gap-2 mb-3">
-                <span className="badge-navy text-xs">{isRTL ? section.ar : section.en}</span>
-                {listing.is_featured && (
-                  <span className="badge-gold text-xs">{isRTL ? '⭐ مميز' : '⭐ Featured'}</span>
-                )}
-                {listing.listing_type && (
-                  <span className="text-xs font-semibold px-2.5 py-1 rounded-full bg-blue-100 text-blue-700">
-                    {listing.listing_type === 'for_sale'  ? (isRTL ? 'للبيع'   : 'For Sale')   :
-                     listing.listing_type === 'for_rent'  ? (isRTL ? 'للإيجار' : 'For Rent')   :
-                     listing.listing_type === 'wanted'    ? (isRTL ? 'مطلوب'   : 'Wanted')     :
-                     listing.listing_type}
-                  </span>
-                )}
-                {listing.is_financing_eligible && (
-                  <span className="badge-emerald text-xs">{isRTL ? 'مؤهل للتمويل' : 'Financing Eligible'}</span>
-                )}
-                {listing.is_ready_to_operate && (
-                  <span className="badge-emerald text-xs">{isRTL ? 'جاهز للتشغيل' : 'Ready to Operate'}</span>
-                )}
-              </div>
-
-              <h1 className="text-2xl font-bold text-navy mb-2">{title}</h1>
-
-              <div className="flex flex-wrap gap-4 text-sm text-gray-500">
-                {listing.city && (
-                  <span className="flex items-center gap-1">
-                    <MapPin size={14} /> {listing.city}{listing.region ? `, ${listing.region}` : ''}
-                  </span>
-                )}
-                <span className="flex items-center gap-1">
-                  <Eye size={14} /> {listing.views_count ?? 0} {isRTL ? 'مشاهدة' : 'views'}
-                </span>
-                <span className="flex items-center gap-1">
-                  <Calendar size={14} /> {formatDistanceToNow(listing.created_at ?? '', locale)}
-                </span>
               </div>
             </div>
+          )}
 
-            {/* Description */}
-            {desc && (
-              <div className="card">
-                <h2 className="font-semibold text-navy mb-3">
-                  {isRTL ? 'تفاصيل الإعلان' : 'Listing Details'}
-                </h2>
-                <p className="text-gray-700 leading-relaxed whitespace-pre-line" dir={isRTL ? 'rtl' : 'ltr'}>
-                  {desc}
-                </p>
-              </div>
-            )}
+          {/* Breadcrumb */}
+          <nav className="flex items-center gap-1.5 text-sm text-gray-400 mb-6 flex-wrap">
+            <Link href={`/${locale}`} className="hover:text-emerald transition-colors">
+              {isRTL ? 'الرئيسية' : 'Home'}
+            </Link>
+            <ArrowRight size={13} className={isRTL ? 'rotate-180' : ''} />
+            <Link href={`/${locale}/listings`} className="hover:text-emerald transition-colors">
+              {isRTL ? 'الإعلانات' : 'Listings'}
+            </Link>
+            <ArrowRight size={13} className={isRTL ? 'rotate-180' : ''} />
+            <Link href={`/${locale}/listings?section=${listing.section}`}
+                  className="hover:text-emerald transition-colors">
+              {isRTL ? sectionMeta.ar : sectionMeta.en}
+            </Link>
+            <ArrowRight size={13} className={isRTL ? 'rotate-180' : ''} />
+            <span className="text-gray-600 truncate max-w-[180px]">{title}</span>
+          </nav>
 
-            {/* Dynamic data */}
-            {listing.dynamic_data && Object.keys(listing.dynamic_data).length > 0 && (
-              <div className="card">
-                <h2 className="font-semibold text-navy mb-3">
-                  {isRTL ? 'المعلومات الإضافية' : 'Additional Information'}
-                </h2>
-                <dl className="grid grid-cols-2 gap-x-6 gap-y-3">
-                  {Object.entries(listing.dynamic_data).map(([key, val]) => (
-                    <div key={key}>
-                      <dt className="text-xs text-gray-400 uppercase tracking-wide">{key}</dt>
-                      <dd className="text-sm font-medium text-gray-800">{String(val)}</dd>
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
+
+            {/* ── LEFT: images + details ─────────────────────────────── */}
+            <div className="lg:col-span-2 space-y-6">
+
+              {/* Image Gallery */}
+              {imageUrls.length > 0 ? (
+                <div className="space-y-3">
+                  {/* Main image */}
+                  <div
+                    className="relative rounded-2xl overflow-hidden aspect-video bg-gray-100
+                               cursor-zoom-in group shadow-sm"
+                    onClick={() => setLightbox(true)}
+                  >
+                    <img
+                      src={imageUrls[activeImg]}
+                      alt={`${title} — ${isRTL ? 'صورة' : 'image'} ${activeImg + 1}`}
+                      className="w-full h-full object-cover transition-transform duration-300
+                                 group-hover:scale-[1.02]"
+                    />
+
+                    {/* Overlay hint */}
+                    <div className="absolute inset-0 bg-black/0 group-hover:bg-black/15
+                                    transition-colors flex items-center justify-center">
+                      <span className="opacity-0 group-hover:opacity-100 transition-opacity
+                                       bg-black/60 text-white text-xs px-3 py-1.5 rounded-full
+                                       backdrop-blur-sm">
+                        {isRTL ? '🔍 انقر للتكبير' : '🔍 Click to zoom'}
+                      </span>
                     </div>
-                  ))}
-                </dl>
-              </div>
-            )}
 
-            {/* ── Similar Listings ── */}
-            {similar.length > 0 && (
-              <div>
-                <h2 className="font-bold text-navy text-base mb-4">
-                  {isRTL ? '🔗 إعلانات مشابهة' : '🔗 Similar Listings'}
-                </h2>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  {similar.map(l => (
-                    <ListingCard key={l.id} listing={l} />
-                  ))}
-                </div>
-              </div>
-            )}
-          </div>
+                    {/* Prev / Next arrows */}
+                    {imageUrls.length > 1 && (
+                      <>
+                        <button
+                          onClick={(e) => { e.stopPropagation(); setActiveImg(i => (i - 1 + imageUrls.length) % imageUrls.length); }}
+                          className="absolute start-3 top-1/2 -translate-y-1/2 w-9 h-9 rounded-full
+                                     bg-black/40 hover:bg-black/60 text-white flex items-center
+                                     justify-center transition opacity-0 group-hover:opacity-100 z-10"
+                          aria-label={isRTL ? 'السابق' : 'Previous'}
+                        >
+                          <ChevronLeft size={20} />
+                        </button>
+                        <button
+                          onClick={(e) => { e.stopPropagation(); setActiveImg(i => (i + 1) % imageUrls.length); }}
+                          className="absolute end-3 top-1/2 -translate-y-1/2 w-9 h-9 rounded-full
+                                     bg-black/40 hover:bg-black/60 text-white flex items-center
+                                     justify-center transition opacity-0 group-hover:opacity-100 z-10"
+                          aria-label={isRTL ? 'التالي' : 'Next'}
+                        >
+                          <ChevronRight size={20} />
+                        </button>
+                      </>
+                    )}
 
-          {/* ── Right: price + actions ── */}
-          <div className="space-y-4">
+                    {/* Counter */}
+                    {imageUrls.length > 1 && (
+                      <span className="absolute bottom-3 end-3 bg-black/50 text-white
+                                       text-xs px-2.5 py-1 rounded-full backdrop-blur-sm">
+                        {activeImg + 1} / {imageUrls.length}
+                      </span>
+                    )}
+                  </div>
 
-            {/* Price card */}
-            <div className="card border-2 border-emerald/20">
-              {listing.price_type === 'on_request' ? (
-                <p className="text-lg font-semibold text-gray-600">
-                  {isRTL ? 'السعر عند الطلب' : 'Price on Request'}
-                </p>
-              ) : listing.price ? (
-                <div>
-                  <p className="text-xs text-gray-400 mb-1">{isRTL ? 'السعر' : 'Price'}</p>
-                  <p className="text-3xl font-bold text-emerald">
-                    {formatPrice(listing.price, locale)}
-                  </p>
-                  {listing.price_type === 'negotiable' && (
-                    <p className="text-sm text-amber-600 mt-1 font-medium">
-                      {isRTL ? '🤝 قابل للتفاوض' : '🤝 Negotiable'}
-                    </p>
+                  {/* Thumbnails */}
+                  {imageUrls.length > 1 && (
+                    <div className="flex gap-2 overflow-x-auto pb-1">
+                      {imageUrls.map((url: string, i: number) => (
+                        <button
+                          key={i}
+                          onClick={() => setActiveImg(i)}
+                          className={`shrink-0 w-20 h-14 rounded-lg overflow-hidden border-2 transition-all
+                                      ${i === activeImg
+                                        ? 'border-emerald ring-2 ring-emerald/20'
+                                        : 'border-gray-200 opacity-60 hover:opacity-100 hover:border-gray-400'}`}
+                          aria-label={`${isRTL ? 'صورة' : 'Image'} ${i + 1}`}
+                        >
+                          <img src={url} alt="" className="w-full h-full object-cover" />
+                        </button>
+                      ))}
+                    </div>
                   )}
                 </div>
-              ) : null}
+              ) : (
+                <div className="rounded-2xl aspect-video bg-gradient-to-br from-navy/5 to-emerald/10
+                               flex items-center justify-center">
+                  <span className="text-7xl opacity-40">{sectionMeta.emoji}</span>
+                </div>
+              )}
 
-              <div className="mt-4 space-y-2">
-                {/* Message seller */}
-                {isAuthenticated && user?.id !== listing.user_id ? (
-                  <Link
-                    href={`/${locale}/messages?to=${listing.user_id}&listing=${listing.id}`}
-                    className="btn-primary w-full text-center flex items-center justify-center gap-2"
-                  >
-                    <MessageSquare size={16} />
-                    {isRTL ? 'مراسلة البائع' : 'Message Seller'}
-                  </Link>
-                ) : !isAuthenticated ? (
-                  <Link href={`/${locale}/auth/login`} className="btn-primary w-full text-center">
-                    {isRTL ? 'سجّل دخولك للتواصل' : 'Login to Contact'}
-                  </Link>
-                ) : null}
+              {/* Title + Badges + Meta */}
+              <div className="space-y-3">
+                {/* Badges row */}
+                <div className="flex flex-wrap gap-2">
+                  <span className={`text-xs font-bold px-2.5 py-1 rounded-full ${sectionMeta.color}`}>
+                    {sectionMeta.emoji} {isRTL ? sectionMeta.ar : sectionMeta.en}
+                  </span>
+                  {typeMeta && (
+                    <span className={`text-xs font-semibold px-2.5 py-1 rounded-full ${typeMeta.color}`}>
+                      {isRTL ? typeMeta.ar : typeMeta.en}
+                    </span>
+                  )}
+                  {listing.is_featured && (
+                    <span className="text-xs font-bold px-2.5 py-1 rounded-full bg-amber-100 text-amber-700">
+                      ⭐ {isRTL ? 'مميز' : 'Featured'}
+                    </span>
+                  )}
+                  {listing.is_financing_eligible && (
+                    <span className="text-xs font-semibold px-2.5 py-1 rounded-full bg-blue-50 text-blue-700">
+                      💰 {isRTL ? 'مؤهل للتمويل' : 'Financing OK'}
+                    </span>
+                  )}
+                  {listing.is_ready_to_operate && (
+                    <span className="text-xs font-semibold px-2.5 py-1 rounded-full bg-emerald-50 text-emerald-700">
+                      🟢 {isRTL ? 'جاهز للتشغيل' : 'Ready to Operate'}
+                    </span>
+                  )}
+                </div>
 
-                {/* WhatsApp */}
-                {listing.contact_phone && (
+                {/* Title + share */}
+                <div className="flex items-start justify-between gap-3">
+                  <h1 className="text-2xl font-black text-navy leading-snug flex-1">{title}</h1>
                   <button
-                    onClick={handleWhatsApp}
-                    className="w-full flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl
-                               bg-green-500 hover:bg-green-600 text-white font-semibold text-sm transition"
+                    onClick={handleShare}
+                    title={isRTL ? 'مشاركة' : 'Share'}
+                    className="shrink-0 p-2 rounded-xl border border-gray-200 hover:border-emerald
+                               text-gray-500 hover:text-emerald transition-colors mt-0.5"
                   >
-                    <MessageCircle size={16} />
-                    {isRTL ? 'تواصل عبر واتساب' : 'Contact via WhatsApp'}
+                    {copied ? <Check size={18} className="text-emerald" /> : <Share2 size={18} />}
                   </button>
-                )}
+                </div>
 
-                {/* Phone display */}
-                {listing.contact_phone && (
-                  <div className="flex items-center justify-center gap-2 text-sm text-gray-500 py-1">
-                    <Phone size={14} />
-                    <span dir="ltr">{listing.contact_phone}</span>
-                  </div>
-                )}
-
-                {/* Bid */}
-                {listing.section === 'ma' && (
-                  <button
-                    onClick={() => setShowBid(!showBid)}
-                    className="btn-navy w-full flex items-center justify-center gap-2"
-                  >
-                    <DollarSign size={16} />
-                    {isRTL ? 'تقديم عرض سعر' : 'Submit Bid'}
-                  </button>
-                )}
-
-                {/* Bookmark */}
-                <button
-                  onClick={handleBookmark}
-                  className={`w-full flex items-center justify-center gap-2 py-2 px-4 rounded-lg border
-                              transition text-sm font-medium
-                              ${bookmarked
-                                ? 'border-emerald bg-emerald/10 text-emerald'
-                                : 'border-gray-300 text-gray-600 hover:border-emerald'}`}
-                >
-                  <Bookmark size={16} fill={bookmarked ? 'currentColor' : 'none'} />
-                  {bookmarked
-                    ? (isRTL ? 'محفوظ في المفضلة' : 'Bookmarked')
-                    : (isRTL ? 'حفظ في المفضلة' : 'Save')}
-                </button>
+                {/* Meta row */}
+                <div className="flex flex-wrap gap-4 text-sm text-gray-500">
+                  {listing.city && (
+                    <span className="flex items-center gap-1.5">
+                      <MapPin size={14} className="text-emerald" />
+                      {listing.city}{listing.region ? `، ${listing.region}` : ''}
+                    </span>
+                  )}
+                  <span className="flex items-center gap-1.5">
+                    <Eye size={14} className="text-gray-400" />
+                    {(listing.views_count ?? 0).toLocaleString(isRTL ? 'ar-SA' : 'en-US')}
+                    {' '}{isRTL ? 'مشاهدة' : 'views'}
+                  </span>
+                  <span className="flex items-center gap-1.5">
+                    <Calendar size={14} className="text-gray-400" />
+                    {formatDistanceToNow(listing.created_at ?? '', locale)}
+                  </span>
+                </div>
               </div>
 
-              {/* Bid form */}
-              {showBid && (
-                <form onSubmit={handleBidSubmit} className="mt-4 space-y-3 border-t pt-4">
-                  <input
-                    type="number" value={bidAmount}
-                    onChange={(e) => setBidAmount(e.target.value)}
-                    className="input text-sm"
-                    placeholder={isRTL ? 'المبلغ (ر.س)' : 'Amount (SAR)'} required
-                  />
-                  <textarea
-                    value={bidMsg} onChange={(e) => setBidMsg(e.target.value)}
-                    className="input text-sm h-20 resize-none"
-                    placeholder={isRTL ? 'رسالة مع عرضك (اختياري)' : 'Message with your bid (optional)'}
-                  />
-                  <button type="submit" disabled={submitting}
-                    className="btn-primary w-full text-sm disabled:opacity-60">
-                    {submitting ? (isRTL ? 'جارٍ الإرسال…' : 'Submitting…') : (isRTL ? 'إرسال العرض' : 'Send Bid')}
-                  </button>
-                </form>
+              {/* Description */}
+              {desc && (
+                <div className="card p-5">
+                  <h2 className="font-bold text-navy mb-3 flex items-center gap-2">
+                    <span className="w-1 h-5 bg-emerald rounded-full inline-block" />
+                    {isRTL ? 'تفاصيل الإعلان' : 'Listing Details'}
+                  </h2>
+                  <p className="text-gray-700 leading-relaxed whitespace-pre-line text-sm"
+                     dir={isRTL ? 'rtl' : 'ltr'}>
+                    {desc}
+                  </p>
+                </div>
+              )}
+
+              {/* Dynamic data — with human-readable labels */}
+              {dynEntries.length > 0 && (
+                <div className="card p-5">
+                  <h2 className="font-bold text-navy mb-4 flex items-center gap-2">
+                    <span className="w-1 h-5 bg-emerald rounded-full inline-block" />
+                    {isRTL ? 'معلومات إضافية' : 'Additional Info'}
+                  </h2>
+                  <dl className="grid grid-cols-2 sm:grid-cols-3 gap-4">
+                    {dynEntries.map(([key, val]) => {
+                      const label = FIELD_LABELS[key];
+                      return (
+                        <div key={key} className="bg-gray-50 rounded-xl px-3 py-2.5">
+                          <dt className="text-[10px] text-gray-400 uppercase tracking-wider mb-0.5">
+                            {label ? (isRTL ? label.ar : label.en) : key}
+                          </dt>
+                          <dd className="text-sm font-semibold text-gray-800">{String(val)}</dd>
+                        </div>
+                      );
+                    })}
+                  </dl>
+                </div>
+              )}
+
+              {/* Similar Listings */}
+              {similar.length > 0 && (
+                <div>
+                  <h2 className="font-bold text-navy text-lg mb-4 flex items-center gap-2">
+                    <span className="w-1 h-5 bg-emerald rounded-full inline-block" />
+                    {isRTL ? 'إعلانات مشابهة' : 'Similar Listings'}
+                  </h2>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    {similar.map(l => <ListingCard key={l.id} listing={l} />)}
+                  </div>
+                </div>
               )}
             </div>
 
-            {/* Seller card */}
-            <div className="card">
-              <h3 className="text-sm font-semibold text-gray-500 mb-3">
-                {isRTL ? 'معلومات البائع' : 'Seller Info'}
-              </h3>
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-full bg-navy/10 flex items-center justify-center
-                                font-bold text-navy text-sm">
-                  {sellerName?.[0] ?? '?'}
+            {/* ── RIGHT: sticky sidebar ──────────────────────────────── */}
+            <div className="lg:col-span-1">
+              <div className="sticky top-6 space-y-4">
+
+                {/* Price card */}
+                <div className="card p-5 border-2 border-emerald/20">
+
+                  {/* Price */}
+                  {listing.price_type === 'on_request' ? (
+                    <p className="text-base font-semibold text-gray-500 mb-4">
+                      {isRTL ? '💬 السعر عند الطلب' : '💬 Price on Request'}
+                    </p>
+                  ) : listing.price ? (
+                    <div className="mb-4">
+                      <p className="text-xs text-gray-400 mb-0.5">{isRTL ? 'السعر' : 'Price'}</p>
+                      <p className="text-3xl font-black text-emerald leading-none">
+                        {formatPrice(listing.price, locale)}
+                      </p>
+                      {listing.price_type === 'negotiable' && (
+                        <p className="text-xs text-amber-600 mt-1 font-medium">
+                          🤝 {isRTL ? 'قابل للتفاوض' : 'Negotiable'}
+                        </p>
+                      )}
+                    </div>
+                  ) : null}
+
+                  {/* Actions */}
+                  <div className="space-y-2.5">
+
+                    {/* WhatsApp — primary CTA if phone exists */}
+                    {listing.contact_phone && (
+                      <button
+                        onClick={handleWhatsApp}
+                        className="w-full flex items-center justify-center gap-2 py-3 px-4 rounded-xl
+                                   bg-[#25D366] hover:bg-[#1ebe5d] text-white font-bold text-sm
+                                   transition-colors shadow-sm shadow-green-200"
+                      >
+                        <MessageCircle size={17} />
+                        {isRTL ? 'تواصل عبر واتساب' : 'WhatsApp'}
+                      </button>
+                    )}
+
+                    {/* Message seller */}
+                    {isAuthenticated && !isOwner ? (
+                      <Link
+                        href={`/${locale}/messages?to=${listing.user_id}&listing=${listing.id}`}
+                        className="w-full flex items-center justify-center gap-2 py-2.5 px-4
+                                   rounded-xl bg-navy hover:bg-navy-dark text-white font-semibold
+                                   text-sm transition-colors"
+                      >
+                        <MessageSquare size={16} />
+                        {isRTL ? 'مراسلة البائع' : 'Message Seller'}
+                      </Link>
+                    ) : !isAuthenticated ? (
+                      <Link
+                        href={`/${locale}/auth/login`}
+                        className="w-full flex items-center justify-center gap-2 py-2.5 px-4
+                                   rounded-xl bg-navy hover:bg-navy-dark text-white font-semibold
+                                   text-sm transition-colors"
+                      >
+                        {isRTL ? 'سجّل دخولك للتواصل' : 'Login to Contact'}
+                      </Link>
+                    ) : null}
+
+                    {/* Phone number */}
+                    {listing.contact_phone && (
+                      <a
+                        href={`tel:${listing.contact_phone}`}
+                        className="w-full flex items-center justify-center gap-2 py-2 text-sm
+                                   text-gray-500 hover:text-navy transition-colors"
+                        dir="ltr"
+                      >
+                        <Phone size={14} />
+                        {listing.contact_phone}
+                      </a>
+                    )}
+
+                    {/* Bid — M&A only */}
+                    {listing.section === 'ma' && (
+                      <button
+                        onClick={() => setShowBid(!showBid)}
+                        className="w-full flex items-center justify-center gap-2 py-2.5 px-4
+                                   rounded-xl border-2 border-navy text-navy hover:bg-navy
+                                   hover:text-white font-semibold text-sm transition-colors"
+                      >
+                        <DollarSign size={16} />
+                        {isRTL ? 'تقديم عرض سعر' : 'Submit Bid'}
+                      </button>
+                    )}
+
+                    {/* Bid form */}
+                    {showBid && (
+                      <form onSubmit={handleBidSubmit}
+                            className="space-y-2 border-t border-gray-100 pt-3 mt-1">
+                        <input
+                          type="number" value={bidAmount} min={1}
+                          onChange={(e) => setBidAmount(e.target.value)}
+                          className="input text-sm"
+                          placeholder={isRTL ? 'المبلغ بالريال' : 'Amount (SAR)'}
+                          required
+                        />
+                        <textarea
+                          value={bidMsg} onChange={(e) => setBidMsg(e.target.value)}
+                          className="input text-sm h-20 resize-none"
+                          placeholder={isRTL ? 'رسالة مع عرضك (اختياري)' : 'Message (optional)'}
+                        />
+                        <button type="submit" disabled={submitting}
+                          className="btn-primary w-full text-sm disabled:opacity-60">
+                          {submitting ? '…' : (isRTL ? 'إرسال العرض' : 'Send Bid')}
+                        </button>
+                      </form>
+                    )}
+
+                    {/* Bookmark */}
+                    <button
+                      onClick={handleBookmark}
+                      className={`w-full flex items-center justify-center gap-2 py-2.5 px-4
+                                  rounded-xl border-2 text-sm font-medium transition-colors
+                                  ${bookmarked
+                                    ? 'border-emerald bg-emerald/5 text-emerald'
+                                    : 'border-gray-200 text-gray-500 hover:border-emerald hover:text-emerald'}`}
+                    >
+                      <Bookmark size={16} fill={bookmarked ? 'currentColor' : 'none'} />
+                      {bookmarked
+                        ? (isRTL ? 'محفوظ في المفضلة' : 'Saved')
+                        : (isRTL ? 'حفظ في المفضلة' : 'Save')}
+                    </button>
+                  </div>
                 </div>
-                <div>
-                  <p className="font-medium text-gray-800 text-sm">{sellerName}</p>
-                  <p className="text-xs text-gray-400 capitalize">{listing.user?.role}</p>
+
+                {/* Seller card */}
+                <div className="card p-4">
+                  <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-3">
+                    {isRTL ? 'معلومات المُعلِن' : 'Posted By'}
+                  </h3>
+                  <div className="flex items-center gap-3">
+                    <div className="w-11 h-11 rounded-full bg-navy/10 flex items-center justify-center
+                                    font-black text-navy text-base shrink-0">
+                      {sellerName?.[0]?.toUpperCase() ?? '?'}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="font-bold text-gray-800 text-sm truncate">{sellerName}</p>
+                      <p className="text-xs text-gray-400 capitalize">
+                        {listing.user?.role === 'business'
+                          ? (isRTL ? 'شركة' : 'Business')
+                          : (isRTL ? 'فرد' : 'Individual')}
+                      </p>
+                    </div>
+                    <div className="flex flex-col gap-1 shrink-0">
+                      {listing.user?.role === 'business' && (
+                        <span title={isRTL ? 'حساب موثق' : 'Verified Business'}
+                              className="flex items-center gap-1 text-[10px] text-emerald font-semibold
+                                         bg-emerald/10 px-2 py-0.5 rounded-full">
+                          <BadgeCheck size={11} /> {isRTL ? 'موثق' : 'Verified'}
+                        </span>
+                      )}
+                      {listing.user?.is_trusted_payer && (
+                        <span title={isRTL ? 'دافع موثوق' : 'Trusted Payer'}
+                              className="flex items-center gap-1 text-[10px] text-amber-600 font-semibold
+                                         bg-amber-50 px-2 py-0.5 rounded-full">
+                          <Shield size={11} /> {isRTL ? 'موثوق' : 'Trusted'}
+                        </span>
+                      )}
+                    </div>
+                  </div>
                 </div>
-                <div className="ms-auto flex gap-1">
-                  {listing.user?.is_trusted_payer && (
-                    <span title={isRTL ? 'دافع موثوق' : 'Trusted Payer'}>
-                      <Shield className="text-emerald w-4 h-4" />
-                    </span>
-                  )}
-                </div>
+
+                {/* Report */}
+                <button
+                  onClick={() => setShowReport(true)}
+                  className="w-full flex items-center justify-center gap-1.5 text-xs
+                             text-gray-400 hover:text-red-500 transition-colors py-1"
+                >
+                  <Flag size={12} />
+                  {isRTL ? 'الإبلاغ عن هذا الإعلان' : 'Report this listing'}
+                </button>
+
               </div>
             </div>
-
-            {/* Report */}
-            <button
-              onClick={() => setShowReport(true)}
-              className="flex items-center gap-2 text-xs text-gray-400 hover:text-red-500
-                         transition w-full justify-center py-1"
-            >
-              <Flag size={12} />
-              {isRTL ? 'الإبلاغ عن الإعلان' : 'Report this listing'}
-            </button>
           </div>
         </div>
-      </div>
+      </main>
+
+      <Footer />
+
+      {/* ── Mobile floating CTA bar ─────────────────────────────────────── */}
+      {canContact && (
+        <div className="fixed bottom-0 inset-x-0 lg:hidden z-40 bg-white border-t
+                        border-gray-200 px-4 py-3 flex gap-3 shadow-lg">
+          {listing.contact_phone ? (
+            <button
+              onClick={handleWhatsApp}
+              className="flex-1 flex items-center justify-center gap-2 py-3 rounded-xl
+                         bg-[#25D366] text-white font-bold text-sm"
+            >
+              <MessageCircle size={17} />
+              {isRTL ? 'واتساب' : 'WhatsApp'}
+            </button>
+          ) : null}
+          {isAuthenticated && !isOwner ? (
+            <Link
+              href={`/${locale}/messages?to=${listing.user_id}&listing=${listing.id}`}
+              className="flex-1 flex items-center justify-center gap-2 py-3 rounded-xl
+                         bg-navy text-white font-bold text-sm"
+            >
+              <MessageSquare size={16} />
+              {isRTL ? 'مراسلة' : 'Message'}
+            </Link>
+          ) : !isAuthenticated ? (
+            <Link
+              href={`/${locale}/auth/login`}
+              className="flex-1 flex items-center justify-center py-3 rounded-xl
+                         bg-navy text-white font-bold text-sm"
+            >
+              {isRTL ? 'تواصل' : 'Contact'}
+            </Link>
+          ) : null}
+          <button
+            onClick={handleBookmark}
+            className={`w-12 flex items-center justify-center rounded-xl border-2 transition
+                        ${bookmarked ? 'border-emerald bg-emerald/10 text-emerald' : 'border-gray-200 text-gray-500'}`}
+          >
+            <Bookmark size={18} fill={bookmarked ? 'currentColor' : 'none'} />
+          </button>
+        </div>
+      )}
 
       {/* Lightbox */}
       {lightbox && imageUrls.length > 0 && (
@@ -461,7 +722,7 @@ export default function ListingDetailPage() {
           images={imageUrls}
           current={activeImg}
           onClose={() => setLightbox(false)}
-          onChange={(i) => setActiveImg(i)}
+          onChange={setActiveImg}
         />
       )}
 

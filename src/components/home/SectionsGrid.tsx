@@ -1,20 +1,34 @@
 'use client'
 
+import { useState, useEffect } from 'react'
 import { useTranslations, useLocale } from 'next-intl'
 import Link from 'next/link'
+import { statsApi } from '@/lib/api'
 
-const sections = [
-  { key: 'ma',        emoji: '🏢', href: 'listings?section=ma',        count: '148', iconBg: 'bg-indigo-50' },
-  { key: 'fleet',     emoji: '🚛', href: 'listings?section=fleet',     count: '412', iconBg: 'bg-emerald-bg' },
-  { key: 'contracts', emoji: '📄', href: 'listings?section=contracts', count: '87',  iconBg: 'bg-amber-50' },
-  { key: 'jobs',      emoji: '👷', href: 'listings?section=jobs',      count: '63',  iconBg: 'bg-purple-50' },
-  { key: 'forum',     emoji: '💬', href: 'listings?section=forum',     count: '234', iconBg: 'bg-red-50' },
-  { key: 'tools',     emoji: '🧮', href: 'listings',                   count: '5',   iconBg: 'bg-sky-50' },
+const SECTIONS = [
+  { key: 'ma',        emoji: '🏢', href: 'listings?section=ma',        iconBg: 'bg-indigo-50'   },
+  { key: 'fleet',     emoji: '🚛', href: 'listings?section=fleet',     iconBg: 'bg-emerald-bg'  },
+  { key: 'contracts', emoji: '📄', href: 'listings?section=contracts', iconBg: 'bg-amber-50'    },
+  { key: 'jobs',      emoji: '👷', href: 'listings?section=jobs',      iconBg: 'bg-purple-50'   },
+  { key: 'forum',     emoji: '💬', href: 'listings?section=forum',     iconBg: 'bg-red-50'      },
 ]
 
 export default function SectionsGrid() {
-  const t = useTranslations('sections')
+  const t      = useTranslations('sections')
   const locale = useLocale()
+
+  const [counts, setCounts] = useState<Record<string, number>>({})
+
+  useEffect(() => {
+    statsApi.get()
+      .then((data) => setCounts(data.sections ?? {}))
+      .catch(() => {})
+  }, [])
+
+  const fmtCount = (n: number) =>
+    n.toLocaleString(locale === 'ar' ? 'ar-SA' : 'en-US')
+
+  const listingWord = locale === 'ar' ? 'إعلان' : 'listings'
 
   return (
     <section className="py-14 px-6 bg-gray-50">
@@ -23,7 +37,7 @@ export default function SectionsGrid() {
         <p className="section-sub mb-8">{t('sub')}</p>
 
         <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-          {sections.map((sec) => (
+          {SECTIONS.map((sec) => (
             <Link key={sec.key} href={`/${locale}/${sec.href}`}>
               <div className="card p-5 hover:border-emerald hover:shadow-card-lg
                               transition-all duration-200 cursor-pointer group
@@ -40,7 +54,10 @@ export default function SectionsGrid() {
                 </p>
                 <div className="flex items-center justify-between mt-4">
                   <span className="text-emerald text-xs font-semibold">
-                    {sec.count} إعلان
+                    {counts[sec.key] !== undefined
+                      ? `${fmtCount(counts[sec.key])} ${listingWord}`
+                      : <span className="inline-block w-10 h-3 bg-gray-200 rounded animate-pulse" />
+                    }
                   </span>
                   <span className="text-gray-300 group-hover:text-emerald
                                    transition-colors text-lg leading-none">←</span>
