@@ -6,18 +6,34 @@ import Link from 'next/link'
 import { useState, useRef, useEffect } from 'react'
 import { Menu, X, Globe, Plus, LogIn, ChevronDown, LayoutDashboard, User, MessageSquare, LogOut, Shield } from 'lucide-react'
 import { useAuthStore } from '@/store/auth'
-import { authApi } from '@/lib/api'
+import { authApi, messagesApi } from '@/lib/api'
 
 export default function Navbar() {
   const t = useTranslations('nav')
   const locale = useLocale()
   const router = useRouter()
   const pathname = usePathname()
-  const [mobileOpen, setMobileOpen] = useState(false)
+  const [mobileOpen, setMobileOpen]     = useState(false)
   const [dropdownOpen, setDropdownOpen] = useState(false)
+  const [unread, setUnread]             = useState(0)
   const dropdownRef = useRef<HTMLDivElement>(null)
   const isRTL = locale === 'ar'
   const { user, isAuthenticated, clearAuth } = useAuthStore()
+
+  /* ── Poll inbox every 30s for unread count ── */
+  useEffect(() => {
+    if (!isAuthenticated) { setUnread(0); return; }
+    const fetchUnread = async () => {
+      try {
+        const res: any = await messagesApi.getInbox()
+        const threads: any[] = res.data ?? []
+        setUnread(threads.reduce((s: number, t: any) => s + (t.unread_count ?? 0), 0))
+      } catch {}
+    }
+    fetchUnread()
+    const tid = setInterval(fetchUnread, 30000)
+    return () => clearInterval(tid)
+  }, [isAuthenticated])
 
   // Close dropdown on outside click
   useEffect(() => {
@@ -107,6 +123,23 @@ export default function Navbar() {
                   {t('post')}
                 </Link>
 
+                {/* Messages icon with badge */}
+                <Link
+                  href={`/${locale}/messages`}
+                  className="relative p-2 rounded-lg text-white/80 hover:text-white
+                             hover:bg-white/10 transition-colors"
+                  title={isRTL ? 'الرسائل' : 'Messages'}
+                >
+                  <MessageSquare size={18} />
+                  {unread > 0 && (
+                    <span className="absolute -top-0.5 -end-0.5 min-w-[16px] h-4 bg-red-500
+                                     text-white text-[9px] font-black rounded-full flex items-center
+                                     justify-center px-0.5 leading-none">
+                      {unread > 9 ? '9+' : unread}
+                    </span>
+                  )}
+                </Link>
+
                 {/* User dropdown */}
                 <div className="relative" ref={dropdownRef}>
                   <button
@@ -136,11 +169,17 @@ export default function Navbar() {
                         {isRTL ? 'لوحة التحكم' : 'Dashboard'}
                       </Link>
                       <Link href={`/${locale}/messages`}
-                        onClick={() => setDropdownOpen(false)}
+                        onClick={() => { setDropdownOpen(false); setUnread(0); }}
                         className="flex items-center gap-2.5 px-4 py-2.5 text-sm text-gray-700
                                    hover:bg-gray-50 transition-colors">
                         <MessageSquare size={15} className="text-navy" />
                         {isRTL ? 'الرسائل' : 'Messages'}
+                        {unread > 0 && (
+                          <span className="ms-auto min-w-[20px] h-5 bg-red-500 text-white text-[10px]
+                                           font-bold rounded-full flex items-center justify-center px-1">
+                            {unread > 9 ? '9+' : unread}
+                          </span>
+                        )}
                       </Link>
                       <Link href={`/${locale}/profile`}
                         onClick={() => setDropdownOpen(false)}

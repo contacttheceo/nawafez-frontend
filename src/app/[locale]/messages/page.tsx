@@ -181,38 +181,40 @@ function MessagesInner() {
     setNewMessage('');
 
     // Optimistic insert
-    const optimistic: Message = {
-      id: Date.now(),
-      body,
-      sent_at: new Date().toISOString(),
-      is_mine: true,
-    };
-    setMessages(prev => [...prev, optimistic]);
+    const tempId = Date.now();
+    setMessages(prev => [...prev, { id: tempId, body, sent_at: new Date().toISOString(), is_mine: true }]);
 
+    // Step 1 — Send (failure = real error, show toast + rollback)
     try {
       await messagesApi.send({
         to_user_id: activeThread.other_user.id,
         listing_id: activeThread.listing.id,
         body,
       });
+    } catch (err: any) {
+      const msg = err?.response?.data?.message;
+      toast.error(msg || (isRTL ? 'فشل إرسال الرسالة' : 'Failed to send'));
+      setMessages(prev => prev.filter(m => m.id !== tempId));
+      setNewMessage(body);
+      setSending(false);
+      sendingRef.current = false;
+      return;
+    }
 
-      // Refresh thread + inbox
+    // Step 2 — Refresh silently (failure here = message WAS sent, just keep optimistic)
+    try {
       const [threadRes, inboxRes]: any[] = await Promise.all([
         messagesApi.getThread(activeThread.other_user.id, activeThread.listing.id),
         messagesApi.getInbox(),
       ]);
       setMessages(threadRes.data ?? []);
       setThreads(inboxRes.data ?? []);
-      scrollToBottom(true);
-    } catch {
-      toast.error(isRTL ? 'فشل إرسال الرسالة' : 'Failed to send');
-      setMessages(prev => prev.filter(m => m.id !== optimistic.id));
-      setNewMessage(body);
-    } finally {
-      setSending(false);
-      sendingRef.current = false;
-      inputRef.current?.focus();
-    }
+    } catch { /* keep optimistic message */ }
+
+    scrollToBottom(true);
+    setSending(false);
+    sendingRef.current = false;
+    inputRef.current?.focus();
   };
 
   /* ── Helpers ── */
