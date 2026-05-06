@@ -192,8 +192,12 @@ function MessagesInner() {
         body,
       });
     } catch (err: any) {
-      const msg = err?.response?.data?.message;
-      toast.error(msg || (isRTL ? 'فشل إرسال الرسالة' : 'Failed to send'));
+      // Try to extract a meaningful server error message
+      const serverMsg = err?.response?.data?.message
+        ?? err?.response?.data?.error
+        ?? (err?.message !== 'Network Error' ? err?.message : null);
+      console.error('[Messages] send failed:', err?.response?.status, err?.response?.data);
+      toast.error(serverMsg || (isRTL ? 'فشل إرسال الرسالة' : 'Failed to send'));
       setMessages(prev => prev.filter(m => m.id !== tempId));
       setNewMessage(body);
       setSending(false);
