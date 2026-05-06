@@ -40,8 +40,8 @@ export default function Footer() {
           <div>
             <h4 className="text-white font-bold text-sm mb-4">{t('for_business')}</h4>
             <div className="flex flex-col gap-2 text-sm">
-              <Link href={`/${locale}/pricing`} className="hover:text-white transition-colors">{t('packages')}</Link>
-              <Link href={`/${locale}/verify`} className="hover:text-white transition-colors">{t('verify')}</Link>
+              <Link href={`/${locale}/listings/create`} className="hover:text-white transition-colors">{t('packages')}</Link>
+              <Link href={`/${locale}/profile`} className="hover:text-white transition-colors">{t('verify')}</Link>
               <Link href={`/${locale}/dashboard`} className="hover:text-white transition-colors">لوحة التحكم</Link>
             </div>
           </div>
@@ -52,7 +52,7 @@ export default function Footer() {
             <div className="flex flex-col gap-2 text-sm">
               <Link href={`/${locale}/terms`} className="hover:text-white transition-colors">{t('terms')}</Link>
               <Link href={`/${locale}/privacy`} className="hover:text-white transition-colors">{t('privacy')}</Link>
-              <Link href={`/${locale}/contact`} className="hover:text-white transition-colors">{t('contact')}</Link>
+              <a href="mailto:support@nawafez.sa" className="hover:text-white transition-colors">{t('contact')}</a>
               <Link href={`/${locale}/faq`} className="hover:text-white transition-colors">{t('faq')}</Link>
             </div>
           </div>

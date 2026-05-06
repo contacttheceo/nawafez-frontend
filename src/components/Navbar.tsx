@@ -3,8 +3,10 @@
 import { useTranslations, useLocale } from 'next-intl'
 import { useRouter, usePathname } from 'next/navigation'
 import Link from 'next/link'
-import { useState } from 'react'
-import { Menu, X, Globe, Plus, LogIn } from 'lucide-react'
+import { useState, useRef, useEffect } from 'react'
+import { Menu, X, Globe, Plus, LogIn, ChevronDown, LayoutDashboard, User, MessageSquare, LogOut, Shield } from 'lucide-react'
+import { useAuthStore } from '@/store/auth'
+import { authApi } from '@/lib/api'
 
 export default function Navbar() {
   const t = useTranslations('nav')
@@ -12,7 +14,28 @@ export default function Navbar() {
   const router = useRouter()
   const pathname = usePathname()
   const [mobileOpen, setMobileOpen] = useState(false)
+  const [dropdownOpen, setDropdownOpen] = useState(false)
+  const dropdownRef = useRef<HTMLDivElement>(null)
   const isRTL = locale === 'ar'
+  const { user, isAuthenticated, clearAuth } = useAuthStore()
+
+  // Close dropdown on outside click
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
+        setDropdownOpen(false)
+      }
+    }
+    document.addEventListener('mousedown', handler)
+    return () => document.removeEventListener('mousedown', handler)
+  }, [])
+
+  const handleLogout = async () => {
+    try { await authApi.logout() } catch {}
+    clearAuth()
+    localStorage.removeItem('nawafez_token')
+    router.push(`/${locale}`)
+  }
 
   const switchLocale = () => {
     const newLocale = locale === 'ar' ? 'en' : 'ar'
@@ -71,21 +94,103 @@ export default function Navbar() {
               <Globe size={12} />
               {locale === 'ar' ? 'EN' : 'ع'}
             </button>
-            <Link
-              href={`/${locale}/auth/login`}
-              className="text-white/80 hover:text-white border border-white/30
-                         hover:border-white px-4 py-2 rounded-lg text-sm transition-all"
-            >
-              {t('login')}
-            </Link>
-            <Link
-              href={`/${locale}/listings/create`}
-              className="bg-emerald hover:bg-emerald-dark text-white px-4 py-2
-                         rounded-lg text-sm font-semibold transition-colors flex items-center gap-1.5"
-            >
-              <Plus size={14} />
-              {t('post')}
-            </Link>
+
+            {isAuthenticated && user ? (
+              /* ── Authenticated: user dropdown + post button ── */
+              <>
+                <Link
+                  href={`/${locale}/listings/create`}
+                  className="bg-emerald hover:bg-emerald-dark text-white px-4 py-2
+                             rounded-lg text-sm font-semibold transition-colors flex items-center gap-1.5"
+                >
+                  <Plus size={14} />
+                  {t('post')}
+                </Link>
+
+                {/* User dropdown */}
+                <div className="relative" ref={dropdownRef}>
+                  <button
+                    onClick={() => setDropdownOpen(!dropdownOpen)}
+                    className="flex items-center gap-2 bg-white/10 hover:bg-white/20 text-white
+                               px-3 py-1.5 rounded-lg text-sm transition-colors"
+                  >
+                    <div className="w-6 h-6 bg-emerald rounded-full flex items-center justify-center
+                                    text-white font-bold text-xs">
+                      {(isRTL ? user.name_ar : user.name_en)?.[0]?.toUpperCase() ?? 'U'}
+                    </div>
+                    <span className="max-w-[100px] truncate">
+                      {isRTL ? user.name_ar : user.name_en}
+                    </span>
+                    <ChevronDown size={14} className={`transition-transform ${dropdownOpen ? 'rotate-180' : ''}`} />
+                  </button>
+
+                  {dropdownOpen && (
+                    <div className={`absolute top-full mt-2 w-48 bg-white rounded-xl shadow-xl border
+                                     border-gray-100 py-1 z-50
+                                     ${isRTL ? 'left-0' : 'right-0'}`}>
+                      <Link href={`/${locale}/dashboard`}
+                        onClick={() => setDropdownOpen(false)}
+                        className="flex items-center gap-2.5 px-4 py-2.5 text-sm text-gray-700
+                                   hover:bg-gray-50 transition-colors">
+                        <LayoutDashboard size={15} className="text-navy" />
+                        {isRTL ? 'لوحة التحكم' : 'Dashboard'}
+                      </Link>
+                      <Link href={`/${locale}/messages`}
+                        onClick={() => setDropdownOpen(false)}
+                        className="flex items-center gap-2.5 px-4 py-2.5 text-sm text-gray-700
+                                   hover:bg-gray-50 transition-colors">
+                        <MessageSquare size={15} className="text-navy" />
+                        {isRTL ? 'الرسائل' : 'Messages'}
+                      </Link>
+                      <Link href={`/${locale}/profile`}
+                        onClick={() => setDropdownOpen(false)}
+                        className="flex items-center gap-2.5 px-4 py-2.5 text-sm text-gray-700
+                                   hover:bg-gray-50 transition-colors">
+                        <User size={15} className="text-navy" />
+                        {isRTL ? 'الملف الشخصي' : 'Profile'}
+                      </Link>
+                      {user.role === 'admin' && (
+                        <Link href={`/${locale}/admin`}
+                          onClick={() => setDropdownOpen(false)}
+                          className="flex items-center gap-2.5 px-4 py-2.5 text-sm text-amber-600
+                                     hover:bg-amber-50 transition-colors">
+                          <Shield size={15} />
+                          {isRTL ? 'لوحة الإدارة' : 'Admin Panel'}
+                        </Link>
+                      )}
+                      <div className="border-t border-gray-100 my-1" />
+                      <button
+                        onClick={() => { setDropdownOpen(false); handleLogout(); }}
+                        className="flex items-center gap-2.5 px-4 py-2.5 text-sm text-red-500
+                                   hover:bg-red-50 transition-colors w-full text-start"
+                      >
+                        <LogOut size={15} />
+                        {isRTL ? 'تسجيل الخروج' : 'Sign Out'}
+                      </button>
+                    </div>
+                  )}
+                </div>
+              </>
+            ) : (
+              /* ── Guest: login + post ── */
+              <>
+                <Link
+                  href={`/${locale}/auth/login`}
+                  className="text-white/80 hover:text-white border border-white/30
+                             hover:border-white px-4 py-2 rounded-lg text-sm transition-all"
+                >
+                  {t('login')}
+                </Link>
+                <Link
+                  href={`/${locale}/listings/create`}
+                  className="bg-emerald hover:bg-emerald-dark text-white px-4 py-2
+                             rounded-lg text-sm font-semibold transition-colors flex items-center gap-1.5"
+                >
+                  <Plus size={14} />
+                  {t('post')}
+                </Link>
+              </>
+            )}
           </div>
 
           {/* Mobile Menu Toggle */}
@@ -122,20 +227,30 @@ export default function Navbar() {
             >
               {locale === 'ar' ? 'English' : 'العربية'}
             </button>
-            <Link
-              href={`/${locale}/auth/login`}
-              className="flex-1 text-center text-white border border-white/30
-                         py-2 rounded-lg text-sm"
-            >
-              {t('login')}
-            </Link>
-            <Link
-              href={`/${locale}/listings/create`}
-              className="flex-1 text-center bg-emerald text-white py-2 rounded-lg
-                         text-sm font-semibold"
-            >
-              {t('post')}
-            </Link>
+
+            {isAuthenticated ? (
+              <>
+                <Link href={`/${locale}/dashboard`} onClick={() => setMobileOpen(false)}
+                  className="flex-1 text-center text-white border border-white/30 py-2 rounded-lg text-sm">
+                  {isRTL ? 'لوحتي' : 'Dashboard'}
+                </Link>
+                <button onClick={() => { setMobileOpen(false); handleLogout(); }}
+                  className="flex-1 text-center bg-red-500 text-white py-2 rounded-lg text-sm font-semibold">
+                  {isRTL ? 'خروج' : 'Sign Out'}
+                </button>
+              </>
+            ) : (
+              <>
+                <Link href={`/${locale}/auth/login`} onClick={() => setMobileOpen(false)}
+                  className="flex-1 text-center text-white border border-white/30 py-2 rounded-lg text-sm">
+                  {t('login')}
+                </Link>
+                <Link href={`/${locale}/listings/create`} onClick={() => setMobileOpen(false)}
+                  className="flex-1 text-center bg-emerald text-white py-2 rounded-lg text-sm font-semibold">
+                  {t('post')}
+                </Link>
+              </>
+            )}
           </div>
         </div>
       )}

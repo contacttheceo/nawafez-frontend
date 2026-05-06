@@ -4,6 +4,7 @@ import { getMessages } from 'next-intl/server'
 import { notFound } from 'next/navigation'
 import { routing } from '@/i18n/routing'
 import { Toaster } from 'react-hot-toast'
+import AuthSync from '@/components/AuthSync'
 import './globals.css'
 
 export const metadata: Metadata = {
@@ -39,6 +40,7 @@ export default async function LocaleLayout({ children, params }: Props) {
     <html lang={locale} dir={isRTL ? 'rtl' : 'ltr'}>
       <body className={isRTL ? 'font-arabic' : 'font-sans'}>
         <NextIntlClientProvider messages={messages}>
+          <AuthSync />
           {children}
           <Toaster
             position={isRTL ? 'bottom-left' : 'bottom-right'}

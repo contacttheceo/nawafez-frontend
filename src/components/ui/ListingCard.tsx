@@ -116,7 +116,7 @@ export function ListingCard({ listing }: Props) {
             const mediaImg = listing.media?.find(m => m.type === 'image' && m.is_primary)
                           ?? listing.media?.find(m => m.type === 'image')
             const imgUrl = mediaImg
-              ? `${process.env.NEXT_PUBLIC_API_URL}/storage/${mediaImg.path}`
+              ? `${process.env.NEXT_PUBLIC_API_URL}/uploads/${mediaImg.path}`
               : listing.images?.[0]
             return imgUrl
               ? <img src={imgUrl} alt={title ?? ''} className="w-full h-full object-cover" />

@@ -54,8 +54,10 @@ export interface Listing {
   currency: 'SAR'
   status: ListingStatus
   rejection_reason?: string | null
+  contact_phone?: string | null
   dynamic_data: Record<string, unknown>
   media: MediaItem[]
+  images?: string[]
   is_featured: boolean
   is_financing_eligible: boolean
   is_ready_to_operate: boolean

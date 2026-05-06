@@ -1,306 +1,446 @@
 'use client';
 
-import { useState } from 'react';
-import { useForm } from 'react-hook-form';
-import { useRouter } from 'next/navigation';
-import { useLocale } from 'next-intl';
-import { Upload, X, Plus } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import { useForm }              from 'react-hook-form';
+import { useRouter }            from 'next/navigation';
+import { useLocale }            from 'next-intl';
+import { ArrowRight, ArrowLeft, MapPin, Phone, DollarSign } from 'lucide-react';
+import Link                     from 'next/link';
+import toast                    from 'react-hot-toast';
+
+import Navbar          from '@/components/Navbar';
+import StepIndicator   from '@/components/listings/StepIndicator';
+import SectionFields   from '@/components/listings/SectionFields';
+import ImageUploader   from '@/components/listings/ImageUploader';
+import ListingPreview  from '@/components/listings/ListingPreview';
 import { listingsApi } from '@/lib/api';
 import { useAuthStore } from '@/store/auth';
-import toast from 'react-hot-toast';
 import type { ListingSection } from '@/types';
 
+/* ── Types ────────────────────────────────────────────────────────── */
 type FormData = {
-  section:        ListingSection;
-  listing_type:   string;
-  title_ar:       string;
-  title_en:       string;
-  description_ar: string;
-  city:           string;
-  region:         string;
-  price:          string;
+  section:          ListingSection;
+  listing_type:     string;
+  title_ar:         string;
+  title_en:         string;
+  description_ar:   string;
+  vehicle_type:     string;
+  condition:        string;
+  year:             string;
+  mileage:          string;
+  capacity:         string;
+  job_title:        string;
+  employment_type:  string;
+  experience_years: string;
+  salary_type:      string;
+  salary_min:       string;
+  salary_max:       string;
+  contract_type:    string;
+  duration:         string;
+  company_type:     string;
+  employees_count:  string;
+  annual_revenue:   string;
+  city:             string;
+  region:           string;
+  price:            string;
+  price_type:       string;
+  contact_phone:    string;
 };
 
-const SECTIONS: { value: ListingSection; labelAr: string; labelEn: string }[] = [
-  { value: 'fleet',     labelAr: 'أسطول — عرض/طلب',         labelEn: 'Fleet — Buy/Sell'         },
-  { value: 'contracts', labelAr: 'عقود لوجستية',             labelEn: 'Logistics Contracts'      },
-  { value: 'jobs',      labelAr: 'وظائف',                   labelEn: 'Jobs'                     },
-  { value: 'forum',     labelAr: 'منتدى / نقاش',            labelEn: 'Forum / Discussion'        },
-  { value: 'ma',        labelAr: 'استحواذ ودمج (M&A)',       labelEn: 'M&A'                      },
+/* ── Section config ───────────────────────────────────────────────── */
+const SECTIONS = [
+  { value: 'fleet'     as ListingSection, emoji: '🚛', labelAr: 'أسطول',           labelEn: 'Fleet',      descAr: 'بيع وشراء وإيجار المركبات اللوجستية', descEn: 'Buy, sell & rent logistics vehicles' },
+  { value: 'contracts' as ListingSection, emoji: '📄', labelAr: 'عقود',            labelEn: 'Contracts',  descAr: 'عروض وطلبات العقود اللوجستية',         descEn: 'Logistics contract offers & requests' },
+  { value: 'jobs'      as ListingSection, emoji: '💼', labelAr: 'وظائف',           labelEn: 'Jobs',       descAr: 'فرص العمل في القطاع اللوجستي',          descEn: 'Job opportunities in logistics' },
+  { value: 'forum'     as ListingSection, emoji: '💬', labelAr: 'منتدى',           labelEn: 'Forum',      descAr: 'نقاشات ومعلومات مهنية',                 descEn: 'Professional discussions & insights' },
+  { value: 'ma'        as ListingSection, emoji: '🏢', labelAr: 'استحواذ M&A',    labelEn: 'M&A',        descAr: 'فرص الاستحواذ ودمج الشركات',            descEn: 'Mergers & acquisitions opportunities' },
 ];
 
 const SAUDI_CITIES = [
-  'الرياض', 'جدة', 'مكة المكرمة', 'المدينة المنورة', 'الدمام',
-  'الخبر', 'الظهران', 'تبوك', 'أبها', 'نجران', 'حائل',
-  'الجوف', 'القصيم', 'بريدة', 'ينبع',
+  'الرياض','جدة','مكة المكرمة','المدينة المنورة','الدمام','الخبر','الظهران',
+  'تبوك','أبها','نجران','حائل','الجوف','القصيم','بريدة','ينبع',
 ];
 
+/* ══════════════════════════════════════════════════════════════════ */
 export default function CreateListingPage() {
-  const locale          = useLocale();
-  const router          = useRouter();
-  const { isAuthenticated } = useAuthStore();
+  const locale   = useLocale();
+  const router   = useRouter();
+  const isRTL    = locale === 'ar';
+  const { isAuthenticated, user } = useAuthStore();
 
-  const [images, setImages]           = useState<File[]>([]);
-  const [previews, setPreviews]       = useState<string[]>([]);
+  const [step,     setStep]     = useState(1);
+  const [images,   setImages]   = useState<File[]>([]);
+  const [previews, setPreviews] = useState<string[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  /* ── Auth guard ─────────────────────────────────────────────────── */
+  useEffect(() => {
+    if (!isAuthenticated) router.push(`/${locale}/auth/login`);
+  }, [isAuthenticated, locale, router]);
+
+  /* ── Unsaved changes warning ────────────────────────────────────── */
+  useEffect(() => {
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      if (step > 1) {
+        e.preventDefault();
+        e.returnValue = '';
+      }
+    };
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+  }, [step]);
+
+  /* ── Form ───────────────────────────────────────────────────────── */
   const {
-    register,
-    handleSubmit,
-    watch,
-    formState: { errors },
-  } = useForm<FormData>({ defaultValues: { section: 'fleet' } });
+    register, handleSubmit, watch, trigger, formState: { errors },
+  } = useForm<FormData>({ defaultValues: { section: 'fleet', price_type: 'fixed' } });
 
   const selectedSection = watch('section');
+  const allValues       = watch();
 
-  // Redirect if not logged in
-  if (!isAuthenticated) {
-    router.push(`/${locale}/auth/login`);
-    return null;
-  }
-
-  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = Array.from(e.target.files ?? []);
-    if (images.length + files.length > 8) {
-      toast.error(locale === 'ar' ? 'الحد الأقصى 8 صور' : 'Max 8 images allowed');
-      return;
-    }
-    const newImages   = [...images, ...files];
-    const newPreviews = [...previews, ...files.map((f) => URL.createObjectURL(f))];
-    setImages(newImages);
-    setPreviews(newPreviews);
-    e.target.value = '';
+  /* ── Image handlers ─────────────────────────────────────────────── */
+  const handleAddImages = (files: File[]) => {
+    const newPreviews = files.map((f) => URL.createObjectURL(f));
+    setImages((p) => [...p, ...files]);
+    setPreviews((p) => [...p, ...newPreviews]);
   };
 
-  const removeImage = (index: number) => {
-    URL.revokeObjectURL(previews[index]);
-    setImages(images.filter((_, i) => i !== index));
-    setPreviews(previews.filter((_, i) => i !== index));
+  const handleRemoveImage = (i: number) => {
+    URL.revokeObjectURL(previews[i]);
+    setImages((p)   => p.filter((_, idx) => idx !== i));
+    setPreviews((p) => p.filter((_, idx) => idx !== i));
   };
 
+  const handleReorderImages = (from: number, to: number) => {
+    const reorder = <T,>(arr: T[]) => {
+      const a = [...arr];
+      const [item] = a.splice(from, 1);
+      a.splice(to, 0, item);
+      return a;
+    };
+    setImages((p)   => reorder(p));
+    setPreviews((p) => reorder(p));
+  };
+
+  /* ── Navigation ─────────────────────────────────────────────────── */
+  const goNext = async () => {
+    const fieldsToValidate: (keyof FormData)[][] = [
+      ['section'],
+      ['title_ar', 'description_ar'],
+      [],
+      [],
+    ];
+    const valid = await trigger(fieldsToValidate[step - 1]);
+    if (valid) setStep((s) => Math.min(s + 1, 5));
+  };
+
+  const goBack = () => setStep((s) => Math.max(s - 1, 1));
+
+  /* ── Submit ─────────────────────────────────────────────────────── */
   const onSubmit = async (data: FormData) => {
     setIsSubmitting(true);
     try {
+      // Sections that don't have a listing_type radio → inject default value
+      if (!data.listing_type) {
+        const defaults: Record<string, string> = {
+          jobs:  'job',
+          forum: 'discussion',
+          ma:    'acquisition',
+        };
+        if (defaults[data.section]) data.listing_type = defaults[data.section];
+      }
+
       const formData = new FormData();
       Object.entries(data).forEach(([k, v]) => { if (v) formData.append(k, String(v)); });
       images.forEach((img) => formData.append('images[]', img));
-
       const res = await listingsApi.create(formData);
-      toast.success(locale === 'ar' ? 'تم نشر الإعلان بنجاح!' : 'Listing published!');
+      toast.success(isRTL ? '🎉 تم نشر إعلانك بنجاح!' : '🎉 Listing published!');
       router.push(`/${locale}/listings/${res.data?.id ?? ''}`);
     } catch (err: any) {
-      const msg = err?.response?.data?.message ?? (locale === 'ar' ? 'حدث خطأ.' : 'Something went wrong.');
-      toast.error(msg);
+      toast.error(err?.response?.data?.message ?? (isRTL ? 'حدث خطأ.' : 'Something went wrong.'));
     } finally {
       setIsSubmitting(false);
     }
   };
 
+  if (!isAuthenticated) return null;
+
+  const userName = isRTL
+    ? (user?.name_ar ?? user?.name_en ?? '')
+    : (user?.name_en ?? user?.name_ar ?? '');
+
+  /* ── Render ─────────────────────────────────────────────────────── */
   return (
-    <main className="min-h-screen bg-gray-50 py-10">
-      <div className="max-w-2xl mx-auto px-4">
-        <h1 className="text-2xl font-bold text-navy mb-2">
-          {locale === 'ar' ? 'نشر إعلان جديد' : 'Post a New Listing'}
-        </h1>
-        <p className="text-gray-500 text-sm mb-8">
-          {locale === 'ar'
-            ? 'أكمل البيانات التالية لنشر إعلانك على منصة نوافذ'
-            : 'Fill in the details below to publish your listing on Nawafez'}
-        </p>
+    <div className="min-h-screen bg-gray-50 flex flex-col">
+      <Navbar />
 
-        <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
-          {/* Section */}
-          <div className="card space-y-4">
-            <h2 className="font-semibold text-navy">
-              {locale === 'ar' ? '1. اختر القسم' : '1. Choose Section'}
-            </h2>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              {SECTIONS.map((s) => (
-                <label
-                  key={s.value}
-                  className={`flex items-center gap-3 p-3 rounded-xl border-2 cursor-pointer transition
-                    ${selectedSection === s.value ? 'border-emerald bg-emerald/5' : 'border-gray-200 hover:border-gray-300'}`}
-                >
-                  <input
-                    type="radio"
-                    value={s.value}
-                    {...register('section', { required: true })}
-                    className="accent-emerald"
-                  />
-                  <span className="text-sm font-medium text-gray-700">
-                    {locale === 'ar' ? s.labelAr : s.labelEn}
-                  </span>
-                </label>
-              ))}
-            </div>
+      {/* Page header */}
+      <div className="bg-navy text-white py-6 px-4">
+        <div className="max-w-2xl mx-auto">
+          <div className="flex items-center gap-3 mb-1">
+            <Link href={`/${locale}/listings`}
+              className="text-white/60 hover:text-white text-sm transition flex items-center gap-1">
+              {isRTL ? <ArrowRight size={14} /> : <ArrowLeft size={14} />}
+              {isRTL ? 'الإعلانات' : 'Listings'}
+            </Link>
+          </div>
+          <h1 className="text-2xl font-black">
+            {isRTL ? '✍️ نشر إعلان جديد' : '✍️ Post a New Listing'}
+          </h1>
+          <p className="text-white/60 text-sm mt-1">
+            {isRTL ? 'اتبع الخطوات لنشر إعلانك على منصة نوافذ' : 'Follow the steps to publish on Nawafez'}
+          </p>
+        </div>
+      </div>
 
-            {/* M&A note */}
-            {selectedSection === 'ma' && (
-              <p className="text-xs text-amber-600 bg-amber-50 rounded-lg px-3 py-2 border border-amber-200">
-                {locale === 'ar'
-                  ? 'إعلانات الاستحواذ والدمج تخضع للمراجعة قبل النشر'
-                  : 'M&A listings are reviewed before publishing'}
+      <main className="flex-1 max-w-2xl mx-auto w-full px-4 py-8">
+        <StepIndicator current={step} isRTL={isRTL} />
+
+        <form onSubmit={handleSubmit(onSubmit)}>
+
+          {/* ══════════ STEP 1 — Section ══════════ */}
+          {step === 1 && (
+            <div className="card p-6">
+              <h2 className="text-lg font-bold text-navy mb-1">
+                {isRTL ? 'اختر قسم إعلانك' : 'Choose a Section'}
+              </h2>
+              <p className="text-sm text-gray-400 mb-5">
+                {isRTL ? 'حدد نوع الإعلان الذي تريد نشره' : 'Select the type of listing you want to post'}
               </p>
-            )}
-          </div>
 
-          {/* Basic info */}
-          <div className="card space-y-4">
-            <h2 className="font-semibold text-navy">
-              {locale === 'ar' ? '2. معلومات الإعلان' : '2. Listing Information'}
-            </h2>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                {locale === 'ar' ? 'نوع الإعلان' : 'Listing Type'} *
-              </label>
-              <input
-                {...register('listing_type', { required: true })}
-                className="input"
-                placeholder={locale === 'ar' ? 'مثال: شاحنة للبيع، مطلوب سائق، عقد توزيع…' : 'e.g. Truck for sale, Driver wanted…'}
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                {locale === 'ar' ? 'العنوان بالعربية' : 'Title (Arabic)'} *
-              </label>
-              <input
-                {...register('title_ar', { required: true })}
-                className="input"
-                placeholder={locale === 'ar' ? 'عنوان واضح ومختصر' : 'Clear and concise title'}
-                dir="rtl"
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                {locale === 'ar' ? 'العنوان بالإنجليزية (اختياري)' : 'Title (English, optional)'}
-              </label>
-              <input
-                {...register('title_en')}
-                className="input"
-                placeholder="English title (optional)"
-                dir="ltr"
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                {locale === 'ar' ? 'وصف الإعلان' : 'Description'}
-              </label>
-              <textarea
-                {...register('description_ar')}
-                className="input min-h-[120px] resize-y"
-                placeholder={locale === 'ar' ? 'اكتب تفاصيل الإعلان هنا…' : 'Describe your listing in detail…'}
-                dir="rtl"
-              />
-            </div>
-          </div>
-
-          {/* Location + price */}
-          <div className="card space-y-4">
-            <h2 className="font-semibold text-navy">
-              {locale === 'ar' ? '3. الموقع والسعر' : '3. Location & Price'}
-            </h2>
-
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  {locale === 'ar' ? 'المدينة' : 'City'} *
-                </label>
-                <select {...register('city', { required: true })} className="input">
-                  <option value="">{locale === 'ar' ? 'اختر المدينة' : 'Select city'}</option>
-                  {SAUDI_CITIES.map((c) => (
-                    <option key={c} value={c}>{c}</option>
-                  ))}
-                </select>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  {locale === 'ar' ? 'المنطقة (اختياري)' : 'Region (optional)'}
-                </label>
-                <input
-                  {...register('region')}
-                  className="input"
-                  placeholder={locale === 'ar' ? 'الحي / المنطقة' : 'District / Area'}
-                />
-              </div>
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                {locale === 'ar' ? 'السعر (ر.س) — اتركه فارغاً للسعر عند الطلب' : 'Price (SAR) — Leave empty for "on request"'}
-              </label>
-              <input
-                type="number"
-                min="0"
-                {...register('price')}
-                className="input"
-                placeholder="0"
-              />
-            </div>
-          </div>
-
-          {/* Images */}
-          <div className="card space-y-4">
-            <h2 className="font-semibold text-navy">
-              {locale === 'ar' ? '4. الصور (اختياري — حتى 8 صور)' : '4. Images (optional — up to 8)'}
-            </h2>
-
-            {/* Preview grid */}
-            {previews.length > 0 && (
-              <div className="grid grid-cols-3 gap-3">
-                {previews.map((src, i) => (
-                  <div key={i} className="relative aspect-square rounded-xl overflow-hidden bg-gray-100">
-                    <img src={src} alt="" className="w-full h-full object-cover" />
-                    {i === 0 && (
-                      <span className="absolute top-1 start-1 bg-emerald text-white text-[10px] px-1.5 py-0.5 rounded">
-                        {locale === 'ar' ? 'رئيسية' : 'Main'}
-                      </span>
-                    )}
-                    <button
-                      type="button"
-                      onClick={() => removeImage(i)}
-                      className="absolute top-1 end-1 bg-red-500 text-white rounded-full w-5 h-5 flex items-center justify-center"
-                    >
-                      <X size={10} />
-                    </button>
-                  </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                {SECTIONS.map((s) => (
+                  <label key={s.value}
+                    className={`flex items-start gap-3 p-4 rounded-xl border-2 cursor-pointer
+                                transition-all hover:shadow-sm
+                                ${selectedSection === s.value
+                                  ? 'border-emerald bg-emerald/5 shadow-sm'
+                                  : 'border-gray-200 hover:border-gray-300'}`}>
+                    <input type="radio" value={s.value}
+                      {...register('section', { required: true })}
+                      className="accent-emerald mt-1 flex-shrink-0" />
+                    <div>
+                      <div className="font-semibold text-gray-800 text-sm">
+                        {s.emoji} {isRTL ? s.labelAr : s.labelEn}
+                      </div>
+                      <div className="text-xs text-gray-400 mt-0.5">
+                        {isRTL ? s.descAr : s.descEn}
+                      </div>
+                    </div>
+                  </label>
                 ))}
               </div>
+            </div>
+          )}
+
+          {/* ══════════ STEP 2 — Section fields ══════════ */}
+          {step === 2 && (
+            <div className="card p-6">
+              <h2 className="text-lg font-bold text-navy mb-1">
+                {isRTL ? 'تفاصيل الإعلان' : 'Listing Details'}
+              </h2>
+              <p className="text-sm text-gray-400 mb-5">
+                {isRTL ? 'أكمل المعلومات المطلوبة بدقة' : 'Fill in the required information accurately'}
+              </p>
+
+              <SectionFields
+                section={selectedSection}
+                isRTL={isRTL}
+                reg={register as any}
+                errors={errors as any}
+                watch={watch as any}
+              />
+            </div>
+          )}
+
+          {/* ══════════ STEP 3 — Location & Price ══════════ */}
+          {step === 3 && (
+            <div className="card p-6 space-y-5">
+              <div>
+                <h2 className="text-lg font-bold text-navy mb-1">
+                  {isRTL ? 'الموقع والسعر' : 'Location & Price'}
+                </h2>
+                <p className="text-sm text-gray-400">
+                  {selectedSection === 'forum'
+                    ? (isRTL ? 'الموقع والسعر اختياريان في المنتدى' : 'Location & price are optional for forum posts')
+                    : (isRTL ? 'حدد موقع الإعلان وسعره' : 'Specify location and price')}
+                </p>
+              </div>
+
+              {/* City + Region */}
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1 flex items-center gap-1">
+                    <MapPin size={13} className="text-gray-400" />
+                    {isRTL ? 'المدينة' : 'City'}
+                    {selectedSection !== 'forum' && ' *'}
+                  </label>
+                  <select
+                    {...register('city', { required: selectedSection !== 'forum' })}
+                    className="input text-sm">
+                    <option value="">{isRTL ? 'اختر المدينة' : 'Select city'}</option>
+                    {SAUDI_CITIES.map((c) => <option key={c} value={c}>{c}</option>)}
+                  </select>
+                  {errors.city && <p className="text-red-500 text-xs mt-0.5">{isRTL ? 'مطلوب' : 'Required'}</p>}
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    {isRTL ? 'الحي / المنطقة' : 'District / Area'}
+                  </label>
+                  <input {...register('region')} className="input text-sm"
+                    placeholder={isRTL ? 'اختياري' : 'Optional'} />
+                </div>
+              </div>
+
+              {/* Price type */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2 flex items-center gap-1">
+                  <DollarSign size={13} className="text-gray-400" />
+                  {isRTL ? 'نوع السعر' : 'Price Type'}
+                </label>
+                <div className="flex flex-wrap gap-2">
+                  {[
+                    { v: 'fixed',      ar: '💵 سعر ثابت',       en: '💵 Fixed Price'  },
+                    { v: 'negotiable', ar: '🤝 قابل للتفاوض',   en: '🤝 Negotiable'   },
+                    { v: 'on_request', ar: '📞 عند الطلب',       en: '📞 On Request'   },
+                  ].map((o) => (
+                    <label key={o.v} className="flex items-center gap-2 px-3 py-2 rounded-lg border border-gray-200
+                                                cursor-pointer hover:border-emerald text-sm
+                                                has-[:checked]:border-emerald has-[:checked]:bg-emerald/5 transition">
+                      <input type="radio" value={o.v} {...register('price_type')} className="accent-emerald" />
+                      {isRTL ? o.ar : o.en}
+                    </label>
+                  ))}
+                </div>
+              </div>
+
+              {/* Price amount */}
+              {watch('price_type') !== 'on_request' && (
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    {isRTL ? 'السعر (ر.س)' : 'Price (SAR)'}
+                  </label>
+                  <input type="number" min="0" {...register('price')} className="input text-sm" placeholder="0" />
+                </div>
+              )}
+
+              {/* Contact phone */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1 flex items-center gap-1">
+                  <Phone size={13} className="text-gray-400" />
+                  {isRTL ? 'رقم الواتساب / الجوال (اختياري)' : 'WhatsApp / Phone (optional)'}
+                </label>
+                <input
+                  type="tel"
+                  {...register('contact_phone')}
+                  className="input text-sm"
+                  dir="ltr"
+                  placeholder="+966 5X XXX XXXX"
+                />
+                <p className="text-xs text-gray-400 mt-1">
+                  {isRTL ? 'سيظهر للمشترين المهتمين للتواصل معك مباشرةً' : 'Shown to interested buyers for direct contact'}
+                </p>
+              </div>
+            </div>
+          )}
+
+          {/* ══════════ STEP 4 — Images ══════════ */}
+          {step === 4 && (
+            <div className="card p-6">
+              <h2 className="text-lg font-bold text-navy mb-1">
+                {isRTL ? 'صور الإعلان' : 'Listing Images'}
+              </h2>
+              <p className="text-sm text-gray-400 mb-5">
+                {isRTL
+                  ? 'الصورة الأولى هي الصورة الرئيسية — اسحبها لإعادة الترتيب'
+                  : 'First image is the main one — drag to reorder'}
+              </p>
+              <ImageUploader
+                images={images}
+                previews={previews}
+                onAdd={handleAddImages}
+                onRemove={handleRemoveImage}
+                onReorder={handleReorderImages}
+                isRTL={isRTL}
+                maxImages={8}
+              />
+              <p className="text-xs text-center text-gray-400 mt-4">
+                {isRTL
+                  ? 'الصور اختيارية — يمكنك نشر الإعلان بدون صور'
+                  : 'Images are optional — you can publish without them'}
+              </p>
+            </div>
+          )}
+
+          {/* ══════════ STEP 5 — Preview & Publish ══════════ */}
+          {step === 5 && (
+            <div className="space-y-6">
+              <div className="card p-5 text-center">
+                <p className="text-sm font-semibold text-gray-600 mb-1">
+                  {isRTL ? '🎉 إعلانك جاهز للنشر!' : '🎉 Your listing is ready!'}
+                </p>
+                <p className="text-xs text-gray-400">
+                  {isRTL
+                    ? 'راجع المعاينة أدناه ثم اضغط "نشر الإعلان"'
+                    : 'Review the preview below then click "Publish"'}
+                </p>
+              </div>
+
+              <ListingPreview
+                data={allValues as any}
+                previews={previews}
+                isRTL={isRTL}
+                userName={userName}
+              />
+
+              {/* M&A notice */}
+              {selectedSection === 'ma' && (
+                <div className="bg-amber-50 border border-amber-200 rounded-xl px-4 py-3 text-sm text-amber-700">
+                  ⚠️ {isRTL
+                    ? 'سيخضع هذا الإعلان للمراجعة من فريق نوافذ قبل ظهوره للعموم.'
+                    : 'This listing will be reviewed by the Nawafez team before going public.'}
+                </div>
+              )}
+
+              {/* Publish button */}
+              <button
+                type="submit"
+                disabled={isSubmitting}
+                className="btn-primary w-full py-4 text-base font-bold disabled:opacity-60"
+              >
+                {isSubmitting
+                  ? (isRTL ? '⏳ جارٍ النشر…' : '⏳ Publishing…')
+                  : (isRTL ? '🚀 نشر الإعلان' : '🚀 Publish Listing')}
+              </button>
+            </div>
+          )}
+
+          {/* ── Navigation buttons ──────────────────────────────── */}
+          <div className={`flex mt-6 gap-3 ${step > 1 ? 'justify-between' : 'justify-end'}`}>
+            {step > 1 && (
+              <button
+                type="button"
+                onClick={goBack}
+                className="btn-secondary flex items-center gap-2"
+              >
+                {isRTL ? <ArrowRight size={16} /> : <ArrowLeft size={16} />}
+                {isRTL ? 'السابق' : 'Back'}
+              </button>
             )}
 
-            {images.length < 8 && (
-              <label className="flex flex-col items-center gap-2 border-2 border-dashed border-gray-300 rounded-xl p-6 cursor-pointer hover:border-emerald transition">
-                <Upload className="text-gray-400 w-8 h-8" />
-                <span className="text-sm text-gray-500">
-                  {locale === 'ar' ? 'انقر لرفع الصور (JPG, PNG — 5MB max)' : 'Click to upload (JPG, PNG — 5MB max)'}
-                </span>
-                <input
-                  type="file"
-                  accept="image/jpeg,image/png,image/webp"
-                  multiple
-                  onChange={handleImageChange}
-                  className="hidden"
-                />
-              </label>
+            {step < 5 && (
+              <button
+                type="button"
+                onClick={goNext}
+                className="btn-primary flex items-center gap-2"
+              >
+                {isRTL ? 'التالي' : 'Next'}
+                {isRTL ? <ArrowLeft size={16} /> : <ArrowRight size={16} />}
+              </button>
             )}
           </div>
-
-          {/* Submit */}
-          <button
-            type="submit"
-            disabled={isSubmitting}
-            className="btn-primary w-full text-base py-3 disabled:opacity-60 disabled:cursor-not-allowed"
-          >
-            {isSubmitting
-              ? (locale === 'ar' ? 'جارٍ النشر…' : 'Publishing…')
-              : (locale === 'ar' ? 'نشر الإعلان' : 'Publish Listing')}
-          </button>
         </form>
-      </div>
-    </main>
+      </main>
+    </div>
   );
 }

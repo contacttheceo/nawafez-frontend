@@ -6,227 +6,345 @@ import { useLocale } from 'next-intl';
 import Link from 'next/link';
 import {
   LayoutDashboard, Plus, Eye, Bookmark, MessageSquare,
-  TrendingUp, Clock, CheckCircle, XCircle, AlertCircle, LogOut
+  TrendingUp, Clock, CheckCircle, XCircle, AlertCircle,
+  LogOut, Settings, ArrowUpRight, DollarSign, Bell, Star,
+  ChevronRight, Pencil, ExternalLink, Package
 } from 'lucide-react';
 import { userApi, authApi } from '@/lib/api';
 import { useAuthStore } from '@/store/auth';
-import { formatDistanceToNow, formatPrice } from '@/lib/utils';
+import { formatDistanceToNow } from '@/lib/utils';
+import Navbar from '@/components/Navbar';
 import toast from 'react-hot-toast';
 
-const STATUS_CONFIG: Record<string, { labelAr: string; labelEn: string; color: string; Icon: any }> = {
-  active:         { labelAr: 'نشط',          labelEn: 'Active',          color: 'text-emerald', Icon: CheckCircle  },
-  pending_review: { labelAr: 'قيد المراجعة', labelEn: 'Under Review',    color: 'text-amber-500',Icon: Clock        },
-  expired:        { labelAr: 'منتهي',         labelEn: 'Expired',         color: 'text-gray-400', Icon: XCircle     },
-  draft:          { labelAr: 'مسودة',         labelEn: 'Draft',           color: 'text-gray-400', Icon: AlertCircle  },
-  rejected:       { labelAr: 'مرفوض',         labelEn: 'Rejected',        color: 'text-red-500',  Icon: XCircle     },
+const SECTION_EMOJI: Record<string, string> = {
+  ma: '🏢', fleet: '🚛', contracts: '📄', jobs: '💼', forum: '💬',
+};
+const SECTION_LABEL: Record<string, { ar: string; en: string }> = {
+  ma:        { ar: 'استحواذ', en: 'M&A'       },
+  fleet:     { ar: 'أسطول',   en: 'Fleet'     },
+  contracts: { ar: 'عقود',    en: 'Contracts' },
+  jobs:      { ar: 'وظائف',  en: 'Jobs'      },
+  forum:     { ar: 'منتدى',  en: 'Forum'     },
+};
+
+const STATUS_CONFIG: Record<string, { labelAr: string; labelEn: string; bg: string; text: string; Icon: any }> = {
+  active:         { labelAr: 'نشط',          labelEn: 'Active',        bg: 'bg-emerald/10', text: 'text-emerald',    Icon: CheckCircle  },
+  pending_review: { labelAr: 'قيد المراجعة', labelEn: 'Under Review',  bg: 'bg-amber-50',   text: 'text-amber-600',  Icon: Clock        },
+  expired:        { labelAr: 'منتهي',         labelEn: 'Expired',       bg: 'bg-gray-100',   text: 'text-gray-500',   Icon: XCircle      },
+  draft:          { labelAr: 'مسودة',         labelEn: 'Draft',         bg: 'bg-gray-100',   text: 'text-gray-500',   Icon: AlertCircle  },
+  rejected:       { labelAr: 'مرفوض',         labelEn: 'Rejected',      bg: 'bg-red-50',     text: 'text-red-500',    Icon: XCircle      },
 };
 
 export default function DashboardPage() {
   const locale  = useLocale();
+  const isRTL   = locale === 'ar';
   const router  = useRouter();
   const { user, isAuthenticated, clearAuth } = useAuthStore();
 
-  const [stats, setStats]   = useState<any>(null);
+  const [stats,    setStats]    = useState<any>(null);
   const [listings, setListings] = useState<any[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const [loading,  setLoading]  = useState(true);
 
   useEffect(() => {
-    if (!isAuthenticated) {
-      router.push(`/${locale}/auth/login`);
-      return;
-    }
-
+    if (!isAuthenticated) { router.push(`/${locale}/auth/login`); return; }
     const load = async () => {
       try {
         const data = await userApi.getDashboardStats();
         setStats(data.stats);
         setListings(data.recent_listings ?? []);
       } catch {
-        toast.error(locale === 'ar' ? 'تعذر تحميل البيانات' : 'Failed to load data');
-      } finally {
-        setIsLoading(false);
-      }
+        toast.error(isRTL ? 'تعذر تحميل البيانات' : 'Failed to load data');
+      } finally { setLoading(false); }
     };
     load();
   }, [isAuthenticated]);
 
   const handleLogout = async () => {
-    try {
-      await authApi.logout();
-    } catch {}
+    try { await authApi.logout(); } catch {}
     clearAuth();
     router.push(`/${locale}`);
-    toast.success(locale === 'ar' ? 'تم تسجيل الخروج' : 'Logged out');
+    toast.success(isRTL ? 'تم تسجيل الخروج' : 'Logged out');
   };
-
-  const displayName = locale === 'ar' ? user?.name_ar : user?.name_en;
 
   if (!isAuthenticated) return null;
 
+  const displayName = isRTL ? user?.name_ar : user?.name_en;
+  const pendingCount = listings.filter(l => l.status === 'pending_review').length;
+  const rejectedCount = listings.filter(l => l.status === 'rejected').length;
+
+  const STATS = [
+    {
+      icon: TrendingUp, value: stats?.total_listings  ?? 0,
+      labelAr: 'إجمالي الإعلانات', labelEn: 'Total Listings',
+      bg: 'from-navy to-navy/80', text: 'text-white', sub: 'text-white/70',
+      href: `/${locale}/listings?mine=1`,
+    },
+    {
+      icon: CheckCircle, value: stats?.active_listings ?? 0,
+      labelAr: 'إعلانات نشطة', labelEn: 'Active Listings',
+      bg: 'from-emerald to-emerald/80', text: 'text-white', sub: 'text-white/70',
+      href: `/${locale}/listings?mine=1&status=active`,
+    },
+    {
+      icon: Eye, value: stats?.total_views ?? 0,
+      labelAr: 'إجمالي المشاهدات', labelEn: 'Total Views',
+      bg: 'from-blue-500 to-blue-400', text: 'text-white', sub: 'text-white/70',
+      href: null,
+    },
+    {
+      icon: DollarSign, value: stats?.total_bids ?? 0,
+      labelAr: 'عروض الأسعار', labelEn: 'Bids Received',
+      bg: 'from-purple-500 to-purple-400', text: 'text-white', sub: 'text-white/70',
+      href: null,
+    },
+    {
+      icon: Bell, value: stats?.unread_messages ?? 0,
+      labelAr: 'رسائل جديدة', labelEn: 'Unread Messages',
+      bg: 'from-amber-500 to-amber-400', text: 'text-white', sub: 'text-white/70',
+      href: `/${locale}/messages`,
+    },
+    {
+      icon: Bookmark, value: stats?.bookmarks_count ?? 0,
+      labelAr: 'المحفوظات', labelEn: 'Saved',
+      bg: 'from-pink-500 to-pink-400', text: 'text-white', sub: 'text-white/70',
+      href: `/${locale}/bookmarks`,
+    },
+  ];
+
   return (
-    <main className="min-h-screen bg-gray-50">
-      <div className="max-w-6xl mx-auto px-4 py-10">
-        {/* Header */}
-        <div className="flex items-center justify-between mb-8">
+    <div className="min-h-screen bg-gray-50">
+      <Navbar />
+
+      {/* Hero banner */}
+      <div className="bg-gradient-to-r from-navy to-navy/90 text-white">
+        <div className="max-w-6xl mx-auto px-4 py-8 flex items-center justify-between flex-wrap gap-4">
           <div>
-            <h1 className="text-2xl font-bold text-navy flex items-center gap-2">
-              <LayoutDashboard size={24} />
-              {locale === 'ar' ? 'لوحة التحكم' : 'Dashboard'}
+            <div className="flex items-center gap-2 mb-1">
+              <LayoutDashboard size={20} className="text-emerald" />
+              <span className="text-white/60 text-sm">{isRTL ? 'لوحة التحكم' : 'Dashboard'}</span>
+            </div>
+            <h1 className="text-2xl font-black">
+              {isRTL ? `مرحباً، ${displayName} 👋` : `Welcome back, ${displayName} 👋`}
             </h1>
-            <p className="text-gray-500 text-sm mt-1">
-              {locale === 'ar' ? `مرحباً، ${displayName}` : `Welcome back, ${displayName}`}
+            <p className="text-white/50 text-sm mt-1">
+              {isRTL ? 'هذه نظرة عامة على نشاطك في نوافذ' : "Here's an overview of your activity on Nawafez"}
             </p>
           </div>
-          <div className="flex items-center gap-3">
-            <Link
-              href={`/${locale}/listings/create`}
-              className="btn-primary flex items-center gap-2 text-sm"
-            >
+          <div className="flex items-center gap-2">
+            <Link href={`/${locale}/listings/create`}
+              className="bg-emerald hover:bg-emerald/90 text-white px-4 py-2.5 rounded-xl
+                         text-sm font-semibold flex items-center gap-2 transition">
               <Plus size={16} />
-              {locale === 'ar' ? 'إعلان جديد' : 'New Listing'}
+              {isRTL ? 'إعلان جديد' : 'New Listing'}
             </Link>
-            <button
-              onClick={handleLogout}
-              className="flex items-center gap-2 px-3 py-2 rounded-lg border border-gray-300 text-gray-600 hover:text-red-500 hover:border-red-300 transition text-sm"
-            >
-              <LogOut size={16} />
-              {locale === 'ar' ? 'خروج' : 'Logout'}
+            <button onClick={handleLogout}
+              className="flex items-center gap-1.5 px-3 py-2.5 rounded-xl border border-white/20
+                         text-white/70 hover:text-white hover:border-white/40 transition text-sm">
+              <LogOut size={15} />
+              {isRTL ? 'خروج' : 'Logout'}
             </button>
           </div>
         </div>
+      </div>
 
-        {/* Stats cards */}
-        {isLoading ? (
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 mb-8">
-            {Array.from({ length: 6 }).map((_, i) => (
-              <div key={i} className="card animate-pulse">
-                <div className="skeleton h-8 w-8 rounded-lg mb-3" />
-                <div className="skeleton h-7 w-1/2 mb-1" />
-                <div className="skeleton h-4 w-3/4" />
-              </div>
-            ))}
-          </div>
-        ) : stats ? (
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 mb-8">
-            {[
-              { icon: TrendingUp,    value: stats.total_listings,  labelAr: 'إجمالي الإعلانات', labelEn: 'Total Listings',   color: 'text-navy' },
-              { icon: CheckCircle,   value: stats.active_listings, labelAr: 'إعلانات نشطة',      labelEn: 'Active',           color: 'text-emerald' },
-              { icon: Eye,           value: stats.total_views,     labelAr: 'مشاهدات',           labelEn: 'Views',            color: 'text-blue-500' },
-              { icon: MessageSquare, value: stats.total_bids,      labelAr: 'عروض أسعار',        labelEn: 'Bids',             color: 'text-purple-500' },
-              { icon: MessageSquare, value: stats.unread_messages, labelAr: 'رسائل جديدة',       labelEn: 'Unread Messages',  color: 'text-amber-500' },
-              { icon: Bookmark,      value: stats.bookmarks_count, labelAr: 'المحفوظات',         labelEn: 'Bookmarks',        color: 'text-pink-500' },
-            ].map(({ icon: Icon, value, labelAr, labelEn, color }, i) => (
-              <div key={i} className="card text-center">
-                <div className={`flex justify-center mb-2 ${color}`}>
-                  <Icon size={22} />
-                </div>
-                <p className="text-2xl font-bold text-navy">{value ?? 0}</p>
-                <p className="text-xs text-gray-500 mt-1">{locale === 'ar' ? labelAr : labelEn}</p>
-              </div>
-            ))}
-          </div>
-        ) : null}
+      <div className="max-w-6xl mx-auto px-4 py-8 space-y-8">
 
-        {/* Recent listings */}
-        <div className="card">
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="font-semibold text-navy">
-              {locale === 'ar' ? 'أحدث إعلاناتك' : 'Your Recent Listings'}
-            </h2>
-            <Link
-              href={`/${locale}/listings?mine=1`}
-              className="text-sm text-emerald hover:underline"
-            >
-              {locale === 'ar' ? 'عرض الكل' : 'View all'}
-            </Link>
-          </div>
-
-          {isLoading ? (
-            <div className="space-y-3">
-              {Array.from({ length: 3 }).map((_, i) => (
-                <div key={i} className="flex gap-3 animate-pulse">
-                  <div className="skeleton h-14 w-14 rounded-lg" />
-                  <div className="flex-1 space-y-2">
-                    <div className="skeleton h-4 w-3/4" />
-                    <div className="skeleton h-3 w-1/2" />
-                  </div>
-                </div>
-              ))}
-            </div>
-          ) : listings.length === 0 ? (
-            <div className="text-center py-12">
-              <p className="text-gray-400 text-sm mb-4">
-                {locale === 'ar' ? 'لا توجد إعلانات بعد' : 'No listings yet'}
-              </p>
-              <Link href={`/${locale}/listings/create`} className="btn-primary text-sm">
-                {locale === 'ar' ? 'انشر أول إعلان' : 'Post your first listing'}
-              </Link>
-            </div>
-          ) : (
-            <div className="divide-y">
-              {listings.map((listing: any) => {
-                const cfg    = STATUS_CONFIG[listing.status] ?? STATUS_CONFIG.draft;
-                const title  = locale === 'ar' ? listing.title_ar : (listing.title_en ?? listing.title_ar);
-
+        {/* ── Stats ── */}
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4">
+          {loading
+            ? Array.from({ length: 6 }).map((_, i) => (
+                <div key={i} className="rounded-2xl h-28 animate-pulse bg-gray-200" />
+              ))
+            : STATS.map(({ icon: Icon, value, labelAr, labelEn, bg, text, sub, href }, i) => {
+                const Wrapper = href ? Link : 'div';
                 return (
-                  <div key={listing.id} className="flex items-center gap-4 py-3">
-                    <div className="w-12 h-12 rounded-lg bg-navy/10 flex items-center justify-center text-navy font-bold text-lg shrink-0">
-                      {title?.[0] ?? '#'}
+                  <Wrapper key={i} href={href ?? ''} className={`rounded-2xl p-4 bg-gradient-to-br ${bg}
+                             flex flex-col justify-between min-h-[7rem] shadow-sm
+                             ${href ? 'hover:scale-[1.02] transition-transform cursor-pointer' : ''}`}>
+                    <div className={`${text} opacity-80`}><Icon size={20} /></div>
+                    <div>
+                      <p className={`text-3xl font-black ${text}`}>{value}</p>
+                      <p className={`text-[11px] mt-0.5 ${sub}`}>{isRTL ? labelAr : labelEn}</p>
                     </div>
-                    <div className="flex-1 min-w-0">
-                      <Link
-                        href={`/${locale}/listings/${listing.id}`}
-                        className="font-medium text-gray-800 hover:text-emerald truncate block"
-                      >
-                        {title}
-                      </Link>
-                      <p className="text-xs text-gray-400">
-                        {formatDistanceToNow(listing.created_at, locale)}
-                        {' · '}
-                        <Eye size={10} className="inline" /> {listing.views_count ?? 0}
-                      </p>
-                    </div>
-                    <div className="flex items-center gap-1.5 shrink-0">
-                      <cfg.Icon size={14} className={cfg.color} />
-                      <span className={`text-xs font-medium ${cfg.color}`}>
-                        {locale === 'ar' ? cfg.labelAr : cfg.labelEn}
-                      </span>
-                    </div>
-                    {listing.expires_at && (
-                      <p className="text-xs text-gray-400 shrink-0 hidden sm:block">
-                        {locale === 'ar' ? 'ينتهي' : 'Expires'}{' '}
-                        {formatDistanceToNow(listing.expires_at, locale)}
-                      </p>
-                    )}
-                  </div>
+                  </Wrapper>
                 );
-              })}
-            </div>
-          )}
+              })
+          }
         </div>
 
-        {/* Quick links */}
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mt-6">
-          {[
-            { href: `/${locale}/bookmarks`, labelAr: 'إعلاناتي المحفوظة', labelEn: 'My Bookmarks', icon: Bookmark    },
-            { href: `/${locale}/messages`,  labelAr: 'رسائلي',            labelEn: 'My Messages',  icon: MessageSquare },
-            { href: `/${locale}/profile`,   labelAr: 'إعدادات الحساب',    labelEn: 'Account Settings', icon: AlertCircle },
-          ].map(({ href, labelAr, labelEn, icon: Icon }) => (
-            <Link
-              key={href}
-              href={href}
-              className="card flex items-center gap-3 hover:border-emerald hover:shadow-md transition group"
-            >
-              <div className="w-10 h-10 rounded-lg bg-emerald/10 flex items-center justify-center text-emerald group-hover:bg-emerald group-hover:text-white transition">
-                <Icon size={18} />
+        {/* ── Alerts ── */}
+        {!loading && pendingCount > 0 && (
+          <div className="bg-amber-50 border border-amber-200 rounded-2xl p-4 flex gap-3 items-start">
+            <Clock size={18} className="text-amber-500 mt-0.5 shrink-0" />
+            <div>
+              <p className="font-semibold text-amber-800 text-sm">
+                {isRTL
+                  ? `${pendingCount} إعلان قيد المراجعة`
+                  : `${pendingCount} listing${pendingCount > 1 ? 's' : ''} under review`}
+              </p>
+              <p className="text-amber-700 text-xs mt-0.5">
+                {isRTL
+                  ? 'سيتم مراجعة إعلاناتك من فريق نوافذ خلال 24 ساعة. ستظهر في صفحة الإعلانات بعد القبول.'
+                  : 'Your listings will be reviewed by the Nawafez team within 24 hours and published upon approval.'}
+              </p>
+            </div>
+          </div>
+        )}
+        {!loading && rejectedCount > 0 && (
+          <div className="bg-red-50 border border-red-200 rounded-2xl p-4 flex gap-3 items-start">
+            <XCircle size={18} className="text-red-500 mt-0.5 shrink-0" />
+            <p className="text-red-700 text-sm">
+              {isRTL
+                ? `${rejectedCount} إعلان مرفوض. راجع سبب الرفض وأعد نشره.`
+                : `${rejectedCount} listing${rejectedCount > 1 ? 's' : ''} rejected. Please review the reason and repost.`}
+            </p>
+          </div>
+        )}
+
+        {/* ── Listings + Quick Links ── */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+
+          {/* Recent listings (2/3 width) */}
+          <div className="lg:col-span-2">
+            <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+              <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100">
+                <h2 className="font-bold text-navy flex items-center gap-2">
+                  <Package size={16} className="text-emerald" />
+                  {isRTL ? 'إعلاناتك الأخيرة' : 'Your Recent Listings'}
+                </h2>
+                <Link href={`/${locale}/listings?mine=1`}
+                  className="text-xs text-emerald hover:underline flex items-center gap-1">
+                  {isRTL ? 'عرض الكل' : 'View all'}
+                  <ChevronRight size={12} className={isRTL ? 'rotate-180' : ''} />
+                </Link>
               </div>
-              <span className="font-medium text-gray-700 text-sm">
-                {locale === 'ar' ? labelAr : labelEn}
-              </span>
-            </Link>
-          ))}
+
+              {loading ? (
+                <div className="divide-y">
+                  {Array.from({ length: 3 }).map((_, i) => (
+                    <div key={i} className="flex gap-3 px-5 py-4 animate-pulse">
+                      <div className="w-12 h-12 bg-gray-200 rounded-xl shrink-0" />
+                      <div className="flex-1 space-y-2">
+                        <div className="h-4 bg-gray-200 rounded w-3/4" />
+                        <div className="h-3 bg-gray-200 rounded w-1/2" />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : listings.length === 0 ? (
+                <div className="text-center py-16 px-4">
+                  <div className="text-5xl mb-3">📋</div>
+                  <p className="text-gray-500 text-sm mb-4">
+                    {isRTL ? 'لا توجد إعلانات بعد' : 'No listings yet'}
+                  </p>
+                  <Link href={`/${locale}/listings/create`} className="btn-primary text-sm">
+                    {isRTL ? '+ انشر أول إعلان' : '+ Post your first listing'}
+                  </Link>
+                </div>
+              ) : (
+                <div className="divide-y divide-gray-50">
+                  {listings.map((listing: any) => {
+                    const cfg   = STATUS_CONFIG[listing.status] ?? STATUS_CONFIG.draft;
+                    const title = isRTL ? listing.title_ar : (listing.title_en ?? listing.title_ar);
+                    const sec   = listing.section ?? '';
+                    const price = listing.price
+                      ? `${Number(listing.price).toLocaleString(isRTL ? 'ar-SA' : 'en-US')} ${isRTL ? 'ر.س' : 'SAR'}`
+                      : null;
+
+                    return (
+                      <div key={listing.id} className="flex items-center gap-3 px-5 py-3.5 hover:bg-gray-50 transition group">
+                        {/* Section icon */}
+                        <div className="w-11 h-11 rounded-xl bg-navy/5 flex items-center justify-center text-2xl shrink-0">
+                          {SECTION_EMOJI[sec] ?? '📋'}
+                        </div>
+
+                        {/* Info */}
+                        <div className="flex-1 min-w-0">
+                          <p className="font-semibold text-gray-800 text-sm truncate">{title}</p>
+                          <div className="flex items-center gap-2 mt-0.5 flex-wrap">
+                            {SECTION_LABEL[sec] && (
+                              <span className="text-[10px] text-gray-400">
+                                {isRTL ? SECTION_LABEL[sec].ar : SECTION_LABEL[sec].en}
+                              </span>
+                            )}
+                            {price && <span className="text-[10px] font-bold text-navy">· {price}</span>}
+                            <span className="text-[10px] text-gray-400">
+                              · <Eye size={9} className="inline" /> {listing.views_count ?? 0}
+                            </span>
+                          </div>
+                        </div>
+
+                        {/* Status badge */}
+                        <span className={`shrink-0 flex items-center gap-1 text-[11px] font-semibold
+                                          px-2.5 py-1 rounded-full ${cfg.bg} ${cfg.text}`}>
+                          <cfg.Icon size={11} />
+                          {isRTL ? cfg.labelAr : cfg.labelEn}
+                        </span>
+
+                        {/* Actions */}
+                        <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition shrink-0">
+                          <Link href={`/${locale}/listings/${listing.id}`}
+                            className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-400 hover:text-gray-700"
+                            title={isRTL ? 'عرض' : 'View'}>
+                            <ExternalLink size={14} />
+                          </Link>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Quick links (1/3) */}
+          <div className="space-y-4">
+            <h2 className="font-bold text-navy text-sm px-1">
+              {isRTL ? 'روابط سريعة' : 'Quick Links'}
+            </h2>
+
+            {[
+              { href: `/${locale}/listings/create`, labelAr: 'إضافة إعلان جديد',    labelEn: 'Post New Listing',    icon: Plus,         color: 'bg-emerald/10 text-emerald',  hover: 'group-hover:bg-emerald group-hover:text-white' },
+              { href: `/${locale}/listings`,        labelAr: 'تصفح الإعلانات',       labelEn: 'Browse Listings',     icon: Package,      color: 'bg-navy/10 text-navy',        hover: 'group-hover:bg-navy group-hover:text-white'    },
+              { href: `/${locale}/messages`,        labelAr: 'رسائلي',               labelEn: 'My Messages',         icon: MessageSquare,color: 'bg-blue-50 text-blue-500',    hover: 'group-hover:bg-blue-500 group-hover:text-white'},
+              { href: `/${locale}/bookmarks`,       labelAr: 'إعلاناتي المحفوظة',    labelEn: 'Saved Listings',      icon: Bookmark,     color: 'bg-pink-50 text-pink-500',    hover: 'group-hover:bg-pink-500 group-hover:text-white'},
+              { href: `/${locale}/profile`,         labelAr: 'إعدادات الحساب',       labelEn: 'Account Settings',    icon: Settings,     color: 'bg-gray-100 text-gray-600',   hover: 'group-hover:bg-gray-600 group-hover:text-white'},
+            ].map(({ href, labelAr, labelEn, icon: Icon, color, hover }) => (
+              <Link key={href} href={href}
+                className="bg-white border border-gray-100 rounded-2xl px-4 py-3.5 flex items-center gap-3
+                           hover:border-emerald hover:shadow-sm transition group">
+                <div className={`w-9 h-9 rounded-xl flex items-center justify-center transition ${color} ${hover}`}>
+                  <Icon size={16} />
+                </div>
+                <span className="text-sm font-medium text-gray-700 group-hover:text-gray-900">
+                  {isRTL ? labelAr : labelEn}
+                </span>
+                <ChevronRight size={14} className={`ms-auto text-gray-300 group-hover:text-gray-400 ${isRTL ? 'rotate-180' : ''}`} />
+              </Link>
+            ))}
+
+            {/* Account info card */}
+            <div className="bg-gradient-to-br from-navy to-navy/80 rounded-2xl p-4 text-white mt-2">
+              <div className="flex items-center gap-3 mb-3">
+                <div className="w-10 h-10 rounded-full bg-white/20 flex items-center justify-center font-bold text-base">
+                  {displayName?.charAt(0) ?? '?'}
+                </div>
+                <div>
+                  <p className="font-bold text-sm">{displayName}</p>
+                  <p className="text-white/60 text-xs capitalize">{user?.role}</p>
+                </div>
+              </div>
+              {user?.role !== 'business' && (
+                <Link href={`/${locale}/profile`}
+                  className="text-[11px] text-white/70 hover:text-white flex items-center gap-1 transition">
+                  <Star size={11} />
+                  {isRTL ? 'ارفع حسابك إلى Business ←' : 'Upgrade to Business →'}
+                </Link>
+              )}
+            </div>
+          </div>
         </div>
       </div>
-    </main>
+    </div>
   );
 }
