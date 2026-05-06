@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, useRef, useCallback, Suspense } from 'react';
+import { useEffect, useState, useRef, useCallback, Suspense, useMemo } from 'react';
 import { useLocale } from 'next-intl';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
@@ -51,8 +51,10 @@ function MessagesInner() {
   const [newMessage,    setNewMessage]    = useState('');
   const [sending,       setSending]       = useState(false);
 
-  const bottomRef  = useRef<HTMLDivElement>(null);
-  const inputRef   = useRef<HTMLInputElement>(null);
+  const bottomRef    = useRef<HTMLDivElement>(null);
+  const inputRef     = useRef<HTMLInputElement>(null);
+  const chatAreaRef  = useRef<HTMLDivElement>(null);
+  const sendingRef   = useRef(false);   // avoid polling overlap during send
 
   /* ── Redirect if not logged in ── */
   useEffect(() => {
@@ -109,10 +111,50 @@ function MessagesInner() {
       .catch(() => {});
   }, [loadingInbox, threads]);
 
-  /* ── Auto-scroll to bottom when messages change ── */
+  /* ── Smart scroll — only if near bottom ── */
+  const scrollToBottom = useCallback((force = false) => {
+    const area = chatAreaRef.current;
+    if (!area) return;
+    const nearBottom = area.scrollHeight - area.scrollTop - area.clientHeight < 140;
+    if (force || nearBottom) {
+      bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
+    }
+  }, []);
+
+  useEffect(() => { scrollToBottom(); }, [messages]);
+
+  /* ── Poll active thread every 5 s ── */
   useEffect(() => {
-    bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [messages]);
+    if (!activeThread) return;
+    const { id: otherId } = activeThread.other_user;
+    const { id: lstId }   = activeThread.listing;
+
+    const tid = setInterval(async () => {
+      if (sendingRef.current) return;          // skip while user is sending
+      try {
+        const res: any = await messagesApi.getThread(otherId, lstId);
+        const incoming: Message[] = res.data ?? [];
+        setMessages(prev => {
+          if (incoming.length === prev.length) return prev;  // nothing new
+          return incoming;
+        });
+      } catch {}
+    }, 5000);
+
+    return () => clearInterval(tid);
+  }, [activeThread?.other_user.id, activeThread?.listing.id]);
+
+  /* ── Poll inbox every 15 s (unread badges) ── */
+  useEffect(() => {
+    if (!isAuthenticated) return;
+    const tid = setInterval(async () => {
+      try {
+        const res: any = await messagesApi.getInbox();
+        setThreads(res.data ?? []);
+      } catch {}
+    }, 15000);
+    return () => clearInterval(tid);
+  }, [isAuthenticated]);
 
   /* ── Open a thread ── */
   const openThread = useCallback(async (thread: Thread) => {
@@ -134,6 +176,7 @@ function MessagesInner() {
   const sendMessage = async () => {
     if (!activeThread || !newMessage.trim() || sending) return;
     setSending(true);
+    sendingRef.current = true;
     const body = newMessage.trim();
     setNewMessage('');
 
@@ -160,12 +203,14 @@ function MessagesInner() {
       ]);
       setMessages(threadRes.data ?? []);
       setThreads(inboxRes.data ?? []);
+      scrollToBottom(true);
     } catch {
       toast.error(isRTL ? 'فشل إرسال الرسالة' : 'Failed to send');
       setMessages(prev => prev.filter(m => m.id !== optimistic.id));
       setNewMessage(body);
     } finally {
       setSending(false);
+      sendingRef.current = false;
       inputRef.current?.focus();
     }
   };
@@ -296,9 +341,14 @@ function MessagesInner() {
                   </div>
 
                   <div className="flex-1 min-w-0">
-                    <p className="font-bold text-navy text-sm">
-                      {userName(activeThread.other_user)}
-                    </p>
+                    <div className="flex items-center gap-1.5">
+                      <p className="font-bold text-navy text-sm">
+                        {userName(activeThread.other_user)}
+                      </p>
+                      {/* Live polling indicator */}
+                      <span className="w-1.5 h-1.5 rounded-full bg-emerald animate-pulse"
+                            title={isRTL ? 'تحديث تلقائي' : 'Live'} />
+                    </div>
                     <Link
                       href={`/${locale}/listings/${activeThread.listing.id}`}
                       className="text-xs text-emerald hover:underline truncate block"
@@ -310,7 +360,7 @@ function MessagesInner() {
                 </div>
 
                 {/* Messages area */}
-                <div className="flex-1 overflow-y-auto p-4 space-y-2 bg-gray-50">
+                <div ref={chatAreaRef} className="flex-1 overflow-y-auto p-4 space-y-2 bg-gray-50">
                   {loadingThread ? (
                     <div className="flex justify-center pt-10">
                       <Loader2 className="animate-spin text-navy" size={24} />
