@@ -5,13 +5,16 @@ import { useLocale } from 'next-intl';
 import {
   Search, X, Plus, MapPin, Star, Loader2,
   LayoutGrid, LayoutList, SlidersHorizontal,
-  ChevronDown, ChevronRight, ArrowUpDown, Truck
+  ChevronDown, ChevronRight, ArrowUpDown, Truck,
+  Bookmark, Trash2,
 } from 'lucide-react';
 import Link from 'next/link';
-import { listingsApi } from '@/lib/api';
+import { listingsApi, interactionsApi } from '@/lib/api';
+import { useAuthStore } from '@/store/auth';
 import { ListingCard } from '@/components/ui/ListingCard';
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
+import toast from 'react-hot-toast';
 import type { Listing } from '@/types';
 
 /* ─── Constants ─────────────────────────────────────────── */
@@ -47,10 +50,17 @@ const SAUDI_CITIES = [
 export default function ListingsPage() {
   const locale  = useLocale();
   const isRTL   = locale === 'ar';
+  const { isAuthenticated } = useAuthStore();
 
   /* view */
   const [viewMode,          setViewMode]          = useState<'grid'|'list'>('grid');
   const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false);
+
+  /* saved searches */
+  const [savedSearches,   setSavedSearches]   = useState<any[]>([]);
+  const [savingSearch,    setSavingSearch]    = useState(false);
+  const [showSaveInput,   setShowSaveInput]   = useState(false);
+  const [saveSearchName,  setSaveSearchName]  = useState('');
 
   /* data */
   const [listings,    setListings]    = useState<Listing[]>([]);
@@ -105,6 +115,54 @@ export default function ListingsPage() {
 
   useEffect(() => { setPage(1); fetchListings(1, false); }, [fetchListings]);
 
+  /* ── Load saved searches ── */
+  useEffect(() => {
+    if (!isAuthenticated) return;
+    interactionsApi.getSavedSearches()
+      .then((res: any) => setSavedSearches(res.data ?? []))
+      .catch(() => {});
+  }, [isAuthenticated]);
+
+  /* ── Save current search ── */
+  const handleSaveSearch = async () => {
+    if (!saveSearchName.trim()) return;
+    setSavingSearch(true);
+    try {
+      const res: any = await interactionsApi.saveSearch({
+        name: saveSearchName.trim(),
+        filters: { section, city, search, priceMin, priceMax, sort, listingTypes },
+      });
+      setSavedSearches(prev => [res.data, ...prev]);
+      setSaveSearchName('');
+      setShowSaveInput(false);
+      toast.success(isRTL ? 'تم حفظ البحث ✓' : 'Search saved ✓');
+    } catch {
+      toast.error(isRTL ? 'فشل الحفظ' : 'Failed to save');
+    } finally {
+      setSavingSearch(false);
+    }
+  };
+
+  /* ── Delete saved search ── */
+  const handleDeleteSaved = async (id: number) => {
+    try {
+      await interactionsApi.deleteSavedSearch(id);
+      setSavedSearches(prev => prev.filter((s: any) => s.id !== id));
+    } catch {}
+  };
+
+  /* ── Apply a saved search ── */
+  const applySearch = (filters: any) => {
+    setSection(filters.section ?? '');
+    setCity(filters.city ?? '');
+    setSearch(filters.search ?? '');
+    setPriceMin(filters.priceMin ?? '');
+    setPriceMax(filters.priceMax ?? '');
+    setSort(filters.sort ?? 'newest');
+    setListingTypes(filters.listingTypes ?? []);
+    setMobileFiltersOpen(false);
+  };
+
   const handleSearchChange = (val: string) => {
     setSearch(val);
     if (searchTimer.current) clearTimeout(searchTimer.current);
@@ -134,6 +192,34 @@ export default function ListingsPage() {
   /* ── Sidebar component (shared desktop + mobile drawer) ── */
   const SidebarContent = () => (
     <div className="space-y-6">
+
+      {/* ── Saved Searches (logged-in users only) ── */}
+      {isAuthenticated && savedSearches.length > 0 && (
+        <div>
+          <p className="text-[11px] font-bold text-gray-400 uppercase tracking-widest mb-3 flex items-center gap-1.5">
+            <Bookmark size={11} />
+            {isRTL ? 'بحوثي المحفوظة' : 'Saved Searches'}
+          </p>
+          <div className="space-y-1">
+            {savedSearches.map((s: any) => (
+              <div key={s.id}
+                className="flex items-center gap-1.5 group px-3 py-2 rounded-xl hover:bg-emerald/5 transition">
+                <button
+                  onClick={() => applySearch(s.data?.filters ?? {})}
+                  className="flex-1 text-start text-sm text-gray-700 hover:text-navy truncate font-medium">
+                  🔍 {s.data?.name}
+                </button>
+                <button
+                  onClick={() => handleDeleteSaved(s.id)}
+                  className="opacity-0 group-hover:opacity-100 text-gray-300 hover:text-red-400 transition p-0.5 rounded">
+                  <Trash2 size={12} />
+                </button>
+              </div>
+            ))}
+          </div>
+          <hr className="border-gray-100 mt-4" />
+        </div>
+      )}
 
       {/* Sections */}
       <div>
@@ -235,6 +321,41 @@ export default function ListingsPage() {
                      hover:bg-red-50 rounded-xl transition font-medium">
           {isRTL ? `مسح الفلاتر (${activeFilterCount})` : `Clear Filters (${activeFilterCount})`}
         </button>
+      )}
+
+      {/* Save Search — only for logged-in users with active filters */}
+      {isAuthenticated && activeFilterCount > 0 && (
+        <div>
+          {showSaveInput ? (
+            <div className="flex gap-1.5">
+              <input
+                autoFocus
+                value={saveSearchName}
+                onChange={e => setSaveSearchName(e.target.value)}
+                onKeyDown={e => { if (e.key === 'Enter') handleSaveSearch(); if (e.key === 'Escape') setShowSaveInput(false); }}
+                className="input text-sm py-2 flex-1"
+                placeholder={isRTL ? 'اسم البحث…' : 'Search name…'}
+                maxLength={60}
+              />
+              <button onClick={handleSaveSearch} disabled={savingSearch || !saveSearchName.trim()}
+                className="px-3 py-2 bg-emerald text-white text-xs rounded-xl font-bold
+                           disabled:opacity-40 hover:bg-emerald-dark transition">
+                {savingSearch ? '…' : (isRTL ? 'حفظ' : 'Save')}
+              </button>
+              <button onClick={() => setShowSaveInput(false)}
+                className="px-2 py-2 text-gray-400 hover:text-gray-600 transition">
+                <X size={14} />
+              </button>
+            </div>
+          ) : (
+            <button onClick={() => setShowSaveInput(true)}
+              className="w-full py-2 text-sm text-emerald border border-emerald/30
+                         hover:bg-emerald/5 rounded-xl transition font-medium flex items-center justify-center gap-1.5">
+              <Bookmark size={13} />
+              {isRTL ? 'حفظ هذا البحث' : 'Save this search'}
+            </button>
+          )}
+        </div>
       )}
     </div>
   );
