@@ -88,12 +88,31 @@ ${typeText}
     const geminiData = await geminiRes.json();
     const text: string = geminiData?.candidates?.[0]?.content?.parts?.[0]?.text ?? '';
 
-    // Extract JSON block
-    const match = text.match(/\{[\s\S]*?"title_ar"[\s\S]*?\}/);
-    const data  = match ? JSON.parse(match[0]) : null;
+    // Extract JSON — handle markdown code blocks and raw JSON
+    let data: Record<string, string> | null = null;
+
+    // 1. Strip ```json ... ``` or ``` ... ``` wrappers
+    const stripped = text
+      .replace(/^```(?:json)?\s*/i, '')
+      .replace(/\s*```\s*$/, '')
+      .trim();
+
+    // 2. Try direct parse first
+    try { data = JSON.parse(stripped); } catch { /* continue */ }
+
+    // 3. Fallback: extract first {...} block that contains title_ar
+    if (!data) {
+      const match = text.match(/\{[\s\S]*"title_ar"[\s\S]*\}/);
+      if (match) {
+        try { data = JSON.parse(match[0]); } catch { /* continue */ }
+      }
+    }
 
     if (!data || !data.title_ar || !data.description_ar) {
-      return NextResponse.json({ message: 'فشل تحليل رد الذكاء الاصطناعي، حاول مرة أخرى.' }, { status: 500 });
+      return NextResponse.json(
+        { message: `فشل تحليل رد الذكاء الاصطناعي. الرد: ${text.slice(0, 200)}` },
+        { status: 500 }
+      );
     }
 
     return NextResponse.json({ data });
