@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { useLocale } from 'next-intl';
 import { useRouter } from 'next/navigation';
+import { Loader2 as Loader2Icon } from 'lucide-react';
 import Link from 'next/link';
 import {
   User, Lock, Shield, Trash2, Upload, CheckCircle,
@@ -11,6 +12,7 @@ import {
 } from 'lucide-react';
 import { userApi, authApi } from '@/lib/api';
 import { useAuthStore } from '@/store/auth';
+import { useAuthGuard } from '@/hooks/useAuthGuard';
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
 import toast from 'react-hot-toast';
@@ -33,7 +35,8 @@ export default function ProfilePage() {
   const locale  = useLocale();
   const router  = useRouter();
   const isRTL   = locale === 'ar';
-  const { user, isAuthenticated, setUser, clearAuth } = useAuthStore();
+  const { user, setUser, clearAuth } = useAuthStore();
+  const { isAuthenticated, isReady } = useAuthGuard();
 
   const [activeTab, setActiveTab]     = useState<Tab>('profile');
   const [showPass, setShowPass]       = useState(false);
@@ -59,10 +62,7 @@ export default function ProfilePage() {
 
   const passwordForm = useForm<PasswordForm>();
 
-  // Redirect if not logged in
-  useEffect(() => {
-    if (!isAuthenticated) router.push(`/${locale}/auth/login`);
-  }, [isAuthenticated]);
+  // useAuthGuard handles redirect — no manual useEffect needed
 
   // Prefill form when user loads
   useEffect(() => {
@@ -179,6 +179,12 @@ export default function ProfilePage() {
       setDeletingAccount(false);
     }
   };
+
+  if (!isReady) return (
+    <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+      <Loader2Icon className="animate-spin text-navy" size={32} />
+    </div>
+  );
 
   if (!isAuthenticated || !user) return null;
 
