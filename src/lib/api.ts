@@ -97,6 +97,15 @@ export const listingsApi = {
   delete: (id: number): Promise<{ message: string }> =>
     api.delete(`/listings/${id}`),
 
+  pause: (id: number): Promise<{ message: string; status: string }> =>
+    api.patch(`/listings/${id}/pause`),
+
+  unpause: (id: number): Promise<{ message: string; status: string }> =>
+    api.patch(`/listings/${id}/unpause`),
+
+  renew: (id: number): Promise<{ message: string; expires_at: string; status: string }> =>
+    api.patch(`/listings/${id}/renew`),
+
   getFeatured: (): Promise<{ data: any[] }> =>
     api.get('/listings/featured'),
 
