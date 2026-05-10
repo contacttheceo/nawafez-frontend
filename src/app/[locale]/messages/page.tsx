@@ -56,10 +56,11 @@ function MessagesInner() {
   const [newMessage,    setNewMessage]    = useState('');
   const [sending,       setSending]       = useState(false);
 
-  const bottomRef   = useRef<HTMLDivElement>(null);
-  const inputRef    = useRef<HTMLInputElement>(null);
-  const chatAreaRef = useRef<HTMLDivElement>(null);
-  const sendingRef  = useRef(false);
+  const bottomRef      = useRef<HTMLDivElement>(null);
+  const inputRef       = useRef<HTMLInputElement>(null);
+  const chatAreaRef    = useRef<HTMLDivElement>(null);
+  const sendingRef     = useRef(false);
+  const hasAutoOpened  = useRef(false);  // prevents re-running auto-open on every threads update
 
   /* ── Smart scroll ── */
   const scrollToBottom = useCallback((force = false) => {
@@ -108,28 +109,40 @@ function MessagesInner() {
       .finally(() => setLoadingInbox(false));
   }, [isAuthenticated]);
 
-  /* ── Auto-open thread from URL params ── */
+  /* ── Auto-open thread from URL params — runs once only ── */
   useEffect(() => {
-    if (loadingInbox || !toParam || !listingParam) return;
+    // Skip if: still loading, no params, or already handled
+    if (loadingInbox || !toParam || !listingParam || hasAutoOpened.current) return;
+
     const toId  = Number(toParam);
     const lstId = Number(listingParam);
 
+    // Mark as handled immediately — prevents re-run when threads updates later
+    hasAutoOpened.current = true;
+
+    // Case 1: thread already exists in inbox → open it directly
     const match = threads.find(
       t => t.other_user.id === toId && t.listing.id === lstId
     );
     if (match) { openThread(match); return; }
 
+    // Case 2: new conversation → fetch listing info and create synthetic thread
     listingsApi.getOne(lstId)
       .then((res: any) => {
         const listing = res.data ?? res;
         const synthetic: Thread = {
-          other_user:   { id: listing.user?.id ?? toId, name_ar: listing.user?.name_ar ?? '—', name_en: listing.user?.name_en ?? '—' },
+          other_user:   {
+            id:      listing.user?.id ?? toId,
+            name_ar: listing.user?.name_ar ?? '—',
+            name_en: listing.user?.name_en ?? '—',
+          },
           listing:      { id: listing.id, title_ar: listing.title_ar, title_en: listing.title_en },
           last_message: { body: '', sent_at: '', is_mine: false },
           unread_count: 0,
         };
         setActiveThread(synthetic);
         setMessages([]);
+        setTimeout(() => inputRef.current?.focus(), 200);
       })
       .catch(() => {});
   }, [loadingInbox, threads]);
@@ -210,7 +223,13 @@ function MessagesInner() {
         messagesApi.getInbox(),
       ]);
       setMessages(threadRes.data ?? []);
-      setThreads(inboxRes.data ?? []);
+      // Update inbox threads — keep active thread unread_count at 0
+      const otherId = activeThread.other_user.id;
+      const lstId   = activeThread.listing.id;
+      setThreads((inboxRes.data ?? []).map((t: Thread) => {
+        const isActive = t.other_user.id === otherId && t.listing.id === lstId;
+        return isActive ? { ...t, unread_count: 0 } : t;
+      }));
     } catch {}
 
     scrollToBottom(true);
