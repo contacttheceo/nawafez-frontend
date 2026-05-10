@@ -82,6 +82,11 @@ export default function ListingDetailPage() {
   const [submitting, setSubmitting] = useState(false);
   const [copied,     setCopied]     = useState(false);
 
+  // Bids state
+  const [bidCount,   setBidCount]   = useState<number>(0);
+  const [highestBid, setHighestBid] = useState<number | null>(null);
+  const [ownerBids,  setOwnerBids]  = useState<Array<{ amount: number; message: string | null; submitted_at: string }>>([]);
+
   /* ── Load listing ── */
   useEffect(() => {
     const load = async () => {
@@ -96,6 +101,17 @@ export default function ListingDetailPage() {
             .then((r: any) => {
               const all: Listing[] = r.data ?? r;
               setSimilar(all.filter((l: Listing) => l.id !== data.id).slice(0, 4));
+            })
+            .catch(() => {});
+        }
+
+        // Fetch bid summary (M&A only)
+        if (data.section === 'ma') {
+          interactionsApi.getBids(Number(id))
+            .then((res: any) => {
+              setBidCount(res.bid_count ?? 0);
+              setHighestBid(res.highest_bid ?? null);
+              setOwnerBids(res.bids ?? []);
             })
             .catch(() => {});
         }
@@ -166,6 +182,13 @@ export default function ListingDetailPage() {
       await interactionsApi.submitBid(Number(id), { amount: Number(bidAmount), message: bidMsg });
       toast.success(isRTL ? 'تم تقديم عرض السعر بنجاح ✓' : 'Bid submitted ✓');
       setShowBid(false); setBidAmount(''); setBidMsg('');
+      // Refresh bid summary after submission
+      interactionsApi.getBids(Number(id))
+        .then((res: any) => {
+          setBidCount(res.bid_count ?? 0);
+          setHighestBid(res.highest_bid ?? null);
+          setOwnerBids(res.bids ?? []);
+        }).catch(() => {});
     } catch (err: any) {
       toast.error(err?.response?.data?.message ?? (isRTL ? 'حدث خطأ' : 'Error'));
     } finally {
@@ -600,6 +623,60 @@ export default function ListingDetailPage() {
                           {submitting ? '…' : (isRTL ? 'إرسال العرض' : 'Send Bid')}
                         </button>
                       </form>
+                    )}
+
+                    {/* Bid summary — M&A public info */}
+                    {listing.section === 'ma' && bidCount > 0 && (
+                      <div className="rounded-xl bg-indigo-50 border border-indigo-100 p-3 space-y-1.5">
+                        <p className="text-xs font-bold text-indigo-700 flex items-center gap-1.5">
+                          <DollarSign size={13} />
+                          {isRTL ? 'إحصائيات العروض' : 'Bid Statistics'}
+                        </p>
+                        <div className="flex justify-between items-center">
+                          <span className="text-xs text-gray-500">{isRTL ? 'عدد العروض' : 'Total Bids'}</span>
+                          <span className="text-sm font-black text-indigo-700">{bidCount}</span>
+                        </div>
+                        {highestBid != null && (
+                          <div className="flex justify-between items-center">
+                            <span className="text-xs text-gray-500">{isRTL ? 'أعلى عرض' : 'Highest Bid'}</span>
+                            <span className="text-sm font-black text-emerald">
+                              {highestBid.toLocaleString(isRTL ? 'ar-SA' : 'en-US')} {isRTL ? 'ر.س' : 'SAR'}
+                            </span>
+                          </div>
+                        )}
+                      </div>
+                    )}
+
+                    {/* Owner: full bids list */}
+                    {isOwner && ownerBids.length > 0 && (
+                      <div className="rounded-xl border border-gray-200 overflow-hidden">
+                        <p className="text-xs font-bold text-gray-600 bg-gray-50 px-3 py-2 border-b border-gray-200 flex items-center gap-1.5">
+                          <DollarSign size={12} className="text-indigo-500" />
+                          {isRTL ? 'تفاصيل العروض المقدمة' : 'Received Bids'}
+                        </p>
+                        <div className="divide-y divide-gray-100 max-h-64 overflow-y-auto">
+                          {ownerBids.map((bid, i) => (
+                            <div key={i} className="px-3 py-2.5">
+                              <div className="flex items-center justify-between">
+                                <span className="text-sm font-black text-navy">
+                                  {bid.amount.toLocaleString(isRTL ? 'ar-SA' : 'en-US')} {isRTL ? 'ر.س' : 'SAR'}
+                                </span>
+                                {i === 0 && (
+                                  <span className="text-[10px] font-bold text-amber-600 bg-amber-50 px-1.5 py-0.5 rounded-full">
+                                    {isRTL ? '⭐ الأعلى' : '⭐ Highest'}
+                                  </span>
+                                )}
+                              </div>
+                              {bid.message && (
+                                <p className="text-xs text-gray-500 mt-0.5 line-clamp-2">{bid.message}</p>
+                              )}
+                              <p className="text-[10px] text-gray-400 mt-1">
+                                {new Date(bid.submitted_at).toLocaleDateString(isRTL ? 'ar-SA' : 'en-US', { year: 'numeric', month: 'short', day: 'numeric' })}
+                              </p>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
                     )}
 
                     {/* Bookmark */}

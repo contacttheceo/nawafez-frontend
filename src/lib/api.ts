@@ -121,6 +121,13 @@ export const interactionsApi = {
   ): Promise<any> =>
     api.post(`/listings/${listingId}/bid`, data),
 
+  getBids: (listingId: number): Promise<{
+    bid_count: number;
+    highest_bid: number | null;
+    bids: Array<{ amount: number; message: string | null; submitted_at: string }>;
+  }> =>
+    api.get(`/listings/${listingId}/bids`),
+
   report: (
     listingId: number,
     data: { reason: string; details?: string }
@@ -183,6 +190,24 @@ export const userApi = {
 
   deleteAvatar: (): Promise<{ message: string }> =>
     api.delete('/user/avatar'),
+
+  getMyBids: (): Promise<{
+    data: Array<{
+      id: number;
+      amount: number;
+      message: string | null;
+      submitted_at: string;
+      listing: {
+        id: number;
+        title_ar: string;
+        title_en: string | null;
+        section: string;
+        status: string;
+        price: number | null;
+      } | null;
+    }>;
+  }> =>
+    api.get('/user/bids'),
 
   uploadBusinessVerification: (data: FormData): Promise<any> =>
     api.post('/user/business-verification', data, {

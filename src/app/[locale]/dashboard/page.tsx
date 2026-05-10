@@ -10,7 +10,7 @@ import {
   LogOut, Settings, ArrowUpRight, DollarSign, Bell, Star,
   ChevronRight, Pencil, ExternalLink, Package
 } from 'lucide-react';
-import { userApi, authApi } from '@/lib/api';
+import { userApi, authApi, interactionsApi } from '@/lib/api';
 import { useAuthStore } from '@/store/auth';
 import { formatDistanceToNow } from '@/lib/utils';
 import Navbar from '@/components/Navbar';
@@ -44,14 +44,19 @@ export default function DashboardPage() {
   const [stats,    setStats]    = useState<any>(null);
   const [listings, setListings] = useState<any[]>([]);
   const [loading,  setLoading]  = useState(true);
+  const [myBids,   setMyBids]   = useState<any[]>([]);
 
   useEffect(() => {
     if (!isAuthenticated) { router.push(`/${locale}/auth/login`); return; }
     const load = async () => {
       try {
-        const data = await userApi.getDashboardStats();
-        setStats(data.stats);
-        setListings(data.recent_listings ?? []);
+        const [dashData, bidsData] = await Promise.all([
+          userApi.getDashboardStats(),
+          userApi.getMyBids().catch(() => ({ data: [] })),
+        ]);
+        setStats(dashData.stats);
+        setListings(dashData.recent_listings ?? []);
+        setMyBids((bidsData as any).data ?? []);
       } catch {
         toast.error(isRTL ? 'تعذر تحميل البيانات' : 'Failed to load data');
       } finally { setLoading(false); }
@@ -296,6 +301,64 @@ export default function DashboardPage() {
               )}
             </div>
           </div>
+
+          {/* My submitted bids (M&A) */}
+          {!loading && myBids.length > 0 && (
+            <div className="lg:col-span-3">
+              <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+                <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100">
+                  <h2 className="font-bold text-navy flex items-center gap-2">
+                    <DollarSign size={16} className="text-indigo-500" />
+                    {isRTL ? 'عروض الأسعار التي قدمتها' : 'My Submitted Bids'}
+                  </h2>
+                  <span className="text-xs text-gray-400">
+                    {isRTL ? `${myBids.length} عروض` : `${myBids.length} bids`}
+                  </span>
+                </div>
+                <div className="divide-y divide-gray-50">
+                  {myBids.map((bid: any) => {
+                    const listingTitle = isRTL
+                      ? bid.listing?.title_ar
+                      : (bid.listing?.title_en ?? bid.listing?.title_ar);
+                    return (
+                      <div key={bid.id} className="flex items-center gap-4 px-5 py-3.5 hover:bg-gray-50 transition">
+                        {/* Icon */}
+                        <div className="w-10 h-10 rounded-xl bg-indigo-50 flex items-center justify-center shrink-0 text-xl">
+                          🏢
+                        </div>
+                        {/* Info */}
+                        <div className="flex-1 min-w-0">
+                          {bid.listing ? (
+                            <Link href={`/${locale}/listings/${bid.listing.id}`}
+                              className="font-semibold text-gray-800 text-sm truncate hover:text-emerald transition-colors block">
+                              {listingTitle}
+                            </Link>
+                          ) : (
+                            <p className="font-semibold text-gray-400 text-sm">
+                              {isRTL ? 'الإعلان غير متاح' : 'Listing unavailable'}
+                            </p>
+                          )}
+                          {bid.message && (
+                            <p className="text-xs text-gray-400 truncate mt-0.5">{bid.message}</p>
+                          )}
+                        </div>
+                        {/* Amount */}
+                        <div className="shrink-0 text-end">
+                          <p className="font-black text-emerald text-sm">
+                            {Number(bid.amount).toLocaleString(isRTL ? 'ar-SA' : 'en-US')}
+                            {' '}{isRTL ? 'ر.س' : 'SAR'}
+                          </p>
+                          <p className="text-[10px] text-gray-400 mt-0.5">
+                            {new Date(bid.submitted_at).toLocaleDateString(isRTL ? 'ar-SA' : 'en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                          </p>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            </div>
+          )}
 
           {/* Quick links (1/3) */}
           <div className="space-y-4">
