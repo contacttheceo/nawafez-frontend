@@ -13,7 +13,7 @@ import StepIndicator   from '@/components/listings/StepIndicator';
 import SectionFields   from '@/components/listings/SectionFields';
 import ImageUploader   from '@/components/listings/ImageUploader';
 import ListingPreview  from '@/components/listings/ListingPreview';
-import { listingsApi } from '@/lib/api';
+import { listingsApi, aiApi } from '@/lib/api';
 import { useAuthStore } from '@/store/auth';
 import type { ListingSection } from '@/types';
 
@@ -68,10 +68,11 @@ export default function CreateListingPage() {
   const isRTL    = locale === 'ar';
   const { isAuthenticated, user } = useAuthStore();
 
-  const [step,     setStep]     = useState(1);
-  const [images,   setImages]   = useState<File[]>([]);
-  const [previews, setPreviews] = useState<string[]>([]);
+  const [step,       setStep]       = useState(1);
+  const [images,     setImages]     = useState<File[]>([]);
+  const [previews,   setPreviews]   = useState<string[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [aiWriting,  setAiWriting]  = useState(false);
 
   /* ── Auth guard ─────────────────────────────────────────────────── */
   useEffect(() => {
@@ -92,7 +93,7 @@ export default function CreateListingPage() {
 
   /* ── Form ───────────────────────────────────────────────────────── */
   const {
-    register, handleSubmit, watch, trigger, formState: { errors },
+    register, handleSubmit, watch, trigger, setValue, formState: { errors },
   } = useForm<FormData>({ defaultValues: { section: 'fleet', price_type: 'fixed' } });
 
   const selectedSection = watch('section');
@@ -109,6 +110,43 @@ export default function CreateListingPage() {
     URL.revokeObjectURL(previews[i]);
     setImages((p)   => p.filter((_, idx) => idx !== i));
     setPreviews((p) => p.filter((_, idx) => idx !== i));
+  };
+
+  /* ── AI Listing Writer ─────────────────────────────────────────────── */
+  const handleAiWrite = async () => {
+    const v = watch();
+    // Build fields from the dynamic data filled so far
+    const dynamicKeys: (keyof FormData)[] = [
+      'vehicle_type', 'condition', 'year', 'mileage', 'capacity',
+      'job_title', 'employment_type', 'experience_years', 'salary_type', 'salary_min', 'salary_max',
+      'contract_type', 'duration',
+      'company_type', 'employees_count', 'annual_revenue',
+      'listing_type',
+    ];
+    const fields: Record<string, string> = {};
+    dynamicKeys.forEach(k => { if (v[k]) fields[k] = String(v[k]); });
+
+    if (Object.keys(fields).length === 0) {
+      toast(isRTL ? '⚠️ أدخل بعض البيانات أولاً حتى يتمكن الذكاء الاصطناعي من الكتابة' : '⚠️ Fill in some fields first so AI can write', { icon: '⚠️' });
+      return;
+    }
+
+    setAiWriting(true);
+    try {
+      const res = await aiApi.writeListing({
+        section:      v.section,
+        listing_type: v.listing_type || undefined,
+        fields,
+      });
+      setValue('title_ar',       res.data.title_ar);
+      setValue('title_en',       res.data.title_en);
+      setValue('description_ar', res.data.description_ar);
+      toast.success(isRTL ? '✨ تم كتابة الإعلان بالذكاء الاصطناعي' : '✨ AI wrote your listing!');
+    } catch {
+      toast.error(isRTL ? 'فشل الذكاء الاصطناعي، حاول مجدداً' : 'AI failed, please try again');
+    } finally {
+      setAiWriting(false);
+    }
   };
 
   const handleReorderImages = (from: number, to: number) => {
@@ -236,12 +274,38 @@ export default function CreateListingPage() {
           {/* ══════════ STEP 2 — Section fields ══════════ */}
           {step === 2 && (
             <div className="card p-6">
-              <h2 className="text-lg font-bold text-navy mb-1">
-                {isRTL ? 'تفاصيل الإعلان' : 'Listing Details'}
-              </h2>
-              <p className="text-sm text-gray-400 mb-5">
-                {isRTL ? 'أكمل المعلومات المطلوبة بدقة' : 'Fill in the required information accurately'}
-              </p>
+              <div className="flex items-start justify-between gap-3 mb-5">
+                <div>
+                  <h2 className="text-lg font-bold text-navy mb-1">
+                    {isRTL ? 'تفاصيل الإعلان' : 'Listing Details'}
+                  </h2>
+                  <p className="text-sm text-gray-400">
+                    {isRTL ? 'أكمل المعلومات المطلوبة بدقة' : 'Fill in the required information accurately'}
+                  </p>
+                </div>
+
+                {/* ✨ AI Writer Button */}
+                <button
+                  type="button"
+                  onClick={handleAiWrite}
+                  disabled={aiWriting}
+                  className="flex items-center gap-2 px-4 py-2 shrink-0
+                             bg-gradient-to-r from-violet-500 to-purple-600
+                             text-white text-sm font-bold rounded-xl
+                             hover:opacity-90 transition disabled:opacity-50
+                             shadow-md shadow-purple-200"
+                >
+                  {aiWriting ? (
+                    <span className="w-4 h-4 border-2 border-white border-t-transparent
+                                     rounded-full animate-spin inline-block" />
+                  ) : (
+                    <span>✨</span>
+                  )}
+                  {isRTL
+                    ? (aiWriting ? 'جارٍ الكتابة…' : 'اكتب بالذكاء الاصطناعي')
+                    : (aiWriting ? 'Writing…'       : 'Write with AI')}
+                </button>
+              </div>
 
               <SectionFields
                 section={selectedSection}

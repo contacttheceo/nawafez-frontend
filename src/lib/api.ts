@@ -266,4 +266,19 @@ export const commentsApi = {
     api.delete(`/listings/${listingId}/comments/${commentId}`),
 };
 
+export const aiApi = {
+  writeListing: (data: {
+    section: string;
+    listing_type?: string;
+    fields: Record<string, string>;
+  }): Promise<{
+    data: {
+      title_ar: string;
+      title_en: string;
+      description_ar: string;
+      description_en: string;
+    };
+  }> => api.post('/ai/write-listing', data),
+};
+
 export default api;
