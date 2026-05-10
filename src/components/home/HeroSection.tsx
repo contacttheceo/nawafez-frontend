@@ -1,19 +1,21 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useTranslations, useLocale } from 'next-intl'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { Search } from 'lucide-react'
+import { Search, X } from 'lucide-react'
 import { statsApi } from '@/lib/api'
 
 export default function HeroSection() {
   const t      = useTranslations('hero')
   const locale = useLocale()
   const router = useRouter()
+  const isRTL  = locale === 'ar'
 
   const [query,  setQuery]  = useState('')
   const [stats,  setStats]  = useState<{ total_listings: number; total_users: number } | null>(null)
+  const inputRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
     statsApi.get()
@@ -30,8 +32,13 @@ export default function HeroSection() {
     )
   }
 
+  const handleClear = () => {
+    setQuery('')
+    inputRef.current?.focus()
+  }
+
   const fmt = (n: number) =>
-    `+${n.toLocaleString(locale === 'ar' ? 'ar-SA' : 'en-US')}`
+    `+${n.toLocaleString(isRTL ? 'ar-SA' : 'en-US')}`
 
   const statItems = [
     {
@@ -48,16 +55,26 @@ export default function HeroSection() {
 
   return (
     <section className="relative bg-gradient-to-br from-navy-dark via-navy to-[#1E3A8A]
-                        text-white py-20 px-6 overflow-hidden">
-      {/* Background glow */}
+                        text-white pt-20 pb-32 px-6 overflow-hidden">
+      {/* Background glow blobs */}
       <div className="absolute inset-0 pointer-events-none">
         <div className="absolute top-0 start-1/4 w-96 h-96 bg-emerald/10
                         rounded-full blur-3xl -translate-y-1/2" />
         <div className="absolute bottom-0 end-1/4 w-64 h-64 bg-white/5
                         rounded-full blur-2xl" />
+        <div className="absolute top-1/2 start-0 w-48 h-48 bg-emerald/5
+                        rounded-full blur-2xl" />
       </div>
 
-      <div className="relative max-w-3xl mx-auto text-center">
+      <div className="relative max-w-4xl mx-auto text-center">
+
+        {/* Trust line */}
+        <p className="text-white/50 text-xs mb-3 tracking-widest uppercase font-medium">
+          🇸🇦{' '}
+          {isRTL
+            ? 'الأول في السعودية للقطاع اللوجستي'
+            : "Saudi Arabia's #1 Logistics B2B Platform"}
+        </p>
 
         {/* Badge */}
         <div className="inline-block bg-emerald/20 border border-emerald/40
@@ -84,30 +101,67 @@ export default function HeroSection() {
                     className="absolute start-3 top-1/2 -translate-y-1/2
                                text-gray-400 pointer-events-none" />
             <input
+              ref={inputRef}
               type="text"
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               placeholder={
-                locale === 'ar'
+                isRTL
                   ? 'ابحث عن شاحنة، عقد، وظيفة...'
                   : 'Search trucks, contracts, jobs...'
               }
-              className="w-full ps-10 pe-4 py-3.5 rounded-xl bg-white text-gray-900
+              className="w-full ps-10 pe-10 py-3.5 rounded-xl bg-white text-gray-900
                          placeholder-gray-400 text-sm focus:outline-none
                          focus:ring-2 focus:ring-emerald"
             />
+            {/* Clear button — shows only when there's text */}
+            {query && (
+              <button
+                type="button"
+                onClick={handleClear}
+                className="absolute end-3 top-1/2 -translate-y-1/2
+                           text-gray-400 hover:text-gray-600 transition-colors"
+                aria-label={isRTL ? 'مسح البحث' : 'Clear search'}
+              >
+                <X size={16} />
+              </button>
+            )}
           </div>
           <button
             type="submit"
             className="bg-emerald hover:bg-emerald-dark text-white px-6 py-3.5
                        rounded-xl font-bold text-sm transition-colors whitespace-nowrap"
           >
-            {locale === 'ar' ? 'بحث' : 'Search'}
+            {isRTL ? 'بحث' : 'Search'}
           </button>
         </form>
 
+        {/* Section quick-filter pills — click redirects with section param */}
+        <div className="flex flex-wrap gap-2 justify-center mb-8">
+          {[
+            { value: 'ma',        ar: '🏢 استحواذ',  en: '🏢 M&A'       },
+            { value: 'fleet',     ar: '🚛 أسطول',    en: '🚛 Fleet'     },
+            { value: 'contracts', ar: '📄 عقود',     en: '📄 Contracts' },
+            { value: 'jobs',      ar: '💼 وظائف',    en: '💼 Jobs'      },
+            { value: 'forum',     ar: '💬 منتدى',    en: '💬 Forum'     },
+          ].map(sec => (
+            <button
+              key={sec.value}
+              type="button"
+              onClick={() =>
+                router.push(`/${locale}/listings?section=${sec.value}`)
+              }
+              className="text-xs px-3.5 py-1.5 rounded-full border border-white/25
+                         text-white/70 hover:text-white hover:border-white/60
+                         hover:bg-white/10 transition-all duration-150 font-medium"
+            >
+              {isRTL ? sec.ar : sec.en}
+            </button>
+          ))}
+        </div>
+
         {/* CTA Buttons */}
-        <div className="flex gap-3 justify-center flex-wrap">
+        <div className="flex gap-3 justify-center flex-wrap mb-0">
           <Link
             href={`/${locale}/listings`}
             className="bg-emerald hover:bg-emerald-dark text-white px-8 py-3.5
@@ -137,6 +191,13 @@ export default function HeroSection() {
           ))}
         </div>
 
+      </div>
+
+      {/* Wave separator at the bottom */}
+      <div className="absolute bottom-0 left-0 right-0 overflow-hidden leading-none">
+        <svg viewBox="0 0 1440 50" className="w-full block fill-white">
+          <path d="M0,50 C480,0 960,50 1440,0 L1440,50 L0,50 Z" />
+        </svg>
       </div>
     </section>
   )

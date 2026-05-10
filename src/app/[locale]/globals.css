@@ -117,3 +117,7 @@
 .skeleton {
   @apply bg-gray-200 rounded animate-pulse;
 }
+
+/* Hide scrollbar for horizontal snap carousels */
+.scrollbar-hide::-webkit-scrollbar { display: none; }
+.scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }

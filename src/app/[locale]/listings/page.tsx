@@ -1,12 +1,12 @@
 'use client';
 
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback, useRef, Suspense } from 'react';
 import { useLocale } from 'next-intl';
+import { useSearchParams, useRouter } from 'next/navigation';
 import {
   Search, X, Plus, MapPin, Star, Loader2,
   LayoutGrid, LayoutList, SlidersHorizontal,
-  ChevronDown, ChevronRight, ArrowUpDown, Truck,
-  Bookmark, Trash2,
+  ArrowUpDown, Truck, Bookmark, Trash2,
 } from 'lucide-react';
 import Link from 'next/link';
 import { listingsApi, interactionsApi } from '@/lib/api';
@@ -46,10 +46,12 @@ const SAUDI_CITIES = [
   'الخبر','تبوك','أبها','نجران','حائل','القصيم','بريدة','ينبع',
 ];
 
-/* ─── Component ──────────────────────────────────────────── */
-export default function ListingsPage() {
+/* ─── Inner component (uses useSearchParams) ─────────────── */
+function ListingsContent() {
   const locale  = useLocale();
   const isRTL   = locale === 'ar';
+  const router  = useRouter();
+  const searchParams = useSearchParams();
   const { isAuthenticated } = useAuthStore();
 
   /* view */
@@ -70,16 +72,45 @@ export default function ListingsPage() {
   const [loadingMore, setLoadingMore] = useState(false);
   const [page,        setPage]        = useState(1);
 
-  /* filters */
-  const [search,       setSearch]       = useState('');
-  const [section,      setSection]      = useState('');
-  const [city,         setCity]         = useState('');
-  const [priceMin,     setPriceMin]     = useState('');
-  const [priceMax,     setPriceMax]     = useState('');
-  const [sort,         setSort]         = useState('newest');
-  const [listingTypes, setListingTypes] = useState<string[]>([]);
+  /* ── filters — initialised from URL query params ── */
+  const [search,       setSearch]       = useState(() => searchParams.get('search')       ?? '');
+  const [section,      setSection]      = useState(() => searchParams.get('section')      ?? '');
+  const [city,         setCity]         = useState(() => searchParams.get('city')         ?? '');
+  const [priceMin,     setPriceMin]     = useState(() => searchParams.get('price_min')    ?? '');
+  const [priceMax,     setPriceMax]     = useState(() => searchParams.get('price_max')    ?? '');
+  const [sort,         setSort]         = useState(() => searchParams.get('sort')         ?? 'newest');
+  const [listingTypes, setListingTypes] = useState<string[]>(
+    () => searchParams.getAll('listing_type')
+  );
 
-  const searchTimer = useRef<ReturnType<typeof setTimeout>|null>(null);
+  /* ── debouncedSearch — actual value sent to API (500ms delay) ── */
+  const [debouncedSearch, setDebouncedSearch] = useState(search);
+  const debounceTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    if (debounceTimer.current) clearTimeout(debounceTimer.current);
+    debounceTimer.current = setTimeout(() => {
+      setDebouncedSearch(search);
+    }, 500);
+    return () => {
+      if (debounceTimer.current) clearTimeout(debounceTimer.current);
+    };
+  }, [search]);
+
+  /* ── Sync active filters → URL (shareable links) ── */
+  useEffect(() => {
+    const params = new URLSearchParams();
+    if (debouncedSearch)      params.set('search',       debouncedSearch);
+    if (section)              params.set('section',      section);
+    if (city)                 params.set('city',         city);
+    if (priceMin)             params.set('price_min',    priceMin);
+    if (priceMax)             params.set('price_max',    priceMax);
+    if (sort !== 'newest')    params.set('sort',         sort);
+    listingTypes.forEach(lt => params.append('listing_type', lt));
+    const qs = params.toString();
+    router.replace(`/${locale}/listings${qs ? `?${qs}` : ''}`, { scroll: false });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [debouncedSearch, section, city, priceMin, priceMax, sort, listingTypes, locale]);
 
   /* ── Featured ── */
   useEffect(() => {
@@ -91,17 +122,17 @@ export default function ListingsPage() {
       .catch(() => {});
   }, []);
 
-  /* ── Fetch listings ── */
+  /* ── Fetch listings (depends on debouncedSearch, not raw search) ── */
   const fetchListings = useCallback(async (pageNum = 1, append = false) => {
     if (pageNum === 1) setIsLoading(true); else setLoadingMore(true);
     try {
-      const params: Record<string,any> = { page: pageNum, sort };
-      if (search)                  params.search       = search;
-      if (section)                 params.section      = section;
-      if (city)                    params.city         = city;
-      if (priceMin)                params.price_min    = priceMin;
-      if (priceMax)                params.price_max    = priceMax;
-      if (listingTypes.length > 0) params.listing_type = listingTypes.join(',');
+      const params: Record<string, any> = { page: pageNum, sort };
+      if (debouncedSearch)          params.search       = debouncedSearch;
+      if (section)                  params.section      = section;
+      if (city)                     params.city         = city;
+      if (priceMin)                 params.price_min    = priceMin;
+      if (priceMax)                 params.price_max    = priceMax;
+      if (listingTypes.length > 0)  params.listing_type = listingTypes.join(',');
       const res  = await listingsApi.getAll(params);
       const data = res.data ?? res;
       setListings(prev => append ? [...prev, ...data] : data);
@@ -111,7 +142,7 @@ export default function ListingsPage() {
     } finally {
       setIsLoading(false); setLoadingMore(false);
     }
-  }, [search, section, city, priceMin, priceMax, sort, listingTypes]);
+  }, [debouncedSearch, section, city, priceMin, priceMax, sort, listingTypes]);
 
   useEffect(() => { setPage(1); fetchListings(1, false); }, [fetchListings]);
 
@@ -130,7 +161,7 @@ export default function ListingsPage() {
     try {
       const res: any = await interactionsApi.saveSearch({
         name: saveSearchName.trim(),
-        filters: { section, city, search, priceMin, priceMax, sort, listingTypes },
+        filters: { section, city, search: debouncedSearch, priceMin, priceMax, sort, listingTypes },
       });
       setSavedSearches(prev => [res.data, ...prev]);
       setSaveSearchName('');
@@ -163,12 +194,6 @@ export default function ListingsPage() {
     setMobileFiltersOpen(false);
   };
 
-  const handleSearchChange = (val: string) => {
-    setSearch(val);
-    if (searchTimer.current) clearTimeout(searchTimer.current);
-    searchTimer.current = setTimeout(() => {}, 500);
-  };
-
   const handleLoadMore = () => { const n = page + 1; setPage(n); fetchListings(n, true); };
 
   const toggleListingType = (val: string) =>
@@ -183,17 +208,17 @@ export default function ListingsPage() {
   const activeFilterCount = [
     section, city, priceMin, priceMax,
     sort !== 'newest' ? sort : '',
-    ...listingTypes
+    ...listingTypes,
   ].filter(Boolean).length;
 
-  const hasMore = meta && page < meta.last_page;
+  const hasMore    = meta && page < meta.last_page;
   const totalCount = meta?.total ?? listings.length;
 
-  /* ── Sidebar component (shared desktop + mobile drawer) ── */
+  /* ── Sidebar (shared desktop + mobile drawer) ── */
   const SidebarContent = () => (
     <div className="space-y-6">
 
-      {/* ── Saved Searches (logged-in users only) ── */}
+      {/* Saved Searches */}
       {isAuthenticated && savedSearches.length > 0 && (
         <div>
           <p className="text-[11px] font-bold text-gray-400 uppercase tracking-widest mb-3 flex items-center gap-1.5">
@@ -314,7 +339,7 @@ export default function ListingsPage() {
         </div>
       </div>
 
-      {/* Clear */}
+      {/* Clear filters */}
       {activeFilterCount > 0 && (
         <button onClick={clearFilters}
           className="w-full py-2 text-sm text-red-500 hover:text-red-600 border border-red-200
@@ -323,7 +348,7 @@ export default function ListingsPage() {
         </button>
       )}
 
-      {/* Save Search — only for logged-in users with active filters */}
+      {/* Save Search */}
       {isAuthenticated && activeFilterCount > 0 && (
         <div>
           {showSaveInput ? (
@@ -332,7 +357,10 @@ export default function ListingsPage() {
                 autoFocus
                 value={saveSearchName}
                 onChange={e => setSaveSearchName(e.target.value)}
-                onKeyDown={e => { if (e.key === 'Enter') handleSaveSearch(); if (e.key === 'Escape') setShowSaveInput(false); }}
+                onKeyDown={e => {
+                  if (e.key === 'Enter') handleSaveSearch();
+                  if (e.key === 'Escape') setShowSaveInput(false);
+                }}
                 className="input text-sm py-2 flex-1"
                 placeholder={isRTL ? 'اسم البحث…' : 'Search name…'}
                 maxLength={60}
@@ -364,7 +392,7 @@ export default function ListingsPage() {
     <div className="min-h-screen bg-gray-50 flex flex-col">
       <Navbar />
 
-      {/* ── Hero Search Bar ─────────────────────────────── */}
+      {/* ── Search Hero ─────────────────────────────── */}
       <div className="bg-gradient-to-br from-navy to-navy/90 py-8 px-4">
         <div className="max-w-4xl mx-auto">
           <div className="text-center mb-5">
@@ -378,11 +406,13 @@ export default function ListingsPage() {
             </p>
           </div>
 
-          {/* Search */}
+          {/* Search bar */}
           <div className="flex gap-2">
             <div className="relative flex-1">
               <Search className="absolute start-4 top-1/2 -translate-y-1/2 text-gray-400 w-5 h-5" />
-              <input value={search} onChange={e => handleSearchChange(e.target.value)}
+              <input
+                value={search}
+                onChange={e => setSearch(e.target.value)}
                 className="w-full ps-11 pe-4 py-3.5 rounded-xl text-sm border-0 shadow-lg
                            focus:outline-none focus:ring-2 focus:ring-emerald"
                 placeholder={isRTL ? 'ابحث في جميع الإعلانات…' : 'Search all listings…'}
@@ -392,6 +422,12 @@ export default function ListingsPage() {
                   className="absolute end-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600">
                   <X size={16} />
                 </button>
+              )}
+              {/* Debounce indicator */}
+              {search !== debouncedSearch && (
+                <span className="absolute end-9 top-1/2 -translate-y-1/2">
+                  <Loader2 size={14} className="animate-spin text-gray-300" />
+                </span>
               )}
             </div>
             <Link href={`/${locale}/listings/create`}
@@ -418,11 +454,11 @@ export default function ListingsPage() {
         </div>
       </div>
 
-      {/* ── Body: Sidebar + Content ──────────────────────── */}
+      {/* ── Body ────────────────────────────────────── */}
       <div className="flex-1 max-w-7xl mx-auto w-full px-4 py-6">
         <div className="flex gap-6 items-start">
 
-          {/* ── Desktop Sidebar ── */}
+          {/* Desktop Sidebar */}
           <aside className="hidden lg:block w-64 shrink-0 sticky top-20">
             <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
               <div className="flex items-center justify-between mb-5">
@@ -440,11 +476,11 @@ export default function ListingsPage() {
             </div>
           </aside>
 
-          {/* ── Main Content ── */}
+          {/* Main Content */}
           <div className="flex-1 min-w-0 space-y-5">
 
             {/* Featured strip */}
-            {featured.length > 0 && !section && !search && (
+            {featured.length > 0 && !section && !debouncedSearch && (
               <div className="bg-gradient-to-r from-amber-50 to-yellow-50 border border-amber-200
                               rounded-2xl p-4">
                 <div className="flex items-center gap-2 mb-3">
@@ -459,19 +495,20 @@ export default function ListingsPage() {
                 <div className="flex gap-3 overflow-x-auto pb-1 scrollbar-hide">
                   {featured.map(l => {
                     const ftitle = isRTL ? (l.title_ar ?? l.title_en) : (l.title_en ?? l.title_ar);
-                    const imgBgF: Record<string,string> = {
-                      ma:'from-green-100 to-green-200', fleet:'from-blue-100 to-blue-200',
-                      contracts:'from-amber-100 to-amber-200', jobs:'from-purple-100 to-purple-200', forum:'from-red-100 to-red-200',
+                    const imgBgF: Record<string, string> = {
+                      ma: 'from-green-100 to-green-200', fleet: 'from-blue-100 to-blue-200',
+                      contracts: 'from-amber-100 to-amber-200', jobs: 'from-purple-100 to-purple-200',
+                      forum: 'from-red-100 to-red-200',
                     };
-                    const sEmoji: Record<string,string> = { ma:'🏢', fleet:'🚛', contracts:'📄', jobs:'💼', forum:'💬' };
+                    const sEmoji: Record<string, string> = { ma: '🏢', fleet: '🚛', contracts: '📄', jobs: '💼', forum: '💬' };
                     return (
                       <Link key={l.id} href={`/${locale}/listings/${l.id}`}
                         className="shrink-0 w-52 bg-white rounded-xl border border-amber-200 overflow-hidden
                                    hover:shadow-md hover:border-amber-300 transition group">
-                        <div className={`h-28 bg-gradient-to-br ${imgBgF[l.section]||'from-gray-100 to-gray-200'}
+                        <div className={`h-28 bg-gradient-to-br ${imgBgF[l.section] || 'from-gray-100 to-gray-200'}
                                          flex items-center justify-center text-3xl relative`}>
                           {l.images?.[0]
-                            ? <img src={l.images[0]} alt={ftitle??''} className="w-full h-full object-cover" />
+                            ? <img src={l.images[0]} alt={ftitle ?? ''} className="w-full h-full object-cover" />
                             : <span>{sEmoji[l.section]}</span>
                           }
                         </div>
@@ -483,7 +520,7 @@ export default function ListingsPage() {
                             {l.city && <span className="text-[10px] text-gray-400">{l.city}</span>}
                             {l.price && (
                               <span className="text-[11px] font-bold text-navy">
-                                {Number(l.price).toLocaleString(isRTL?'ar-SA':'en-US')} {isRTL?'ر.س':'SAR'}
+                                {Number(l.price).toLocaleString(isRTL ? 'ar-SA' : 'en-US')} {isRTL ? 'ر.س' : 'SAR'}
                               </span>
                             )}
                           </div>
@@ -495,9 +532,8 @@ export default function ListingsPage() {
               </div>
             )}
 
-            {/* ── Toolbar ── */}
+            {/* Toolbar */}
             <div className="flex items-center justify-between gap-3 flex-wrap">
-              {/* Count + mobile filter trigger */}
               <div className="flex items-center gap-3">
                 {/* Mobile filter button */}
                 <button onClick={() => setMobileFiltersOpen(true)}
@@ -529,23 +565,19 @@ export default function ListingsPage() {
                 </span>
               </div>
 
-              {/* View toggle + sort */}
+              {/* Sort + View toggle */}
               <div className="flex items-center gap-2">
-                {/* Sort dropdown */}
-                <div className="relative">
-                  <div className="flex items-center gap-1.5 px-3 py-2 rounded-xl border border-gray-200
-                                  text-sm text-gray-600 bg-white cursor-pointer select-none">
-                    <ArrowUpDown size={13} />
-                    <select value={sort} onChange={e => setSort(e.target.value)}
-                      className="bg-transparent border-0 outline-none text-sm text-gray-700 cursor-pointer pr-1">
-                      {SORT_OPTIONS.map(o => (
-                        <option key={o.value} value={o.value}>{isRTL ? o.labelAr : o.labelEn}</option>
-                      ))}
-                    </select>
-                  </div>
+                <div className="flex items-center gap-1.5 px-3 py-2 rounded-xl border border-gray-200
+                                text-sm text-gray-600 bg-white">
+                  <ArrowUpDown size={13} />
+                  <select value={sort} onChange={e => setSort(e.target.value)}
+                    className="bg-transparent border-0 outline-none text-sm text-gray-700 cursor-pointer pr-1">
+                    {SORT_OPTIONS.map(o => (
+                      <option key={o.value} value={o.value}>{isRTL ? o.labelAr : o.labelEn}</option>
+                    ))}
+                  </select>
                 </div>
 
-                {/* Grid / List */}
                 <div className="flex bg-white border border-gray-200 rounded-xl overflow-hidden">
                   <button onClick={() => setViewMode('grid')}
                     className={`p-2 transition ${viewMode === 'grid' ? 'bg-navy text-white' : 'text-gray-500 hover:bg-gray-50'}`}
@@ -561,26 +593,26 @@ export default function ListingsPage() {
               </div>
             </div>
 
-            {/* Active chips */}
-            {(search || section || city || priceMin || priceMax || sort !== 'newest' || listingTypes.length > 0) && (
+            {/* Active filter chips */}
+            {(debouncedSearch || section || city || priceMin || priceMax || sort !== 'newest' || listingTypes.length > 0) && (
               <div className="flex flex-wrap gap-2 items-center">
-                {search && (
-                  <FilterChip label={`"${search}"`} onRemove={() => setSearch('')} />
+                {debouncedSearch && (
+                  <FilterChip label={`"${debouncedSearch}"`} onRemove={() => setSearch('')} />
                 )}
                 {section && (
                   <FilterChip
-                    label={`${SECTIONS.find(s => s.value === section)?.emoji} ${SECTIONS.find(s=>s.value===section)?.[isRTL?'labelAr':'labelEn'] ?? section}`}
+                    label={`${SECTIONS.find(s => s.value === section)?.emoji} ${SECTIONS.find(s => s.value === section)?.[isRTL ? 'labelAr' : 'labelEn'] ?? section}`}
                     onRemove={() => setSection('')} />
                 )}
                 {city && <FilterChip label={city} onRemove={() => setCity('')} />}
                 {priceMin && <FilterChip label={isRTL ? `من ${priceMin} ر.س` : `Min ${priceMin}`} onRemove={() => setPriceMin('')} />}
                 {priceMax && <FilterChip label={isRTL ? `حتى ${priceMax} ر.س` : `Max ${priceMax}`} onRemove={() => setPriceMax('')} />}
                 {sort !== 'newest' && (
-                  <FilterChip label={SORT_OPTIONS.find(o=>o.value===sort)?.[isRTL?'labelAr':'labelEn']??sort} onRemove={() => setSort('newest')} />
+                  <FilterChip label={SORT_OPTIONS.find(o => o.value === sort)?.[isRTL ? 'labelAr' : 'labelEn'] ?? sort} onRemove={() => setSort('newest')} />
                 )}
                 {listingTypes.map(lt => (
                   <FilterChip key={lt}
-                    label={LISTING_TYPES.find(t=>t.value===lt)?.[isRTL?'labelAr':'labelEn']??lt}
+                    label={LISTING_TYPES.find(t => t.value === lt)?.[isRTL ? 'labelAr' : 'labelEn'] ?? lt}
                     onRemove={() => toggleListingType(lt)} />
                 ))}
                 <button onClick={clearFilters}
@@ -590,7 +622,7 @@ export default function ListingsPage() {
               </div>
             )}
 
-            {/* ── Cards ── */}
+            {/* Cards */}
             {isLoading ? (
               <div className={viewMode === 'grid'
                 ? 'grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-5'
@@ -654,7 +686,6 @@ export default function ListingsPage() {
                 {/* Load more */}
                 {hasMore && (
                   <div className="pt-4">
-                    {/* Progress */}
                     <div className="flex items-center gap-3 mb-4">
                       <div className="flex-1 h-1.5 bg-gray-200 rounded-full overflow-hidden">
                         <div
@@ -671,11 +702,10 @@ export default function ListingsPage() {
                     <div className="flex justify-center">
                       <button onClick={handleLoadMore} disabled={loadingMore}
                         className="btn-navy px-10 py-3 text-sm flex items-center gap-2 disabled:opacity-60">
-                        {loadingMore ? (
-                          <><Loader2 size={15} className="animate-spin" />{isRTL ? 'جارٍ التحميل…' : 'Loading…'}</>
-                        ) : (
-                          isRTL ? 'تحميل المزيد' : 'Load More'
-                        )}
+                        {loadingMore
+                          ? <><Loader2 size={15} className="animate-spin" />{isRTL ? 'جارٍ التحميل…' : 'Loading…'}</>
+                          : isRTL ? 'تحميل المزيد' : 'Load More'
+                        }
                       </button>
                     </div>
                   </div>
@@ -694,7 +724,7 @@ export default function ListingsPage() {
         </div>
       </div>
 
-      {/* ── Mobile Filter Drawer ─────────────────────────── */}
+      {/* Mobile Filter Drawer */}
       {mobileFiltersOpen && (
         <>
           <div className="fixed inset-0 bg-black/50 z-40 lg:hidden"
@@ -727,7 +757,7 @@ export default function ListingsPage() {
   );
 }
 
-/* ── Helper: Filter Chip ─────────────────────────────────── */
+/* ── Filter Chip ─────────────────────────────────────────── */
 function FilterChip({ label, onRemove }: { label: string; onRemove: () => void }) {
   return (
     <span className="flex items-center gap-1.5 text-xs bg-navy/10 text-navy
@@ -737,5 +767,18 @@ function FilterChip({ label, onRemove }: { label: string; onRemove: () => void }
         <X size={11} />
       </button>
     </span>
+  );
+}
+
+/* ── Page export — wraps in Suspense (required for useSearchParams) ── */
+export default function ListingsPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <Loader2 className="animate-spin text-emerald" size={32} />
+      </div>
+    }>
+      <ListingsContent />
+    </Suspense>
   );
 }

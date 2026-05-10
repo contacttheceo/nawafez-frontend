@@ -1,12 +1,14 @@
-import { useTranslations } from 'next-intl'
 import { getTranslations } from 'next-intl/server'
 import type { Metadata } from 'next'
-import Navbar from '@/components/Navbar'
-import Footer from '@/components/Footer'
-import HeroSection from '@/components/home/HeroSection'
-import SectionsGrid from '@/components/home/SectionsGrid'
+import Navbar           from '@/components/Navbar'
+import Footer           from '@/components/Footer'
+import HeroSection      from '@/components/home/HeroSection'
+import TrustBar         from '@/components/home/TrustBar'
+import SectionsGrid     from '@/components/home/SectionsGrid'
 import FeaturedListings from '@/components/home/FeaturedListings'
-import HowItWorks from '@/components/home/HowItWorks'
+import LatestListings   from '@/components/home/LatestListings'
+import HowItWorks       from '@/components/home/HowItWorks'
+import CTABanner        from '@/components/home/CTABanner'
 
 type Props = { params: Promise<{ locale: string }> }
 
@@ -25,9 +27,12 @@ export default function HomePage() {
       <Navbar />
       <main className="flex-1">
         <HeroSection />
+        <TrustBar />
         <SectionsGrid />
         <FeaturedListings />
+        <LatestListings />
         <HowItWorks />
+        <CTABanner />
       </main>
       <Footer />
     </div>

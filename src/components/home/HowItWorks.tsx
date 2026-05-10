@@ -1,12 +1,13 @@
 'use client'
 
 import { useTranslations } from 'next-intl'
+import { UserPlus, FileText, Users, CheckCircle, LucideIcon } from 'lucide-react'
 
-const steps = [
-  { num: '1', key: 'step1' },
-  { num: '2', key: 'step2' },
-  { num: '3', key: 'step3' },
-  { num: '4', key: 'step4' },
+const steps: { Icon: LucideIcon; key: string }[] = [
+  { Icon: UserPlus,    key: 'step1' },
+  { Icon: FileText,    key: 'step2' },
+  { Icon: Users,       key: 'step3' },
+  { Icon: CheckCircle, key: 'step4' },
 ]
 
 export default function HowItWorks() {
@@ -18,19 +19,29 @@ export default function HowItWorks() {
         <h2 className="text-3xl font-black text-white mb-2">{t('title')}</h2>
         <p className="text-white/60 mb-12">{t('sub')}</p>
 
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-8">
-          {steps.map((step) => (
-            <div key={step.key} className="text-center">
-              <div className="w-12 h-12 rounded-full bg-emerald text-white
-                              flex items-center justify-center text-xl font-black
-                              mx-auto mb-4">
-                {step.num}
+        <div className="relative grid grid-cols-2 md:grid-cols-4 gap-8">
+          {/* Connecting line — desktop only */}
+          <div className="absolute top-7 start-[12%] end-[12%] h-px bg-emerald/30 hidden md:block" />
+
+          {steps.map(({ Icon, key }, idx) => (
+            <div key={key} className="text-center relative z-10">
+              {/* Icon with numbered badge */}
+              <div className="relative w-fit mx-auto mb-4">
+                <div className="w-14 h-14 rounded-2xl bg-emerald/20 border border-emerald/30
+                                flex items-center justify-center">
+                  <Icon size={24} className="text-emerald-light" />
+                </div>
+                <span className="absolute -top-2 -end-2 w-5 h-5 bg-emerald rounded-full
+                                 text-[10px] text-white font-black flex items-center justify-center">
+                  {idx + 1}
+                </span>
               </div>
+
               <h4 className="text-white font-bold text-sm mb-2">
-                {t(`${step.key}_title` as Parameters<typeof t>[0])}
+                {t(`${key}_title` as Parameters<typeof t>[0])}
               </h4>
               <p className="text-white/50 text-xs leading-relaxed">
-                {t(`${step.key}_desc` as Parameters<typeof t>[0])}
+                {t(`${key}_desc` as Parameters<typeof t>[0])}
               </p>
             </div>
           ))}
