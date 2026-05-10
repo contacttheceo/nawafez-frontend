@@ -7,7 +7,7 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import {
   User, Lock, Shield, Trash2, Upload, CheckCircle,
-  Clock, XCircle, Eye, EyeOff, AlertTriangle,
+  Clock, XCircle, Eye, EyeOff, AlertTriangle, Camera, Loader2, X,
 } from 'lucide-react';
 import { userApi, authApi } from '@/lib/api';
 import { useAuthStore } from '@/store/auth';
@@ -39,6 +39,8 @@ export default function ProfilePage() {
   const [showPass, setShowPass]       = useState(false);
   const [savingProfile, setSavingProfile] = useState(false);
   const [savingPass, setSavingPass]   = useState(false);
+  const [avatarPreview,  setAvatarPreview]  = useState<string | null>(null);
+  const [uploadingAvatar, setUploadingAvatar] = useState(false);
   const [crFile,       setCrFile]       = useState<File | null>(null);
   const [crCompany,    setCrCompany]    = useState('');
   const [crNumber,     setCrNumber]     = useState('');
@@ -87,6 +89,40 @@ export default function ProfilePage() {
       toast.error(err?.response?.data?.message ?? (isRTL ? 'حدث خطأ' : 'Error'));
     } finally {
       setSavingProfile(false);
+    }
+  };
+
+  const handleAvatarChange = async (file: File) => {
+    // Instant local preview
+    const url = URL.createObjectURL(file);
+    setAvatarPreview(url);
+    setUploadingAvatar(true);
+    try {
+      const fd = new FormData();
+      fd.append('avatar', file);
+      const res = await userApi.uploadAvatar(fd);
+      // Update store with new avatar_url
+      setUser({ ...user!, avatar_url: res.avatar_url });
+      setAvatarPreview(null);
+      toast.success(isRTL ? 'تم تحديث الصورة الشخصية ✓' : 'Avatar updated ✓');
+    } catch (err: any) {
+      setAvatarPreview(null);
+      toast.error(err?.response?.data?.message ?? (isRTL ? 'فشل رفع الصورة' : 'Upload failed'));
+    } finally {
+      setUploadingAvatar(false);
+    }
+  };
+
+  const handleAvatarDelete = async () => {
+    setUploadingAvatar(true);
+    try {
+      await userApi.deleteAvatar();
+      setUser({ ...user!, avatar_url: null });
+      toast.success(isRTL ? 'تم حذف الصورة الشخصية' : 'Avatar removed');
+    } catch {
+      toast.error(isRTL ? 'حدث خطأ' : 'Error');
+    } finally {
+      setUploadingAvatar(false);
     }
   };
 
@@ -199,7 +235,100 @@ export default function ProfilePage() {
             {/* Profile Tab */}
             {activeTab === 'profile' && (
               <div className="card p-6">
-                <h2 className="font-bold text-navy mb-5 text-lg">
+
+                {/* ── Avatar section ── */}
+                <div className="flex items-center gap-5 mb-6 pb-6 border-b border-gray-100">
+                  {/* Avatar circle */}
+                  <div className="relative shrink-0">
+                    <div className="w-20 h-20 rounded-full overflow-hidden bg-navy/10
+                                    ring-2 ring-white shadow-md">
+                      {(avatarPreview ?? user.avatar_url) ? (
+                        <img
+                          src={avatarPreview ?? user.avatar_url!}
+                          alt={isRTL ? user.name_ar : user.name_en}
+                          className="w-full h-full object-cover"
+                        />
+                      ) : (
+                        <div className="w-full h-full flex items-center justify-center
+                                        text-navy font-black text-2xl">
+                          {(isRTL ? user.name_ar : user.name_en)[0]?.toUpperCase()}
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Upload button overlay */}
+                    <label className={`absolute -bottom-1 -end-1 w-7 h-7 bg-emerald rounded-full
+                                       flex items-center justify-center cursor-pointer shadow
+                                       hover:bg-emerald-dark transition-colors
+                                       ${uploadingAvatar ? 'opacity-50 pointer-events-none' : ''}`}
+                           aria-label={isRTL ? 'تغيير الصورة' : 'Change avatar'}>
+                      {uploadingAvatar
+                        ? <Loader2 size={13} className="text-white animate-spin" />
+                        : <Camera size={13} className="text-white" />}
+                      <input
+                        type="file"
+                        accept="image/jpeg,image/png,image/webp"
+                        className="hidden"
+                        disabled={uploadingAvatar}
+                        onChange={(e) => {
+                          const file = e.target.files?.[0];
+                          if (file) handleAvatarChange(file);
+                          e.target.value = '';
+                        }}
+                      />
+                    </label>
+                  </div>
+
+                  {/* Info + actions */}
+                  <div className="flex-1 min-w-0">
+                    <p className="font-bold text-navy text-base truncate">
+                      {isRTL ? user.name_ar : user.name_en}
+                    </p>
+                    <p className="text-gray-400 text-xs truncate mb-2">{user.email}</p>
+                    <div className="flex flex-wrap gap-2">
+                      <label className={`text-xs text-emerald font-semibold cursor-pointer
+                                         hover:text-emerald-dark transition-colors flex items-center gap-1
+                                         ${uploadingAvatar ? 'opacity-50 pointer-events-none' : ''}`}>
+                        <Upload size={12} />
+                        {isRTL ? 'تغيير الصورة' : 'Change photo'}
+                        <input
+                          type="file"
+                          accept="image/jpeg,image/png,image/webp"
+                          className="hidden"
+                          disabled={uploadingAvatar}
+                          onChange={(e) => {
+                            const file = e.target.files?.[0];
+                            if (file) handleAvatarChange(file);
+                            e.target.value = '';
+                          }}
+                        />
+                      </label>
+
+                      {user.avatar_url && (
+                        <>
+                          <span className="text-gray-300">·</span>
+                          <button
+                            type="button"
+                            onClick={handleAvatarDelete}
+                            disabled={uploadingAvatar}
+                            className="text-xs text-red-400 hover:text-red-600 transition-colors
+                                       flex items-center gap-1 disabled:opacity-50"
+                          >
+                            <X size={12} />
+                            {isRTL ? 'حذف الصورة' : 'Remove'}
+                          </button>
+                        </>
+                      )}
+                    </div>
+                    <p className="text-gray-400 text-[11px] mt-1">
+                      {isRTL
+                        ? 'JPG أو PNG أو WebP — بحد أقصى 2MB'
+                        : 'JPG, PNG or WebP — max 2MB'}
+                    </p>
+                  </div>
+                </div>
+
+                <h2 className="font-bold text-navy mb-5 text-base">
                   {isRTL ? 'المعلومات الشخصية' : 'Personal Information'}
                 </h2>
                 <form onSubmit={profileForm.handleSubmit(saveProfile)} className="space-y-4">

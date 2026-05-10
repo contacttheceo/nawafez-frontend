@@ -8,6 +8,7 @@ export interface User {
   name_en: string
   email: string
   phone: string | null
+  avatar_url: string | null
   role: UserRole
   is_trusted_payer: boolean
   email_verified_at: string | null

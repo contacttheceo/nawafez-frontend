@@ -147,9 +147,13 @@ export default function Navbar() {
                     className="flex items-center gap-2 bg-white/10 hover:bg-white/20 text-white
                                px-3 py-1.5 rounded-lg text-sm transition-colors"
                   >
-                    <div className="w-6 h-6 bg-emerald rounded-full flex items-center justify-center
-                                    text-white font-bold text-xs">
-                      {(isRTL ? user.name_ar : user.name_en)?.[0]?.toUpperCase() ?? 'U'}
+                    <div className="w-6 h-6 rounded-full overflow-hidden bg-emerald flex items-center
+                                    justify-center text-white font-bold text-xs shrink-0">
+                      {user.avatar_url ? (
+                        <img src={user.avatar_url} alt="" className="w-full h-full object-cover" />
+                      ) : (
+                        (isRTL ? user.name_ar : user.name_en)?.[0]?.toUpperCase() ?? 'U'
+                      )}
                     </div>
                     <span className="max-w-[100px] truncate">
                       {isRTL ? user.name_ar : user.name_en}

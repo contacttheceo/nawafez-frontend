@@ -176,6 +176,14 @@ export const userApi = {
   }): Promise<any> =>
     api.put('/user/profile', data),
 
+  uploadAvatar: (data: FormData): Promise<{ avatar_url: string }> =>
+    api.post('/user/avatar', data, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    }),
+
+  deleteAvatar: (): Promise<{ message: string }> =>
+    api.delete('/user/avatar'),
+
   uploadBusinessVerification: (data: FormData): Promise<any> =>
     api.post('/user/business-verification', data, {
       headers: { 'Content-Type': 'multipart/form-data' },
