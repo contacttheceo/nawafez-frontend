@@ -138,11 +138,13 @@ function MessagesInner() {
           if (incoming.length === prev.length) return prev;  // nothing new
           return incoming;
         });
+        // Backend marks new incoming messages as read on getThread — reflect that in the badge
+        clearUnread(otherId, lstId);
       } catch {}
     }, 5000);
 
     return () => clearInterval(tid);
-  }, [activeThread?.other_user.id, activeThread?.listing.id]);
+  }, [activeThread?.other_user.id, activeThread?.listing.id, clearUnread]);
 
   /* ── Poll inbox every 15 s (unread badges) ── */
   useEffect(() => {
@@ -156,11 +158,24 @@ function MessagesInner() {
     return () => clearInterval(tid);
   }, [isAuthenticated]);
 
+  /* ── Clear unread badge for a thread ── */
+  const clearUnread = useCallback((otherId: number, lstId: number) => {
+    setThreads(prev => prev.map(t =>
+      t.other_user.id === otherId && t.listing.id === lstId
+        ? { ...t, unread_count: 0 }
+        : t
+    ));
+  }, []);
+
   /* ── Open a thread ── */
   const openThread = useCallback(async (thread: Thread) => {
     setActiveThread(thread);
     setMessages([]);
     setLoadingThread(true);
+
+    // Optimistically clear the badge immediately — backend marks read_at on getThread
+    clearUnread(thread.other_user.id, thread.listing.id);
+
     try {
       const res: any = await messagesApi.getThread(thread.other_user.id, thread.listing.id);
       setMessages(res.data ?? []);
@@ -170,7 +185,7 @@ function MessagesInner() {
       setLoadingThread(false);
       setTimeout(() => inputRef.current?.focus(), 100);
     }
-  }, []);
+  }, [clearUnread]);
 
   /* ── Send message ── */
   const sendMessage = async () => {
