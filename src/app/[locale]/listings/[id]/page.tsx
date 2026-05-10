@@ -158,8 +158,18 @@ export default function ListingDetailPage() {
       setCommentMeta(prev => prev ? { ...prev, total: prev.total + 1 } : prev);
       setCommentText('');
       toast.success(isRTL ? 'تم إضافة التعليق ✓' : 'Comment added ✓');
-    } catch {
-      toast.error(isRTL ? 'فشل إضافة التعليق' : 'Failed to add comment');
+    } catch (err: any) {
+      const status  = err?.response?.status;
+      const message = err?.response?.data?.message;
+      if (status === 422 && message) {
+        toast.error(message);
+      } else if (status === 404) {
+        toast.error(isRTL ? 'المسار غير موجود (404) — تحقق من رفع routes/api.php' : 'Route not found (404)');
+      } else if (status === 500) {
+        toast.error(isRTL ? `خطأ في السيرفر (500)${message ? ': ' + message : ''}` : `Server error (500)${message ? ': ' + message : ''}`);
+      } else {
+        toast.error(isRTL ? `فشل إضافة التعليق (${status ?? 'network'})` : `Failed to add comment (${status ?? 'network'})`);
+      }
     } finally {
       setSubmittingComment(false);
     }
