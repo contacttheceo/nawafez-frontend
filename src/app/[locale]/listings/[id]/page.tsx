@@ -589,8 +589,8 @@ export default function ListingDetailPage() {
                       </a>
                     )}
 
-                    {/* Bid — M&A only */}
-                    {listing.section === 'ma' && (
+                    {/* Bid — M&A only, not for owner */}
+                    {listing.section === 'ma' && !isOwner && (
                       <button
                         onClick={() => setShowBid(!showBid)}
                         className="w-full flex items-center justify-center gap-2 py-2.5 px-4
