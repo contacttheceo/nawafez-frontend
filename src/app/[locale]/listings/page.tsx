@@ -28,11 +28,21 @@ const SECTIONS = [
 ];
 
 const LISTING_TYPES = [
-  { value: 'for_sale', labelAr: 'للبيع',    labelEn: 'For Sale'   },
-  { value: 'for_rent', labelAr: 'للإيجار',  labelEn: 'For Rent'   },
-  { value: 'wanted',   labelAr: 'مطلوب',    labelEn: 'Wanted'     },
-  { value: 'offering', labelAr: 'معروض',    labelEn: 'Offering'   },
+  { value: 'for_sale', labelAr: 'للبيع',    labelEn: 'For Sale',  emoji: '🏷️' },
+  { value: 'for_rent', labelAr: 'للإيجار',  labelEn: 'For Rent',  emoji: '🔑' },
+  { value: 'wanted',   labelAr: 'مطلوب',    labelEn: 'Wanted',    emoji: '🔍' },
+  { value: 'offering', labelAr: 'معروض',    labelEn: 'Offering',  emoji: '📢' },
 ];
+
+// Which listing types are relevant per section
+const SECTION_TYPES: Record<string, string[]> = {
+  '':          ['for_sale', 'for_rent', 'offering', 'wanted'],
+  fleet:       ['for_sale', 'for_rent', 'wanted'],
+  contracts:   ['offering', 'wanted'],
+  ma:          [],   // no type filter (all = acquisition)
+  jobs:        [],   // no type filter (all = job)
+  forum:       [],   // no type filter (all = discussion)
+};
 
 const SORT_OPTIONS = [
   { value: 'newest',     labelAr: 'الأحدث أولاً',    labelEn: 'Newest First'    },
@@ -283,25 +293,29 @@ function ListingsContent() {
         </div>
       </div>
 
-      {/* Listing Type */}
-      <div>
-        <p className="text-[11px] font-bold text-gray-400 uppercase tracking-widest mb-3">
-          {isRTL ? 'نوع الإعلان' : 'Listing Type'}
-        </p>
-        <div className="space-y-2">
-          {LISTING_TYPES.map(t => (
-            <label key={t.value}
-              className="flex items-center gap-2.5 cursor-pointer group">
-              <input type="checkbox" checked={listingTypes.includes(t.value)}
-                onChange={() => toggleListingType(t.value)}
-                className="w-4 h-4 accent-emerald rounded" />
-              <span className="text-sm text-gray-700 group-hover:text-gray-900">
-                {isRTL ? t.labelAr : t.labelEn}
-              </span>
-            </label>
-          ))}
+      {/* Listing Type — only when current section has type options */}
+      {(SECTION_TYPES[section] ?? []).length > 0 && (
+        <div>
+          <p className="text-[11px] font-bold text-gray-400 uppercase tracking-widest mb-3">
+            {isRTL ? 'نوع الإعلان' : 'Listing Type'}
+          </p>
+          <div className="space-y-2">
+            {LISTING_TYPES
+              .filter(t => (SECTION_TYPES[section] ?? []).includes(t.value))
+              .map(t => (
+                <label key={t.value}
+                  className="flex items-center gap-2.5 cursor-pointer group">
+                  <input type="checkbox" checked={listingTypes.includes(t.value)}
+                    onChange={() => toggleListingType(t.value)}
+                    className="w-4 h-4 accent-emerald rounded" />
+                  <span className="text-sm text-gray-700 group-hover:text-gray-900">
+                    {t.emoji} {isRTL ? t.labelAr : t.labelEn}
+                  </span>
+                </label>
+              ))}
+          </div>
         </div>
-      </div>
+      )}
 
       {/* Price Range */}
       <div>
@@ -441,7 +455,12 @@ function ListingsContent() {
           {/* Section quick tabs */}
           <div className="flex gap-2 mt-4 overflow-x-auto pb-1 scrollbar-hide">
             {SECTIONS.map(s => (
-              <button key={s.value} onClick={() => setSection(s.value)}
+              <button key={s.value}
+                onClick={() => {
+                  setSection(s.value);
+                  // Clear listing type filter for sections that don't use it
+                  if ((SECTION_TYPES[s.value] ?? []).length === 0) setListingTypes([]);
+                }}
                 className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-semibold
                             whitespace-nowrap shrink-0 transition border
                             ${section === s.value
@@ -451,6 +470,42 @@ function ListingsContent() {
               </button>
             ))}
           </div>
+
+          {/* Listing type quick-filter pills — shown only for sections that have type options */}
+          {(SECTION_TYPES[section] ?? []).length > 0 && (
+            <div className="flex gap-2 mt-2 overflow-x-auto pb-1 scrollbar-hide">
+              {/* "All" pill */}
+              <button
+                onClick={() => setListingTypes([])}
+                className={`flex items-center gap-1 px-3 py-1 rounded-full text-xs font-semibold
+                            whitespace-nowrap shrink-0 transition border
+                            ${listingTypes.length === 0
+                              ? 'bg-white text-navy border-white shadow'
+                              : 'text-white/60 border-white/20 hover:border-white/50 hover:text-white'}`}>
+                {isRTL ? 'الكل' : 'All'}
+              </button>
+              {LISTING_TYPES
+                .filter(t => (SECTION_TYPES[section] ?? []).includes(t.value))
+                .map(t => {
+                  const active = listingTypes.includes(t.value);
+                  return (
+                    <button key={t.value}
+                      onClick={() => setListingTypes(
+                        active && listingTypes.length === 1
+                          ? []                                              // deselect last → show all
+                          : [t.value]                                       // select one (exclusive)
+                      )}
+                      className={`flex items-center gap-1 px-3 py-1 rounded-full text-xs font-semibold
+                                  whitespace-nowrap shrink-0 transition border
+                                  ${active
+                                    ? 'bg-white text-navy border-white shadow'
+                                    : 'text-white/60 border-white/20 hover:border-white/50 hover:text-white'}`}>
+                      {t.emoji} {isRTL ? t.labelAr : t.labelEn}
+                    </button>
+                  );
+                })}
+            </div>
+          )}
         </div>
       </div>
 

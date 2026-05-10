@@ -236,4 +236,34 @@ export const statsApi = {
   }> => api.get('/stats'),
 };
 
+export interface ListingComment {
+  id: number;
+  listing_id: number;
+  user_id: number;
+  body: string;
+  created_at: string;
+  updated_at: string;
+  user: {
+    id: number;
+    name_ar: string | null;
+    name_en: string | null;
+    avatar_url: string | null;
+    role: string;
+    is_trusted_payer: boolean;
+  };
+}
+
+export const commentsApi = {
+  getAll: (listingId: number, page = 1): Promise<{
+    data: ListingComment[];
+    meta: { current_page: number; last_page: number; total: number };
+  }> => api.get(`/listings/${listingId}/comments?page=${page}`),
+
+  add: (listingId: number, body: string): Promise<{ message: string; data: ListingComment }> =>
+    api.post(`/listings/${listingId}/comments`, { body }),
+
+  delete: (listingId: number, commentId: number): Promise<{ message: string }> =>
+    api.delete(`/listings/${listingId}/comments/${commentId}`),
+};
+
 export default api;
