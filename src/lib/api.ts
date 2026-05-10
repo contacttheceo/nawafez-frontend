@@ -267,7 +267,8 @@ export const commentsApi = {
 };
 
 export const aiApi = {
-  writeListing: (data: {
+  // Calls Next.js API route (not Laravel) — Vercel has no outbound restrictions
+  writeListing: async (data: {
     section: string;
     listing_type?: string;
     fields: Record<string, string>;
@@ -278,7 +279,16 @@ export const aiApi = {
       description_ar: string;
       description_en: string;
     };
-  }> => api.post('/ai/write-listing', data),
+  }> => {
+    const res = await fetch('/api/ai/write-listing', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data),
+    });
+    const json = await res.json();
+    if (!res.ok) throw { response: { data: json } };
+    return json;
+  },
 };
 
 export default api;
