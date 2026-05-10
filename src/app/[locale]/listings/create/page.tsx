@@ -142,8 +142,9 @@ export default function CreateListingPage() {
       setValue('title_en',       res.data.title_en);
       setValue('description_ar', res.data.description_ar);
       toast.success(isRTL ? '✨ تم كتابة الإعلان بالذكاء الاصطناعي' : '✨ AI wrote your listing!');
-    } catch {
-      toast.error(isRTL ? 'فشل الذكاء الاصطناعي، حاول مجدداً' : 'AI failed, please try again');
+    } catch (err: any) {
+      const msg = err?.response?.data?.message ?? err?.message ?? 'unknown error';
+      toast.error(msg, { duration: 6000 });
     } finally {
       setAiWriting(false);
     }
