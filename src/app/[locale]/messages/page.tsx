@@ -8,6 +8,7 @@ import { MessageSquare, Send, ChevronLeft, Loader2, Package } from 'lucide-react
 import { messagesApi, listingsApi } from '@/lib/api';
 import { useAuthStore } from '@/store/auth';
 import { useAuthGuard } from '@/hooks/useAuthGuard';
+import { useNotificationStore } from '@/store/notifications';
 import { formatDistanceToNow } from '@/lib/utils';
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
@@ -42,6 +43,7 @@ function MessagesInner() {
   // ✅ Auth guard — waits for store hydration before redirecting
   const { isAuthenticated, isReady } = useAuthGuard();
   const { user } = useAuthStore();
+  const { clearThreadUnread } = useNotificationStore();
 
   const toParam      = params.get('to');
   const listingParam = params.get('listing');
@@ -69,12 +71,15 @@ function MessagesInner() {
 
   /* ── ✅ clearUnread defined FIRST — before any effect that uses it ── */
   const clearUnread = useCallback((otherId: number, lstId: number) => {
-    setThreads(prev => prev.map(t =>
-      t.other_user.id === otherId && t.listing.id === lstId
-        ? { ...t, unread_count: 0 }
-        : t
-    ));
-  }, []);
+    setThreads(prev => prev.map(t => {
+      if (t.other_user.id === otherId && t.listing.id === lstId && t.unread_count > 0) {
+        // Also decrement the shared Navbar counter
+        clearThreadUnread(t.unread_count);
+        return { ...t, unread_count: 0 };
+      }
+      return t;
+    }));
+  }, [clearThreadUnread]);
 
   /* ── Open a thread ── */
   const openThread = useCallback(async (thread: Thread) => {

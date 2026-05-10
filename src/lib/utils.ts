@@ -5,6 +5,19 @@ export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
 }
 
+/**
+ * Build a full storage URL from a relative path returned by the backend.
+ * Backend stores e.g. "avatars/1/photo.jpg"
+ * Frontend builds: https://backend-domain.com/storage/avatars/1/photo.jpg
+ */
+export function storageUrl(path: string | null | undefined): string | null {
+  if (!path) return null
+  if (path.startsWith('http')) return path  // already a full URL
+  const base = (process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:8000')
+    .replace(/\/api$/, '')                  // strip trailing /api
+  return `${base}/storage/${path}`
+}
+
 export function formatDistanceToNow(dateStr: string | undefined | null, locale: string): string {
   if (!dateStr) return ''
   const date = new Date(dateStr)

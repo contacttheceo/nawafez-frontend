@@ -13,6 +13,7 @@ import {
 import { userApi, authApi } from '@/lib/api';
 import { useAuthStore } from '@/store/auth';
 import { useAuthGuard } from '@/hooks/useAuthGuard';
+import { storageUrl } from '@/lib/utils';
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
 import toast from 'react-hot-toast';
@@ -101,8 +102,8 @@ export default function ProfilePage() {
       const fd = new FormData();
       fd.append('avatar', file);
       const res = await userApi.uploadAvatar(fd);
-      // Update store with new avatar_url
-      setUser({ ...user!, avatar_url: res.avatar_url });
+      // Store the relative path — storageUrl() builds full URL at render time
+      setUser({ ...user!, avatar_url: res.avatar_path });
       setAvatarPreview(null);
       toast.success(isRTL ? 'تم تحديث الصورة الشخصية ✓' : 'Avatar updated ✓');
     } catch (err: any) {
@@ -248,11 +249,14 @@ export default function ProfilePage() {
                   <div className="relative shrink-0">
                     <div className="w-20 h-20 rounded-full overflow-hidden bg-navy/10
                                     ring-2 ring-white shadow-md">
-                      {(avatarPreview ?? user.avatar_url) ? (
+                      {(avatarPreview ?? storageUrl(user.avatar_url)) ? (
                         <img
-                          src={avatarPreview ?? user.avatar_url!}
+                          src={avatarPreview ?? storageUrl(user.avatar_url)!}
                           alt={isRTL ? user.name_ar : user.name_en}
                           className="w-full h-full object-cover"
+                          onError={(e) => {
+                            (e.target as HTMLImageElement).style.display = 'none';
+                          }}
                         />
                       ) : (
                         <div className="w-full h-full flex items-center justify-center

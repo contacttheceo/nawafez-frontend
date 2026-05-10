@@ -6,7 +6,9 @@ import Link from 'next/link'
 import { useState, useRef, useEffect } from 'react'
 import { Menu, X, Globe, Plus, LogIn, ChevronDown, LayoutDashboard, User, MessageSquare, LogOut, Shield } from 'lucide-react'
 import { useAuthStore } from '@/store/auth'
+import { useNotificationStore } from '@/store/notifications'
 import { authApi, messagesApi } from '@/lib/api'
+import { storageUrl } from '@/lib/utils'
 
 export default function Navbar() {
   const t = useTranslations('nav')
@@ -15,19 +17,21 @@ export default function Navbar() {
   const pathname = usePathname()
   const [mobileOpen, setMobileOpen]     = useState(false)
   const [dropdownOpen, setDropdownOpen] = useState(false)
-  const [unread, setUnread]             = useState(0)
   const dropdownRef = useRef<HTMLDivElement>(null)
   const isRTL = locale === 'ar'
   const { user, isAuthenticated, clearAuth } = useAuthStore()
 
+  // ✅ Shared unread count — updated by messages page AND Navbar poll
+  const { unreadMessages: unread, setUnreadMessages } = useNotificationStore()
+
   /* ── Poll inbox every 30s for unread count ── */
   useEffect(() => {
-    if (!isAuthenticated) { setUnread(0); return; }
+    if (!isAuthenticated) { setUnreadMessages(0); return; }
     const fetchUnread = async () => {
       try {
         const res: any = await messagesApi.getInbox()
         const threads: any[] = res.data ?? []
-        setUnread(threads.reduce((s: number, t: any) => s + (t.unread_count ?? 0), 0))
+        setUnreadMessages(threads.reduce((s: number, t: any) => s + (t.unread_count ?? 0), 0))
       } catch {}
     }
     fetchUnread()
@@ -149,8 +153,10 @@ export default function Navbar() {
                   >
                     <div className="w-6 h-6 rounded-full overflow-hidden bg-emerald flex items-center
                                     justify-center text-white font-bold text-xs shrink-0">
-                      {user.avatar_url ? (
-                        <img src={user.avatar_url} alt="" className="w-full h-full object-cover" />
+                      {storageUrl(user.avatar_url) ? (
+                        <img src={storageUrl(user.avatar_url)!} alt=""
+                             className="w-full h-full object-cover"
+                             onError={(e) => { (e.target as HTMLImageElement).style.display = 'none' }} />
                       ) : (
                         (isRTL ? user.name_ar : user.name_en)?.[0]?.toUpperCase() ?? 'U'
                       )}

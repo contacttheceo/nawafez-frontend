@@ -176,7 +176,7 @@ export const userApi = {
   }): Promise<any> =>
     api.put('/user/profile', data),
 
-  uploadAvatar: (data: FormData): Promise<{ avatar_url: string }> =>
+  uploadAvatar: (data: FormData): Promise<{ avatar_path: string }> =>
     api.post('/user/avatar', data, {
       headers: { 'Content-Type': 'multipart/form-data' },
     }),
