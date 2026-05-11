@@ -28,11 +28,11 @@ export default function HomePage() {
       <Navbar />
       <main className="flex-1">
         <HeroSection />
+        <AIFeaturesSection />
         <TrustBar />
         <SectionsGrid />
         <FeaturedListings />
         <LatestListings />
-        <AIFeaturesSection />
         <HowItWorks />
         <CTABanner />
       </main>
