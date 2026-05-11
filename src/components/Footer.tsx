@@ -2,11 +2,13 @@
 
 import { useTranslations, useLocale } from 'next-intl'
 import Link from 'next/link'
+import { Phone, Mail, Globe } from 'lucide-react'
 
 export default function Footer() {
   const t = useTranslations('footer')
   const ts = useTranslations('sections')
   const locale = useLocale()
+  const isRTL = locale === 'ar'
 
   return (
     <footer className="bg-navy-dark text-white/70">
@@ -20,7 +22,42 @@ export default function Footer() {
                               text-white font-black text-lg">ن</div>
               <span className="text-white font-black text-xl">نوافذ</span>
             </div>
-            <p className="text-sm leading-relaxed">{t('desc')}</p>
+            <p className="text-sm leading-relaxed mb-5">{t('desc')}</p>
+
+            {/* Operating company */}
+            <div className="border-t border-white/10 pt-4 space-y-2.5">
+              <p className="text-white/40 text-[10px] uppercase tracking-wider font-medium">
+                {isRTL ? 'تحت إدارة' : 'Operated by'}
+              </p>
+              <p className="text-white/80 text-xs font-semibold leading-snug">
+                {isRTL ? 'شركة كريتيف ألفا التجارية' : 'Creative Alpha Commercial'}
+              </p>
+              <div className="flex flex-col gap-2 text-xs">
+                <a
+                  href="tel:+966556716705"
+                  className="flex items-center gap-2 hover:text-white transition-colors"
+                >
+                  <Phone size={11} className="text-emerald shrink-0" />
+                  <span dir="ltr">+966 55 671 6705</span>
+                </a>
+                <a
+                  href="mailto:info@creativealphat.com"
+                  className="flex items-center gap-2 hover:text-white transition-colors"
+                >
+                  <Mail size={11} className="text-emerald shrink-0" />
+                  info@creativealphat.com
+                </a>
+                <a
+                  href="https://creativealphat.com"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center gap-2 hover:text-white transition-colors"
+                >
+                  <Globe size={11} className="text-emerald shrink-0" />
+                  creativealphat.com
+                </a>
+              </div>
+            </div>
           </div>
 
           {/* Sections */}
@@ -42,7 +79,9 @@ export default function Footer() {
             <div className="flex flex-col gap-2 text-sm">
               <Link href={`/${locale}/listings/create`} className="hover:text-white transition-colors">{t('packages')}</Link>
               <Link href={`/${locale}/profile`} className="hover:text-white transition-colors">{t('verify')}</Link>
-              <Link href={`/${locale}/dashboard`} className="hover:text-white transition-colors">لوحة التحكم</Link>
+              <Link href={`/${locale}/dashboard`} className="hover:text-white transition-colors">
+                {isRTL ? 'لوحة التحكم' : 'Dashboard'}
+              </Link>
             </div>
           </div>
 
@@ -52,7 +91,9 @@ export default function Footer() {
             <div className="flex flex-col gap-2 text-sm">
               <Link href={`/${locale}/terms`} className="hover:text-white transition-colors">{t('terms')}</Link>
               <Link href={`/${locale}/privacy`} className="hover:text-white transition-colors">{t('privacy')}</Link>
-              <a href="mailto:support@nawafez.sa" className="hover:text-white transition-colors">{t('contact')}</a>
+              <a href="mailto:info@creativealphat.com" className="hover:text-white transition-colors">
+                {t('contact')}
+              </a>
               <Link href={`/${locale}/faq`} className="hover:text-white transition-colors">{t('faq')}</Link>
             </div>
           </div>
@@ -61,7 +102,15 @@ export default function Footer() {
         {/* Bottom bar */}
         <div className="border-t border-white/10 pt-5 flex flex-col md:flex-row
                         items-center justify-between gap-3 text-xs">
-          <span>© {new Date().getFullYear()} نوافذ — {t('copyright')}</span>
+          <div className="flex flex-col md:flex-row items-center gap-2 text-center md:text-start">
+            <span>© {new Date().getFullYear()} نوافذ — {t('copyright')}</span>
+            <span className="hidden md:inline text-white/20">|</span>
+            <span className="text-white/40">
+              {isRTL ? 'شركة كريتيف ألفا التجارية' : 'Creative Alpha Commercial'}
+              {' · '}
+              {isRTL ? 'ر.و:' : 'CR:'} 7042559364
+            </span>
+          </div>
           <div className="flex gap-2">
             <span className="bg-white/10 px-3 py-1 rounded-md">🇸🇦 {t('saudi')}</span>
             <span className="bg-white/10 px-3 py-1 rounded-md">🔒 {t('secure')}</span>
