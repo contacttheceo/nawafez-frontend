@@ -70,7 +70,7 @@ export async function POST(req: NextRequest) {
         },
         body: JSON.stringify({
           contents: [{ parts: [{ text: prompt }] }],
-          generationConfig: { maxOutputTokens: 1000, temperature: 0.1 },
+          generationConfig: { maxOutputTokens: 1000, temperature: 0, responseMimeType: 'application/json' },
         }),
         signal: AbortSignal.timeout(20_000),
       }
@@ -85,25 +85,28 @@ export async function POST(req: NextRequest) {
     const geminiData = await geminiRes.json();
     const rawText: string = (geminiData as any)?.candidates?.[0]?.content?.parts?.[0]?.text ?? '';
 
-    // Parse JSON — strip markdown if present
+    // Parse JSON — multiple strategies
     let data: any = null;
-    const cleaned = rawText
-      .replace(/^```(?:json)?\s*/i, '')
-      .replace(/\s*```\s*$/, '')
+
+    // Strategy 1: strip markdown code fences then parse
+    const stripped = rawText
+      .replace(/^```(?:json)?\s*/im, '')
+      .replace(/\s*```\s*$/m, '')
       .trim();
+    try { data = JSON.parse(stripped); } catch { /* continue */ }
 
-    try { data = JSON.parse(cleaned); } catch { /* continue */ }
-
+    // Strategy 2: find outermost { ... } block
     if (!data) {
-      const match = rawText.match(/\{[\s\S]*"section"[\s\S]*\}/);
-      if (match) {
-        try { data = JSON.parse(match[0]); } catch { /* continue */ }
+      const start = rawText.indexOf('{');
+      const end   = rawText.lastIndexOf('}');
+      if (start !== -1 && end > start) {
+        try { data = JSON.parse(rawText.slice(start, end + 1)); } catch { /* continue */ }
       }
     }
 
     if (!data || !data.section) {
       return NextResponse.json(
-        { message: 'لم أتمكن من تحليل النص، حاول بكتابة تفاصيل أوضح.' },
+        { message: `لم أتمكن من تحليل النص. الرد: ${rawText.slice(0, 300)}` },
         { status: 500 }
       );
     }
