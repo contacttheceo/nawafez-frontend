@@ -12,9 +12,13 @@ export function cn(...inputs: ClassValue[]) {
  */
 export function storageUrl(path: string | null | undefined): string | null {
   if (!path) return null
-  if (path.startsWith('http')) return path  // already a full URL
+  // Strip cache-buster if present before checking prefix
+  const cleanPath = path.split('?')[0]
+  if (cleanPath.startsWith('http')) return path  // already a full URL
   const base = (process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:8000')
-    .replace(/\/api$/, '')                  // strip trailing /api
+    .replace(/\/api$/, '')                        // strip trailing /api
+  // uploads/ paths are served directly from public/ — no /storage/ prefix needed
+  if (cleanPath.startsWith('uploads/')) return `${base}/${path}`
   return `${base}/storage/${path}`
 }
 
