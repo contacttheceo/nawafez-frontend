@@ -5,10 +5,12 @@
  * Fallback triggers only on overload / high-demand errors (503 or matching message).
  */
 
+// Retry gemini-2.5-flash up to 2 times (overload is usually temporary),
+// then fall back to gemini-2.5-pro.
 const MODELS = [
   'gemini-2.5-flash',
-  'gemini-1.5-flash',
-  'gemini-1.5-pro',
+  'gemini-2.5-flash',   // retry #2
+  'gemini-2.5-pro',
 ];
 
 const GEMINI_BASE = 'https://generativelanguage.googleapis.com/v1beta/models';
@@ -40,6 +42,9 @@ function isOverloadError(status: number, message: string): boolean {
   );
 }
 
+const sleep = (ms: number) => new Promise(r => setTimeout(r, ms));
+const RETRY_DELAYS = [0, 2000, 0]; // ms before each attempt (index matches MODELS)
+
 export async function callGemini(
   apiKey: string,
   parts: GeminiPart[],
@@ -49,8 +54,11 @@ export async function callGemini(
   let lastResponse: Response | null = null;
   let lastModel = MODELS[0];
 
-  for (const model of MODELS) {
+  for (let i = 0; i < MODELS.length; i++) {
+    const model = MODELS[i];
     lastModel = model;
+
+    if (RETRY_DELAYS[i]) await sleep(RETRY_DELAYS[i]);
 
     let response: Response;
     try {

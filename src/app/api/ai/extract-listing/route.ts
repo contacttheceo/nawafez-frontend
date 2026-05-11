@@ -158,11 +158,17 @@ export async function POST(req: NextRequest) {
     ];
 
     // Try models in order — fall back on overload errors
-    const MODELS = ['gemini-2.5-flash', 'gemini-1.5-flash', 'gemini-1.5-pro'];
+    const MODELS        = ['gemini-2.5-flash', 'gemini-2.5-flash', 'gemini-2.5-pro'];
+    const RETRY_DELAYS  = [0, 2000, 0]; // ms before each attempt
     let geminiData: any = null;
     let lastErrMsg = '';
 
-    for (const model of MODELS) {
+    const sleep = (ms: number) => new Promise(r => setTimeout(r, ms));
+
+    for (let mi = 0; mi < MODELS.length; mi++) {
+      const model = MODELS[mi];
+      if (RETRY_DELAYS[mi]) await sleep(RETRY_DELAYS[mi]);
+
       let geminiRes: Response;
       try {
         geminiRes = await fetch(
