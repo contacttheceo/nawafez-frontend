@@ -134,37 +134,44 @@ export default function CreateListingPage() {
       if (res.section)              setValue('section',       res.section as any);
       if (res.listing_type)         setValue('listing_type',  res.listing_type);
 
-      // Common fields
-      if (res.fields.city)          setValue('city',          res.fields.city);
-      if (res.fields.price)         setValue('price',         res.fields.price);
+      // Common fields (all sections)
+      if (res.fields.city)  setValue('city',  res.fields.city);
+      if (res.fields.price) setValue('price', res.fields.price);
 
-      // Fleet
-      if (res.fields.vehicle_type)  setValue('vehicle_type',  res.fields.vehicle_type);
-      if (res.fields.year)          setValue('year',          res.fields.year);
-      if (res.fields.mileage)       setValue('mileage',       res.fields.mileage);
-      if (res.fields.capacity)      setValue('capacity',      res.fields.capacity);
-
-      // Jobs
-      if (res.fields.job_title) {
-        setValue('job_title', res.fields.job_title);
-        // Use job title as listing title if not already set
-        setValue('title_ar', res.fields.job_title);
+      // Fleet only
+      if (res.section === 'fleet') {
+        if (res.fields.vehicle_type) setValue('vehicle_type', res.fields.vehicle_type);
+        if (res.fields.year)         setValue('year',         res.fields.year);
+        if (res.fields.mileage)      setValue('mileage',      res.fields.mileage);
+        if (res.fields.capacity)     setValue('capacity',     res.fields.capacity);
       }
-      if (res.fields.employment_type) setValue('employment_type', res.fields.employment_type);
-      if (res.fields.salary_min) {
-        setValue('salary_type', 'fixed');          // راتب ثابت
-        setValue('salary_min',  res.fields.salary_min);
-        setValue('price',       res.fields.salary_min); // يملأ حقل السعر في الخطوة 3
+
+      // Jobs only
+      if (res.section === 'jobs') {
+        if (res.fields.job_title) {
+          setValue('job_title', res.fields.job_title);
+          setValue('title_ar',  res.fields.job_title); // عنوان الإعلان = المسمى
+        }
+        if (res.fields.employment_type) setValue('employment_type', res.fields.employment_type);
+        if (res.fields.salary_min) {
+          setValue('salary_type', 'fixed');
+          setValue('salary_min',  res.fields.salary_min);
+          setValue('price',       res.fields.salary_min);
+        }
+        if (res.fields.salary_max) setValue('salary_max', res.fields.salary_max);
       }
-      if (res.fields.salary_max) setValue('salary_max', res.fields.salary_max);
 
-      // Contracts
-      if (res.fields.contract_type) setValue('contract_type', res.fields.contract_type);
-      if (res.fields.duration)      setValue('duration',      res.fields.duration);
+      // Contracts only
+      if (res.section === 'contracts') {
+        if (res.fields.contract_type) setValue('contract_type', res.fields.contract_type);
+        if (res.fields.duration)      setValue('duration',      res.fields.duration);
+      }
 
-      // M&A
-      if (res.fields.company_type)     setValue('company_type',     res.fields.company_type);
-      if (res.fields.employees_count)  setValue('employees_count',  res.fields.employees_count);
+      // M&A only
+      if (res.section === 'ma') {
+        if (res.fields.company_type)    setValue('company_type',    res.fields.company_type);
+        if (res.fields.employees_count) setValue('employees_count', res.fields.employees_count);
+      }
       setExtractedData(res);
     } catch (err: any) {
       toast.error(err?.response?.data?.message ?? (isRTL ? 'فشل التحليل، حاول مجدداً' : 'Analysis failed, try again'));

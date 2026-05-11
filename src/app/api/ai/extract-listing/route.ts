@@ -3,8 +3,10 @@ import { NextRequest, NextResponse } from 'next/server';
 // ── Level 1: System Instruction ──────────────────────────────────────────────
 const SYSTEM_INSTRUCTION = `أنت محلل بيانات متخصص في منصة نوافذ للخدمات اللوجستية في المملكة العربية السعودية.
 تفهم السوق السعودي اللوجستي جيداً:
-- الشركات المعروفة: نينجا، جاهز، كيتا، أرامكس، DHL، فيدكس، زاجل، رسول، سمسا
-- "كيتا" و"نينجا" و"جاهز" = شركات توصيل طلبات → contract_type=delivery أو section=jobs
+- الشركات المعروفة: نينجا، جاهز، كيتا، هنقر، هنقرستيشن، مرسول، أرامكس، DHL، فيدكس، زاجل، رسول، سمسا، توصيل
+- "كيتا" و"نينجا" و"جاهز" و"هنقر" و"هنقرستيشن" و"مرسول" = شركات توصيل طلبات → section=jobs أو contract_type=delivery
+- إذا ورد اسم شركة توصيل مع "سائق" → section=jobs, job_title=سائق توصيل
+- إذا ورد اسم شركة توصيل مع "عقد" → section=contracts, contract_type=delivery
 - "بيك آب"، "هايلوكس" = vehicle_type=pickup
 - "مقطورة"، "تريلا" = vehicle_type=trailer
 - "صهريج"، "ووتر تراك" = vehicle_type=tanker
@@ -31,6 +33,10 @@ const FEW_SHOT_EXAMPLES = [
   {
     input:  'مطلوب سيارات بلوحة صفراء سوزوكي عدد 20 في منطقة الرياض',
     output: '{"section":"fleet","listing_type":"wanted","fields":{"vehicle_type":"car","city":"الرياض"},"missing":["year","price"]}',
+  },
+  {
+    input:  'مطلوب سائق 50 للعمل في تطبيق هنقرستيشن براتب ثابت 5500 ريال شامل في منطقة الرياض لا يشترط الخبرة',
+    output: '{"section":"jobs","listing_type":"job","fields":{"job_title":"سائق توصيل","employment_type":"full","salary_min":"5500","city":"الرياض"},"missing":[]}',
   },
   {
     input:  'للإيجار مستودع مبرد في الدمام مساحة 500 متر إيجار شهري',
