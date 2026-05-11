@@ -84,7 +84,9 @@ export default function ProfilePage() {
         name_en: data.name_en,
         phone:   data.phone,
       });
-      setUser(res.data ?? res);
+      // Preserve avatar_url — backend returns raw model with 'avatar' field not 'avatar_url'
+      const updated = res.data ?? res;
+      setUser({ ...user!, ...updated, avatar_url: updated.avatar_url ?? user!.avatar_url });
       toast.success(isRTL ? 'تم تحديث الملف الشخصي ✓' : 'Profile updated ✓');
     } catch (err: any) {
       toast.error(err?.response?.data?.message ?? (isRTL ? 'حدث خطأ' : 'Error'));
