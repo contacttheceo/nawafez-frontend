@@ -41,11 +41,11 @@ export default function Footer() {
                   <span dir="ltr">+966 55 671 6705</span>
                 </a>
                 <a
-                  href="mailto:info@creativealphat.com"
+                  href="mailto:info@nwafizlogi.com"
                   className="flex items-center gap-2 hover:text-white transition-colors"
                 >
                   <Mail size={11} className="text-emerald shrink-0" />
-                  info@creativealphat.com
+                  info@nwafizlogi.com
                 </a>
                 <a
                   href="https://www.nwafizlogi.com"
@@ -91,7 +91,7 @@ export default function Footer() {
             <div className="flex flex-col gap-2 text-sm">
               <Link href={`/${locale}/terms`} className="hover:text-white transition-colors">{t('terms')}</Link>
               <Link href={`/${locale}/privacy`} className="hover:text-white transition-colors">{t('privacy')}</Link>
-              <a href="mailto:info@creativealphat.com" className="hover:text-white transition-colors">
+              <a href="mailto:info@nwafizlogi.com" className="hover:text-white transition-colors">
                 {t('contact')}
               </a>
               <Link href={`/${locale}/faq`} className="hover:text-white transition-colors">{t('faq')}</Link>
