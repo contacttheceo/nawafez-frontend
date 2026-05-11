@@ -198,12 +198,12 @@ export default function Navbar() {
                         <User size={15} className="text-navy" />
                         {isRTL ? 'الملف الشخصي' : 'Profile'}
                       </Link>
-                      <Link href={`/${locale}/tools/contract-analyzer`}
+                      <Link href={`/${locale}/tools`}
                         onClick={() => setDropdownOpen(false)}
                         className="flex items-center gap-2.5 px-4 py-2.5 text-sm text-violet-600
                                    hover:bg-violet-50 transition-colors">
                         <Zap size={15} />
-                        {isRTL ? 'محلل العقود AI' : 'AI Contract Analyzer'}
+                        {isRTL ? 'أدوات الذكاء الاصطناعي' : 'AI Tools'}
                       </Link>
                       {user.role === 'admin' && (
                         <Link href={`/${locale}/admin`}

@@ -9,7 +9,7 @@ import {
   TrendingUp, Clock, CheckCircle, XCircle, AlertCircle,
   LogOut, Settings, DollarSign, Bell, Star,
   ChevronRight, Pencil, ExternalLink, Package,
-  Pause, Play, RefreshCw, Trash2, AlertTriangle,
+  Pause, Play, RefreshCw, Trash2, AlertTriangle, Sparkles, X,
 } from 'lucide-react';
 import { userApi, authApi, listingsApi } from '@/lib/api';
 import { useAuthStore } from '@/store/auth';
@@ -58,6 +58,9 @@ export default function DashboardPage() {
   const [myBids,     setMyBids]     = useState<any[]>([]);
   const [delConfirm, setDelConfirm] = useState<number | null>(null); // listing id pending delete
   const [actionBusy, setActionBusy] = useState<number | null>(null); // which listing is being acted on
+  const [tipsListingId, setTipsListingId] = useState<number | null>(null); // which listing shows tips
+  const [tips,          setTips]          = useState<Array<{icon:string;message:string;priority:string}>>([]);
+  const [loadingTips,   setLoadingTips]   = useState(false);
 
   const loadStats = async () => {
     const [dashData, bidsData] = await Promise.all([
@@ -141,6 +144,34 @@ export default function DashboardPage() {
     } catch (e: any) {
       toast.error(e?.response?.data?.message ?? (isRTL ? 'حدث خطأ' : 'Error'));
     } finally { setActionBusy(null); }
+  };
+
+  const handleFetchTips = async (listing: any) => {
+    if (tipsListingId === listing.id) { setTipsListingId(null); return; }
+    setTipsListingId(listing.id);
+    setTips([]);
+    setLoadingTips(true);
+    try {
+      const res = await fetch('/api/ai/listing-tips', {
+        method:  'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body:    JSON.stringify({
+          section:      listing.section,
+          listing_type: listing.listing_type,
+          dynamic_data: listing.dynamic_data,
+          price:        listing.price,
+          views_count:  listing.views_count,
+          title_ar:     listing.title_ar,
+          has_images:   listing.media?.length > 0,
+          city:         listing.city,
+        }),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setTips(data.tips ?? []);
+      }
+    } catch { setTips([]); }
+    finally  { setLoadingTips(false); }
   };
 
   if (!isAuthenticated) return null;
@@ -501,8 +532,61 @@ export default function DashboardPage() {
                               title={isRTL ? 'حذف' : 'Delete'}>
                               <Trash2 size={14} />
                             </button>
+
+                            {/* AI Tips */}
+                            <button
+                              onClick={() => handleFetchTips(listing)}
+                              className={`p-1.5 rounded-lg transition
+                                          ${tipsListingId === listing.id
+                                            ? 'bg-violet-100 text-violet-600'
+                                            : 'hover:bg-violet-50 text-gray-400 hover:text-violet-500'}`}
+                              title={isRTL ? 'نصائح الذكاء الاصطناعي' : 'AI Tips'}>
+                              <Sparkles size={14} />
+                            </button>
                           </div>
                         </div>
+
+                        {/* AI Tips Panel */}
+                        {tipsListingId === listing.id && (
+                          <div className="mt-3 rounded-xl border border-violet-100 bg-violet-50 p-3">
+                            <div className="flex items-center justify-between mb-2">
+                              <div className="flex items-center gap-1.5">
+                                <Sparkles size={12} className="text-violet-500" />
+                                <span className="text-xs font-bold text-violet-700">
+                                  {isRTL ? 'توصيات الذكاء الاصطناعي' : 'AI Recommendations'}
+                                </span>
+                              </div>
+                              <button
+                                onClick={() => setTipsListingId(null)}
+                                className="p-0.5 text-violet-300 hover:text-violet-600 transition">
+                                <X size={12} />
+                              </button>
+                            </div>
+                            {loadingTips ? (
+                              <div className="space-y-2">
+                                {[1,2].map(i => (
+                                  <div key={i} className="h-4 bg-violet-100 rounded animate-pulse" />
+                                ))}
+                              </div>
+                            ) : tips.length === 0 ? (
+                              <p className="text-xs text-violet-500">
+                                {isRTL ? 'إعلانك يبدو مكتملاً ✓' : 'Your listing looks complete ✓'}
+                              </p>
+                            ) : (
+                              <div className="space-y-2">
+                                {tips.map((tip, i) => (
+                                  <div key={i} className="flex items-start gap-2">
+                                    <span className="text-sm shrink-0">{tip.icon}</span>
+                                    <p className={`text-xs leading-relaxed
+                                                   ${tip.priority === 'high' ? 'text-red-700 font-medium' : 'text-violet-700'}`}>
+                                      {tip.message}
+                                    </p>
+                                  </div>
+                                ))}
+                              </div>
+                            )}
+                          </div>
+                        )}
                       </div>
                     );
                   })}

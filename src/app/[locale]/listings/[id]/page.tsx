@@ -9,7 +9,7 @@ import {
   DollarSign, Phone, MessageSquare, Bookmark, Flag,
   ArrowRight, MessageCircle, ChevronLeft, ChevronRight,
   Share2, Check, AlertTriangle, Clock, BadgeCheck,
-  Send, Trash2, ChevronDown, Zap,
+  Send, Trash2, ChevronDown, Zap, Sparkles, X as XIcon,
 } from 'lucide-react';
 import { listingsApi, interactionsApi, commentsApi } from '@/lib/api';
 import type { ListingComment } from '@/lib/api';
@@ -97,6 +97,8 @@ export default function ListingDetailPage() {
   const [submittingComment, setSubmittingComment] = useState(false);
   const [commentLoading,    setCommentLoading]    = useState(true);
   const [loadingMoreCom,    setLoadingMoreCom]    = useState(false);
+  const [commentSummary,    setCommentSummary]    = useState<string[]>([]);
+  const [summaryDismissed,  setSummaryDismissed]  = useState(false);
 
 
   /* ── Load listing ── */
@@ -141,13 +143,36 @@ export default function ListingDetailPage() {
     if (page === 1) setCommentLoading(true); else setLoadingMoreCom(true);
     try {
       const res = await commentsApi.getAll(Number(id), page);
-      setComments(prev => append ? [...prev, ...res.data] : res.data);
+      const incoming: ListingComment[] = res.data;
+      setComments(prev => append ? [...prev, ...incoming] : incoming);
       setCommentMeta(res.meta);
+      // Trigger summary for ≥5 comments — done via useEffect below
     } catch {}
     finally { setCommentLoading(false); setLoadingMoreCom(false); }
   }, [id]);
 
   useEffect(() => { fetchComments(1); }, [fetchComments]);
+
+  /* ── Auto-summarize comments when ≥5 loaded ── */
+  useEffect(() => {
+    if (!listing || commentSummary.length > 0 || commentLoading) return;
+    if (!commentMeta || commentMeta.total < 5) return;
+    const texts = comments.map(c => c.body);
+    if (texts.length < 5) return;
+    fetch('/api/ai/summarize-comments', {
+      method:  'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body:    JSON.stringify({
+        comments:       texts,
+        listing_title:  listing.title_ar ?? '',
+        section:        listing.section ?? '',
+      }),
+    })
+      .then(r => r.ok ? r.json() : null)
+      .then(data => { if (data?.points?.length) setCommentSummary(data.points); })
+      .catch(() => {});
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [listing?.id, commentMeta?.total, commentLoading]);
 
   /* ── Add comment ── */
   const handleAddComment = async () => {
@@ -600,6 +625,35 @@ export default function ListingDetailPage() {
                     </span>
                   )}
                 </h2>
+
+                {/* AI Comment Summary Card */}
+                {commentSummary.length > 0 && !summaryDismissed && (
+                  <div className="mb-5 rounded-2xl border border-violet-200 bg-violet-50 p-4">
+                    <div className="flex items-center justify-between mb-3">
+                      <div className="flex items-center gap-2">
+                        <div className="w-6 h-6 rounded-lg bg-violet-500 flex items-center justify-center">
+                          <Sparkles size={12} className="text-white" />
+                        </div>
+                        <p className="text-xs font-bold text-violet-700">
+                          {isRTL ? '🤖 أبرز ما يسأل عنه الناس' : '🤖 What people ask about'}
+                        </p>
+                      </div>
+                      <button
+                        onClick={() => setSummaryDismissed(true)}
+                        className="p-0.5 text-violet-300 hover:text-violet-600 transition">
+                        <XIcon size={14} />
+                      </button>
+                    </div>
+                    <ul className="space-y-1.5">
+                      {commentSummary.map((point, i) => (
+                        <li key={i} className="flex items-start gap-2 text-xs text-violet-800">
+                          <span className="text-violet-400 font-bold shrink-0 mt-px">·</span>
+                          {point}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
 
                 {/* Add comment form */}
                 {isAuthenticated ? (

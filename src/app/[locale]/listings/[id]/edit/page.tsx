@@ -5,7 +5,7 @@ import { useParams, useRouter } from 'next/navigation';
 import { useLocale } from 'next-intl';
 import Link from 'next/link';
 import {
-  ArrowRight, Save, Loader2, ImagePlus, X, AlertTriangle, Info,
+  ArrowRight, Save, Loader2, ImagePlus, X, AlertTriangle, Info, Sparkles,
 } from 'lucide-react';
 import { listingsApi } from '@/lib/api';
 import { useAuthStore } from '@/store/auth';
@@ -85,6 +85,8 @@ export default function EditListingPage() {
   const [contactPhone,  setContactPhone]  = useState('');
   const [dynData,       setDynData]       = useState<Record<string, string>>({});
 
+  const [aiWriting, setAiWriting] = useState(false);
+
   /* ── Image state ── */
   const [existingImgs,  setExistingImgs]  = useState<string[]>([]);   // current paths from backend
   const [removedPaths,  setRemovedPaths]  = useState<string[]>([]);   // paths to remove
@@ -157,6 +159,39 @@ export default function EditListingPage() {
     setNewFiles(prev => prev.filter((_, i) => i !== idx));
     URL.revokeObjectURL(newPreviews[idx]);
     setNewPreviews(prev => prev.filter((_, i) => i !== idx));
+  };
+
+  /* ── AI Write ── */
+  const handleAiWrite = async () => {
+    if (!section) {
+      toast.error(isRTL ? 'اختر القسم أولاً' : 'Select a section first');
+      return;
+    }
+    setAiWriting(true);
+    try {
+      const res = await fetch('/api/ai/write-listing', {
+        method:  'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body:    JSON.stringify({
+          section,
+          listing_type: listingType,
+          fields: { ...dynData, city, price, price_type: priceType },
+        }),
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err.message ?? 'AI error');
+      }
+      const { data } = await res.json();
+      if (data?.title_ar)       setTitleAr(data.title_ar);
+      if (data?.title_en)       setTitleEn(data.title_en);
+      if (data?.description_ar) setDescAr(data.description_ar);
+      toast.success(isRTL ? '✨ تم كتابة الإعلان بالذكاء الاصطناعي' : '✨ AI wrote your listing!');
+    } catch (err: any) {
+      toast.error(err.message || (isRTL ? 'فشل الذكاء الاصطناعي' : 'AI failed'));
+    } finally {
+      setAiWriting(false);
+    }
   };
 
   /* ── Submit ── */
@@ -311,7 +346,22 @@ export default function EditListingPage() {
 
           {/* ── Titles ── */}
           <div className="card p-5 space-y-4">
-            <h3 className="text-sm font-bold text-navy">{isRTL ? 'العنوان والوصف' : 'Title & Description'}</h3>
+            <div className="flex items-center justify-between">
+              <h3 className="text-sm font-bold text-navy">{isRTL ? 'العنوان والوصف' : 'Title & Description'}</h3>
+              <button
+                type="button"
+                onClick={handleAiWrite}
+                disabled={aiWriting}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold
+                           bg-gradient-to-r from-violet-500 to-purple-600 text-white
+                           hover:opacity-90 transition disabled:opacity-50 shadow-sm"
+              >
+                {aiWriting
+                  ? <Loader2 size={12} className="animate-spin" />
+                  : <Sparkles size={12} />}
+                {isRTL ? 'اكتب بالذكاء الاصطناعي' : 'Write with AI'}
+              </button>
+            </div>
             <div>
               <label className="block text-xs text-gray-500 mb-1.5">
                 {isRTL ? 'العنوان بالعربي *' : 'Arabic Title *'}

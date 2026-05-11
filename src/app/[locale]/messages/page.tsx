@@ -4,7 +4,7 @@ import { useEffect, useState, useRef, useCallback, Suspense } from 'react';
 import { useLocale } from 'next-intl';
 import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
-import { MessageSquare, Send, ChevronLeft, Loader2, Package } from 'lucide-react';
+import { MessageSquare, Send, ChevronLeft, Loader2, Package, Sparkles, RefreshCw } from 'lucide-react';
 import { messagesApi, listingsApi } from '@/lib/api';
 import { useAuthStore } from '@/store/auth';
 import { useAuthGuard } from '@/hooks/useAuthGuard';
@@ -70,6 +70,36 @@ function MessagesInner() {
   const [loadingThread, setLoadingThread] = useState(false);
   const [newMessage,    setNewMessage]    = useState('');
   const [sending,       setSending]       = useState(false);
+  const [suggestions,   setSuggestions]   = useState<string[]>([]);
+  const [loadingSugg,   setLoadingSugg]   = useState(false);
+
+  /* ── Fetch AI reply suggestions ── */
+  const fetchSuggestions = useCallback(async (thread: Thread, msgs: Message[]) => {
+    setLoadingSugg(true);
+    setSuggestions([]);
+    try {
+      const lastMessages = msgs.slice(-6).map(m =>
+        (m.is_mine ? (isRTL ? 'أنا: ' : 'Me: ') : (isRTL ? 'الطرف الآخر: ' : 'Other: ')) + m.body
+      );
+      const isBuyer = user?.id !== undefined;  // always fetch, server decides role
+      const res = await fetch('/api/ai/suggest-replies', {
+        method:  'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body:    JSON.stringify({
+          listing_title:   isRTL ? thread.listing.title_ar : (thread.listing.title_en || thread.listing.title_ar),
+          listing_section: (thread.listing as any).section ?? '',
+          listing_type:    (thread.listing as any).listing_type ?? '',
+          last_messages:   lastMessages,
+          is_buyer:        isBuyer,
+        }),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setSuggestions(data.suggestions ?? []);
+      }
+    } catch { /* silent — suggestions are optional */ }
+    finally { setLoadingSugg(false); }
+  }, [isRTL, user?.id]);
 
   const bottomRef      = useRef<HTMLDivElement>(null);
   const inputRef       = useRef<HTMLInputElement>(null);
@@ -106,19 +136,22 @@ function MessagesInner() {
   const openThread = useCallback(async (thread: Thread) => {
     setActiveThread(thread);
     setMessages([]);
+    setSuggestions([]);
     setLoadingThread(true);
     // Optimistically clear badge — backend marks read_at on getThread
     clearUnread(thread.other_user.id, thread.listing.id);
     try {
       const res: any = await messagesApi.getThread(thread.other_user.id, thread.listing.id);
-      setMessages(res.data ?? []);
+      const msgs: Message[] = res.data ?? [];
+      setMessages(msgs);
+      fetchSuggestions(thread, msgs);
     } catch {
       setMessages([]);
     } finally {
       setLoadingThread(false);
       setTimeout(() => inputRef.current?.focus(), 100);
     }
-  }, [clearUnread]);
+  }, [clearUnread, fetchSuggestions]);
 
   /* ── Load inbox ── */
   useEffect(() => {
@@ -242,7 +275,8 @@ function MessagesInner() {
         messagesApi.getThread(activeThread.other_user.id, activeThread.listing.id),
         messagesApi.getInbox(),
       ]);
-      setMessages(threadRes.data ?? []);
+      const updatedMsgs: Message[] = threadRes.data ?? [];
+      setMessages(updatedMsgs);
       // Update inbox threads — keep active thread unread_count at 0
       const otherId = activeThread.other_user.id;
       const lstId   = activeThread.listing.id;
@@ -253,6 +287,8 @@ function MessagesInner() {
       setThreads(freshThreads);
       // ✅ Sync Navbar badge with fresh inbox data after sending
       setUnreadMessages(freshThreads.reduce((s: number, t: Thread) => s + t.unread_count, 0));
+      // Refresh AI suggestions after sending
+      fetchSuggestions(activeThread, updatedMsgs);
     } catch {}
 
     scrollToBottom(true);
@@ -437,6 +473,48 @@ function MessagesInner() {
                   )}
                   <div ref={bottomRef} />
                 </div>
+
+                {/* AI Reply Suggestions */}
+                {(loadingSugg || suggestions.length > 0) && (
+                  <div className="px-3 pt-2 pb-1 border-t border-gray-100 bg-white">
+                    <div className="flex items-center gap-1.5 mb-1.5">
+                      <Sparkles size={11} className="text-violet-500" />
+                      <span className="text-[10px] text-gray-400 font-medium">
+                        {isRTL ? 'اقتراحات ذكية' : 'Smart suggestions'}
+                      </span>
+                      {!loadingSugg && suggestions.length > 0 && (
+                        <button
+                          onClick={() => activeThread && fetchSuggestions(activeThread, messages)}
+                          className="ms-auto p-0.5 rounded text-gray-300 hover:text-violet-500 transition-colors"
+                          title={isRTL ? 'تحديث الاقتراحات' : 'Refresh suggestions'}
+                        >
+                          <RefreshCw size={10} />
+                        </button>
+                      )}
+                    </div>
+                    {loadingSugg ? (
+                      <div className="flex gap-2">
+                        {[1, 2, 3].map(i => (
+                          <div key={i} className="h-6 w-24 bg-gray-100 rounded-full animate-pulse" />
+                        ))}
+                      </div>
+                    ) : (
+                      <div className="flex flex-wrap gap-1.5">
+                        {suggestions.map((s, i) => (
+                          <button
+                            key={i}
+                            onClick={() => setNewMessage(s)}
+                            className="text-xs px-3 py-1 rounded-full border border-violet-200
+                                       bg-violet-50 text-violet-700 hover:bg-violet-100
+                                       transition-colors truncate max-w-[200px]"
+                          >
+                            {s}
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                )}
 
                 {/* Input area */}
                 <div className="p-3 border-t border-gray-100 bg-white flex gap-2 items-end">
