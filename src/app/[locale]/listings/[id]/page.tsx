@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useRef } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { useLocale } from 'next-intl';
 import Link from 'next/link';
@@ -99,6 +99,7 @@ export default function ListingDetailPage() {
   const [loadingMoreCom,    setLoadingMoreCom]    = useState(false);
   const [commentSummary,    setCommentSummary]    = useState<string[]>([]);
   const [summaryDismissed,  setSummaryDismissed]  = useState(false);
+  const summaryFetchedRef = useRef(false); // prevent duplicate fetches
 
 
   /* ── Load listing ── */
@@ -153,26 +154,29 @@ export default function ListingDetailPage() {
 
   useEffect(() => { fetchComments(1); }, [fetchComments]);
 
-  /* ── Auto-summarize comments when ≥5 loaded ── */
+  /* ── Auto-summarize when ≥5 comments are loaded ── */
   useEffect(() => {
-    if (!listing || commentSummary.length > 0 || commentLoading) return;
-    if (!commentMeta || commentMeta.total < 5) return;
+    if (summaryFetchedRef.current) return;   // already fetched
+    if (commentLoading)            return;   // still loading
+    if (comments.length < 5)       return;   // not enough (uses actual array, not meta)
+    if (!listing)                  return;   // listing not ready
+
+    summaryFetchedRef.current = true;
     const texts = comments.map(c => c.body);
-    if (texts.length < 5) return;
     fetch('/api/ai/summarize-comments', {
       method:  'POST',
       headers: { 'Content-Type': 'application/json' },
       body:    JSON.stringify({
-        comments:       texts,
-        listing_title:  listing.title_ar ?? '',
-        section:        listing.section ?? '',
+        comments:      texts,
+        listing_title: listing.title_ar ?? '',
+        section:       listing.section  ?? '',
       }),
     })
       .then(r => r.ok ? r.json() : null)
       .then(data => { if (data?.points?.length) setCommentSummary(data.points); })
       .catch(() => {});
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [listing?.id, commentMeta?.total, commentLoading]);
+  }, [comments.length, commentLoading, listing?.id]);
 
   /* ── Add comment ── */
   const handleAddComment = async () => {

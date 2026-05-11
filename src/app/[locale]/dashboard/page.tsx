@@ -532,59 +532,97 @@ export default function DashboardPage() {
                               title={isRTL ? 'حذف' : 'Delete'}>
                               <Trash2 size={14} />
                             </button>
-
-                            {/* AI Tips */}
-                            <button
-                              onClick={() => handleFetchTips(listing)}
-                              className={`p-1.5 rounded-lg transition
-                                          ${tipsListingId === listing.id
-                                            ? 'bg-violet-100 text-violet-600'
-                                            : 'hover:bg-violet-50 text-gray-400 hover:text-violet-500'}`}
-                              title={isRTL ? 'نصائح الذكاء الاصطناعي' : 'AI Tips'}>
-                              <Sparkles size={14} />
-                            </button>
                           </div>
                         </div>
 
-                        {/* AI Tips Panel */}
+                        {/* ── AI Advisor trigger ── */}
+                        {tipsListingId !== listing.id && (
+                          <button
+                            onClick={() => handleFetchTips(listing)}
+                            className="mt-2.5 w-full flex items-center gap-2 px-3 py-2 rounded-xl
+                                       bg-gradient-to-r from-violet-50 to-purple-50
+                                       border border-violet-100 hover:border-violet-300
+                                       hover:from-violet-100 hover:to-purple-100
+                                       transition-all group text-start"
+                          >
+                            <div className="w-6 h-6 rounded-lg bg-gradient-to-br from-violet-500 to-purple-600
+                                            flex items-center justify-center shrink-0 shadow-sm">
+                              <Sparkles size={11} className="text-white" />
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <p className="text-xs font-bold text-violet-700">
+                                {isRTL ? '✨ توصيات الذكاء الاصطناعي' : '✨ AI Advisor'}
+                              </p>
+                              <p className="text-[10px] text-violet-400">
+                                {isRTL ? 'اضغط للحصول على نصائح لتحسين هذا الإعلان' : 'Click to get tips for improving this listing'}
+                              </p>
+                            </div>
+                            <ChevronRight size={14}
+                              className={`text-violet-300 group-hover:text-violet-500 transition shrink-0
+                                          ${isRTL ? 'rotate-180' : ''}`} />
+                          </button>
+                        )}
+
+                        {/* ── AI Tips Panel ── */}
                         {tipsListingId === listing.id && (
-                          <div className="mt-3 rounded-xl border border-violet-100 bg-violet-50 p-3">
-                            <div className="flex items-center justify-between mb-2">
-                              <div className="flex items-center gap-1.5">
-                                <Sparkles size={12} className="text-violet-500" />
-                                <span className="text-xs font-bold text-violet-700">
-                                  {isRTL ? 'توصيات الذكاء الاصطناعي' : 'AI Recommendations'}
+                          <div className="mt-2.5 rounded-xl overflow-hidden border border-violet-200 shadow-sm">
+                            {/* Panel header */}
+                            <div className="flex items-center justify-between px-4 py-2.5
+                                            bg-gradient-to-r from-violet-600 to-purple-600">
+                              <div className="flex items-center gap-2">
+                                <Sparkles size={13} className="text-white/80" />
+                                <span className="text-xs font-bold text-white">
+                                  {isRTL ? 'توصيات الذكاء الاصطناعي لهذا الإعلان' : 'AI Recommendations for this listing'}
                                 </span>
                               </div>
                               <button
                                 onClick={() => setTipsListingId(null)}
-                                className="p-0.5 text-violet-300 hover:text-violet-600 transition">
-                                <X size={12} />
+                                className="p-0.5 text-white/60 hover:text-white transition">
+                                <X size={13} />
                               </button>
                             </div>
-                            {loadingTips ? (
-                              <div className="space-y-2">
-                                {[1,2].map(i => (
-                                  <div key={i} className="h-4 bg-violet-100 rounded animate-pulse" />
-                                ))}
-                              </div>
-                            ) : tips.length === 0 ? (
-                              <p className="text-xs text-violet-500">
-                                {isRTL ? 'إعلانك يبدو مكتملاً ✓' : 'Your listing looks complete ✓'}
-                              </p>
-                            ) : (
-                              <div className="space-y-2">
-                                {tips.map((tip, i) => (
-                                  <div key={i} className="flex items-start gap-2">
-                                    <span className="text-sm shrink-0">{tip.icon}</span>
-                                    <p className={`text-xs leading-relaxed
-                                                   ${tip.priority === 'high' ? 'text-red-700 font-medium' : 'text-violet-700'}`}>
-                                      {tip.message}
-                                    </p>
-                                  </div>
-                                ))}
-                              </div>
-                            )}
+                            {/* Panel body */}
+                            <div className="bg-violet-50 p-3.5">
+                              {loadingTips ? (
+                                <div className="space-y-2.5">
+                                  {[1, 2, 3].map(i => (
+                                    <div key={i} className="flex items-center gap-3">
+                                      <div className="w-7 h-7 rounded-lg bg-violet-200 animate-pulse shrink-0" />
+                                      <div className="flex-1 h-3.5 bg-violet-200 rounded animate-pulse" />
+                                    </div>
+                                  ))}
+                                </div>
+                              ) : tips.length === 0 ? (
+                                <div className="flex items-center gap-2.5 py-1">
+                                  <span className="text-xl">✅</span>
+                                  <p className="text-sm font-medium text-emerald-700">
+                                    {isRTL ? 'إعلانك يبدو مكتملاً — استمر!' : 'Your listing looks complete — great job!'}
+                                  </p>
+                                </div>
+                              ) : (
+                                <div className="space-y-2.5">
+                                  {tips.map((tip, i) => (
+                                    <div key={i}
+                                      className={`flex items-start gap-3 rounded-lg px-3 py-2.5
+                                                  ${tip.priority === 'high'
+                                                    ? 'bg-red-50 border border-red-100'
+                                                    : 'bg-white border border-violet-100'}`}>
+                                      <span className="text-base shrink-0 mt-0.5">{tip.icon}</span>
+                                      <p className={`text-xs leading-relaxed font-medium
+                                                     ${tip.priority === 'high' ? 'text-red-700' : 'text-violet-800'}`}>
+                                        {tip.message}
+                                      </p>
+                                      {tip.priority === 'high' && (
+                                        <span className="shrink-0 text-[9px] bg-red-100 text-red-600
+                                                          font-bold px-1.5 py-0.5 rounded-full border border-red-200 mt-0.5">
+                                          {isRTL ? 'عاجل' : 'High'}
+                                        </span>
+                                      )}
+                                    </div>
+                                  ))}
+                                </div>
+                              )}
+                            </div>
                           </div>
                         )}
                       </div>
