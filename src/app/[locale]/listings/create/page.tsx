@@ -135,7 +135,13 @@ export default function CreateListingPage() {
       if (res.listing_type)         setValue('listing_type',  res.listing_type);
 
       // Common fields (all sections)
-      if (res.fields.city)  setValue('city',  res.fields.city);
+      if (res.fields.city) {
+        // Normalize: strip "منطقة " / "مدينة " / "محافظة " prefixes
+        const city = res.fields.city
+          .replace(/^(منطقة|مدينة|محافظة)\s+/u, '')
+          .trim();
+        setValue('city', city);
+      }
       if (res.fields.price) setValue('price', res.fields.price);
 
       // Fleet only
