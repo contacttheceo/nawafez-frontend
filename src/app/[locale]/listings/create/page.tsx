@@ -341,9 +341,31 @@ export default function CreateListingPage() {
                 </div>
                 {extractedData.missing.length > 0 && (
                   <p className="text-xs text-amber-600">
-                    ⚠️ {isRTL
-                      ? `لم أجد: ${extractedData.missing.join('، ')} — يمكنك إضافتها في الخطوة التالية`
-                      : `Not found: ${extractedData.missing.join(', ')} — add them in the next step`}
+                    ⚠️ {(() => {
+                      const labels: Record<string, { ar: string; en: string }> = {
+                        city:             { ar: 'المدينة',         en: 'City'            },
+                        price:            { ar: 'السعر',           en: 'Price'           },
+                        year:             { ar: 'سنة الصنع',       en: 'Year'            },
+                        mileage:          { ar: 'العداد (كم)',      en: 'Mileage'         },
+                        capacity:         { ar: 'الحمولة',         en: 'Capacity'        },
+                        vehicle_type:     { ar: 'نوع المركبة',     en: 'Vehicle type'    },
+                        listing_type:     { ar: 'نوع الطرح',       en: 'Listing type'    },
+                        contract_type:    { ar: 'نوع العقد',       en: 'Contract type'   },
+                        duration:         { ar: 'مدة العقد',       en: 'Duration'        },
+                        company_type:     { ar: 'نوع الشركة',      en: 'Company type'    },
+                        employees_count:  { ar: 'عدد الموظفين',   en: 'Employees'       },
+                        annual_revenue:   { ar: 'الإيرادات',       en: 'Revenue'         },
+                        job_title:        { ar: 'المسمى الوظيفي', en: 'Job title'       },
+                        employment_type:  { ar: 'نوع التوظيف',    en: 'Employment type' },
+                        salary_min:       { ar: 'الراتب الأدنى',  en: 'Min salary'      },
+                        salary_max:       { ar: 'الراتب الأعلى',  en: 'Max salary'      },
+                      };
+                      const translated = extractedData.missing
+                        .map(k => isRTL ? (labels[k]?.ar ?? k) : (labels[k]?.en ?? k));
+                      return isRTL
+                        ? `لم أجد: ${translated.join('، ')} — يمكنك إضافتها في الخطوة التالية`
+                        : `Not found: ${translated.join(', ')} — add them in the next step`;
+                    })()}
                   </p>
                 )}
               </div>
