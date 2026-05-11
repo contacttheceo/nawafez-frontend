@@ -70,7 +70,7 @@ export async function POST(req: NextRequest) {
         },
         body: JSON.stringify({
           contents: [{ parts: [{ text: prompt }] }],
-          generationConfig: { maxOutputTokens: 1000, temperature: 0, responseMimeType: 'application/json' },
+          generationConfig: { maxOutputTokens: 2000, temperature: 0, responseMimeType: 'application/json' },
         }),
         signal: AbortSignal.timeout(20_000),
       }
