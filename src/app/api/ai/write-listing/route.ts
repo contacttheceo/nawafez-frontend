@@ -73,7 +73,7 @@ ${typeText}
         },
         body: JSON.stringify({
           contents: [{ parts: [{ text: prompt }] }],
-          generationConfig: { maxOutputTokens: 2000, temperature: 0.7 },
+          generationConfig: { maxOutputTokens: 8192, temperature: 0.7 },
         }),
         signal: AbortSignal.timeout(20_000),
       }
