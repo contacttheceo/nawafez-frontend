@@ -9,7 +9,7 @@ import {
   ArrowUpDown, Truck, Bookmark, Trash2,
 } from 'lucide-react';
 import Link from 'next/link';
-import { listingsApi, interactionsApi } from '@/lib/api';
+import { listingsApi, interactionsApi, aiApi } from '@/lib/api';
 import { useAuthStore } from '@/store/auth';
 import { ListingCard } from '@/components/ui/ListingCard';
 import Navbar from '@/components/Navbar';
@@ -73,6 +73,9 @@ function ListingsContent() {
   const [savingSearch,    setSavingSearch]    = useState(false);
   const [showSaveInput,   setShowSaveInput]   = useState(false);
   const [saveSearchName,  setSaveSearchName]  = useState('');
+
+  /* ai search */
+  const [aiSearching, setAiSearching] = useState(false);
 
   /* data */
   const [listings,    setListings]    = useState<Listing[]>([]);
@@ -192,6 +195,46 @@ function ListingsContent() {
     } catch {}
   };
 
+  /* ── AI: analyse search text and fill filters automatically ── */
+  const handleAiSearch = async () => {
+    if (!search.trim() || aiSearching) return;
+    setAiSearching(true);
+    try {
+      const res = await aiApi.extractListing({ text: search.trim() });
+
+      // Section
+      if (res.section && res.section !== 'forum') setSection(res.section);
+
+      // Listing type — only when the section supports it
+      const targetSection = res.section ?? '';
+      if (res.listing_type && (SECTION_TYPES[targetSection] ?? []).includes(res.listing_type)) {
+        setListingTypes([res.listing_type]);
+      } else {
+        setListingTypes([]);
+      }
+
+      // City — strip منطقة/مدينة prefix
+      if (res.fields?.city) {
+        const c = res.fields.city.replace(/^(منطقة|مدينة|محافظة)\s+/u, '').trim();
+        if (SAUDI_CITIES.includes(c)) setCity(c);
+      }
+
+      // Price / salary
+      if (res.fields?.price)      setPriceMax(res.fields.price);
+      if (res.fields?.salary_max) setPriceMax(res.fields.salary_max);
+      if (res.fields?.salary_min) setPriceMin(res.fields.salary_min);
+
+      // Clear raw text — now replaced by structured filters
+      setSearch('');
+
+      toast.success(isRTL ? '✨ تم ضبط الفلاتر تلقائياً' : '✨ Filters set by AI');
+    } catch {
+      toast.error(isRTL ? 'فشل التحليل، حاول مجدداً' : 'AI failed, try again');
+    } finally {
+      setAiSearching(false);
+    }
+  };
+
   /* ── Apply a saved search ── */
   const applySearch = (filters: any) => {
     setSection(filters.section ?? '');
@@ -229,6 +272,14 @@ function ListingsContent() {
     <div className="space-y-6">
 
       {/* Saved Searches */}
+      {isAuthenticated && savedSearches.length === 0 && (
+        <div className="text-[11px] text-gray-400 flex items-center gap-1.5 px-1 mb-1">
+          <Bookmark size={11} className="shrink-0" />
+          {isRTL
+            ? 'فعّل فلتراً ثم احفظ بحثك للرجوع إليه لاحقاً'
+            : 'Set filters then save your search for quick access'}
+        </div>
+      )}
       {isAuthenticated && savedSearches.length > 0 && (
         <div>
           <p className="text-[11px] font-bold text-gray-400 uppercase tracking-widest mb-3 flex items-center gap-1.5">
@@ -427,9 +478,12 @@ function ListingsContent() {
               <input
                 value={search}
                 onChange={e => setSearch(e.target.value)}
+                onKeyDown={e => { if (e.key === 'Enter' && search.trim()) handleAiSearch(); }}
                 className="w-full ps-11 pe-4 py-3.5 rounded-xl text-sm border-0 shadow-lg
                            focus:outline-none focus:ring-2 focus:ring-emerald"
-                placeholder={isRTL ? 'ابحث في جميع الإعلانات…' : 'Search all listings…'}
+                placeholder={isRTL
+                  ? 'ابحث… أو اكتب وصفاً كاملاً واضغط ✨'
+                  : 'Search… or describe what you need and press ✨'}
               />
               {search && (
                 <button onClick={() => setSearch('')}
@@ -438,12 +492,28 @@ function ListingsContent() {
                 </button>
               )}
               {/* Debounce indicator */}
-              {search !== debouncedSearch && (
+              {search !== debouncedSearch && !aiSearching && (
                 <span className="absolute end-9 top-1/2 -translate-y-1/2">
                   <Loader2 size={14} className="animate-spin text-gray-300" />
                 </span>
               )}
             </div>
+
+            {/* ✨ AI Search button */}
+            <button
+              onClick={handleAiSearch}
+              disabled={!search.trim() || aiSearching}
+              title={isRTL ? 'تحليل النص وضبط الفلاتر تلقائياً' : 'Analyse text and set filters automatically'}
+              className="px-4 py-3.5 rounded-xl bg-violet-600 hover:bg-violet-700
+                         text-white text-sm font-bold flex items-center gap-1.5 shadow-lg
+                         transition disabled:opacity-40 whitespace-nowrap shrink-0"
+            >
+              {aiSearching
+                ? <Loader2 size={16} className="animate-spin" />
+                : <span className="text-base leading-none">✨</span>}
+              <span className="hidden sm:inline">{isRTL ? 'بحث ذكي' : 'AI'}</span>
+            </button>
+
             <Link href={`/${locale}/listings/create`}
               className="bg-emerald hover:bg-emerald-dark text-white px-5 py-3.5 rounded-xl
                          text-sm font-bold flex items-center gap-2 shadow-lg transition whitespace-nowrap">
@@ -451,6 +521,13 @@ function ListingsContent() {
               {isRTL ? 'أضف إعلان' : 'Post Ad'}
             </Link>
           </div>
+
+          {/* AI hint */}
+          <p className="text-white/40 text-xs text-center mt-1.5">
+            {isRTL
+              ? '✨ جرّب: "أريد شاحنة مبردة في جدة بأقل من 8000" ← يضبط الفلاتر تلقائياً'
+              : '✨ Try: "refrigerated truck for rent in Jeddah under 8000" → filters set automatically'}
+          </p>
 
           {/* Section quick tabs */}
           <div className="flex gap-2 mt-4 overflow-x-auto pb-1 scrollbar-hide">
