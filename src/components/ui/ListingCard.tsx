@@ -6,7 +6,7 @@ import Link from 'next/link'
 import { MapPin, Clock, Eye, Bookmark, MessageCircle } from 'lucide-react'
 import toast from 'react-hot-toast'
 import type { Listing } from '@/types'
-import { formatDistanceToNow } from '@/lib/utils'
+import { formatDistanceToNow, storageUrl } from '@/lib/utils'
 import { interactionsApi } from '@/lib/api'
 import { useAuthStore } from '@/store/auth'
 import { useRouter } from 'next/navigation'
@@ -221,8 +221,15 @@ export function ListingCard({ listing, mode = 'grid' }: Props) {
                         flex items-center justify-between">
           <div className="flex items-center gap-2 text-xs text-gray-500">
             <div className="w-6 h-6 rounded-full bg-navy flex items-center justify-center
-                            text-white text-[10px] font-bold flex-shrink-0">
-              {sellerName.charAt(0) || '?'}
+                            text-white text-[10px] font-bold flex-shrink-0 overflow-hidden">
+              {listing.user?.avatar_url
+                ? <img
+                    src={storageUrl(listing.user.avatar_url)!}
+                    alt={sellerName}
+                    className="w-full h-full object-cover"
+                    onError={(e) => { (e.target as HTMLImageElement).style.display = 'none' }}
+                  />
+                : sellerName.charAt(0) || '?'}
             </div>
             <span className="truncate max-w-[100px]">{sellerName}</span>
           </div>

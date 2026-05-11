@@ -20,8 +20,8 @@ export default function HeroSection() {
 
   const SAUDI_CITIES = ['الرياض','جدة','مكة المكرمة','المدينة المنورة','الدمام','الخبر','تبوك','أبها','نجران','حائل','القصيم','بريدة','ينبع']
   const SECTION_TYPES: Record<string, string[]> = {
-    fleet: ['for_sale', 'for_rent', 'wanted'],
-    contracts: ['offering', 'wanted'],
+    fleet: ['sale', 'rent', 'wanted'],
+    contracts: ['offer', 'wanted'],
     ma: [], jobs: [], forum: [],
   }
 

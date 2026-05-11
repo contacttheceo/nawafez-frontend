@@ -28,17 +28,17 @@ const SECTIONS = [
 ];
 
 const LISTING_TYPES = [
-  { value: 'for_sale', labelAr: 'للبيع',    labelEn: 'For Sale',  emoji: '🏷️' },
-  { value: 'for_rent', labelAr: 'للإيجار',  labelEn: 'For Rent',  emoji: '🔑' },
-  { value: 'wanted',   labelAr: 'مطلوب',    labelEn: 'Wanted',    emoji: '🔍' },
-  { value: 'offering', labelAr: 'معروض',    labelEn: 'Offering',  emoji: '📢' },
+  { value: 'sale',    labelAr: 'للبيع',    labelEn: 'For Sale',  emoji: '🏷️' },
+  { value: 'rent',    labelAr: 'للإيجار',  labelEn: 'For Rent',  emoji: '🔑' },
+  { value: 'wanted',  labelAr: 'مطلوب',    labelEn: 'Wanted',    emoji: '🔍' },
+  { value: 'offer',   labelAr: 'معروض',    labelEn: 'Offering',  emoji: '📢' },
 ];
 
 // Which listing types are relevant per section
 const SECTION_TYPES: Record<string, string[]> = {
-  '':          ['for_sale', 'for_rent', 'offering', 'wanted'],
-  fleet:       ['for_sale', 'for_rent', 'wanted'],
-  contracts:   ['offering', 'wanted'],
+  '':          ['sale', 'rent', 'offer', 'wanted'],
+  fleet:       ['sale', 'rent', 'wanted'],
+  contracts:   ['offer', 'wanted'],
   ma:          [],   // no type filter (all = acquisition)
   jobs:        [],   // no type filter (all = job)
   forum:       [],   // no type filter (all = discussion)

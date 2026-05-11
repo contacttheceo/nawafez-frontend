@@ -102,8 +102,9 @@ export default function ProfilePage() {
       const fd = new FormData();
       fd.append('avatar', file);
       const res = await userApi.uploadAvatar(fd);
-      // Store the relative path — storageUrl() builds full URL at render time
-      setUser({ ...user!, avatar_url: res.avatar_path });
+      // Append timestamp to bust browser cache after re-upload
+      const freshPath = res.avatar_path + '?t=' + Date.now();
+      setUser({ ...user!, avatar_url: freshPath });
       setAvatarPreview(null);
       toast.success(isRTL ? 'تم تحديث الصورة الشخصية ✓' : 'Avatar updated ✓');
     } catch (err: any) {
@@ -251,6 +252,7 @@ export default function ProfilePage() {
                                     ring-2 ring-white shadow-md">
                       {(avatarPreview ?? storageUrl(user.avatar_url)) ? (
                         <img
+                          key={user.avatar_url}
                           src={avatarPreview ?? storageUrl(user.avatar_url)!}
                           alt={isRTL ? user.name_ar : user.name_en}
                           className="w-full h-full object-cover"

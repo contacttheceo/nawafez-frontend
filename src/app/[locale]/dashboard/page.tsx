@@ -13,7 +13,7 @@ import {
 } from 'lucide-react';
 import { userApi, authApi, listingsApi } from '@/lib/api';
 import { useAuthStore } from '@/store/auth';
-import { formatDistanceToNow } from '@/lib/utils';
+import { formatDistanceToNow, storageUrl } from '@/lib/utils';
 import Navbar from '@/components/Navbar';
 import toast from 'react-hot-toast';
 
@@ -50,32 +50,42 @@ export default function DashboardPage() {
   const router  = useRouter();
   const { user, isAuthenticated, clearAuth } = useAuthStore();
 
-  const [stats,      setStats]      = useState<any>(null);
-  const [listings,   setListings]   = useState<any[]>([]);
-  const [loading,    setLoading]    = useState(true);
+  const [stats,        setStats]        = useState<any>(null);
+  const [listings,     setListings]     = useState<any[]>([]);
+  const [loading,      setLoading]      = useState(true);
+  const [listPage,     setListPage]     = useState(1);
+  const [listLastPage, setListLastPage] = useState(1);
   const [myBids,     setMyBids]     = useState<any[]>([]);
   const [delConfirm, setDelConfirm] = useState<number | null>(null); // listing id pending delete
   const [actionBusy, setActionBusy] = useState<number | null>(null); // which listing is being acted on
 
-  const loadDashboard = async () => {
-    try {
-      const [dashData, bidsData] = await Promise.all([
-        userApi.getDashboardStats(),
-        userApi.getMyBids().catch(() => ({ data: [] })),
-      ]);
-      setStats(dashData.stats);
-      setListings(dashData.recent_listings ?? []);
-      setMyBids((bidsData as any).data ?? []);
-    } catch {
-      toast.error(isRTL ? 'تعذر تحميل البيانات' : 'Failed to load data');
-    } finally {
-      setLoading(false);
-    }
+  const loadStats = async () => {
+    const [dashData, bidsData] = await Promise.all([
+      userApi.getDashboardStats(),
+      userApi.getMyBids().catch(() => ({ data: [] })),
+    ]);
+    setStats(dashData.stats);
+    setMyBids((bidsData as any).data ?? []);
+  };
+
+  const loadListings = async (page: number) => {
+    const res = await userApi.getMyListings(page);
+    // Laravel paginate → { data: [], current_page, last_page }
+    setListings(res.data ?? res ?? []);
+    setListLastPage(res.last_page ?? 1);
+  };
+
+  const goToPage = (page: number) => {
+    setListPage(page);
+    loadListings(page);
   };
 
   useEffect(() => {
     if (!isAuthenticated) { router.push(`/${locale}/auth/login`); return; }
-    loadDashboard();
+    setLoading(true);
+    Promise.all([loadStats(), loadListings(1)])
+      .catch(() => toast.error(isRTL ? 'تعذر تحميل البيانات' : 'Failed to load data'))
+      .finally(() => setLoading(false));
   }, [isAuthenticated]);
 
   const handleLogout = async () => {
@@ -363,11 +373,30 @@ export default function DashboardPage() {
                         )}
 
                         <div className="flex items-center gap-3">
-                          {/* Section icon */}
-                          <div className="w-11 h-11 rounded-xl bg-navy/5 flex items-center
-                                          justify-center text-2xl shrink-0">
-                            {SECTION_EMOJI[sec] ?? '📋'}
-                          </div>
+                          {/* Thumbnail or section emoji */}
+                          {(() => {
+                            const img = listing.media?.find((m: any) => m.is_primary && m.type === 'image')
+                                     ?? listing.media?.find((m: any) => m.type === 'image');
+                            return img ? (
+                              <div className="w-11 h-11 rounded-xl shrink-0 overflow-hidden bg-navy/5">
+                                <img
+                                  src={storageUrl(img.path)!}
+                                  alt={title}
+                                  className="w-full h-full object-cover"
+                                  onError={(e) => {
+                                    const el = e.currentTarget.parentElement!;
+                                    el.className = 'w-11 h-11 rounded-xl bg-navy/5 flex items-center justify-center text-2xl shrink-0';
+                                    el.innerHTML = SECTION_EMOJI[sec] ?? '📋';
+                                  }}
+                                />
+                              </div>
+                            ) : (
+                              <div className="w-11 h-11 rounded-xl bg-navy/5 flex items-center
+                                              justify-center text-2xl shrink-0">
+                                {SECTION_EMOJI[sec] ?? '📋'}
+                              </div>
+                            );
+                          })()}
 
                           {/* Info */}
                           <div className="flex-1 min-w-0">
@@ -477,6 +506,31 @@ export default function DashboardPage() {
                       </div>
                     );
                   })}
+                </div>
+              )}
+
+              {/* Pagination */}
+              {listLastPage > 1 && (
+                <div className="flex items-center justify-center gap-3 py-4 border-t border-gray-100">
+                  <button
+                    onClick={() => goToPage(listPage - 1)}
+                    disabled={listPage === 1}
+                    className="px-3 py-1.5 text-sm border border-gray-200 rounded-lg
+                               disabled:opacity-40 hover:bg-gray-50 transition"
+                  >
+                    {isRTL ? 'السابق →' : '← Prev'}
+                  </button>
+                  <span className="text-sm text-gray-500 font-medium">
+                    {listPage} / {listLastPage}
+                  </span>
+                  <button
+                    onClick={() => goToPage(listPage + 1)}
+                    disabled={listPage === listLastPage}
+                    className="px-3 py-1.5 text-sm border border-gray-200 rounded-lg
+                               disabled:opacity-40 hover:bg-gray-50 transition"
+                  >
+                    {isRTL ? '← التالي' : 'Next →'}
+                  </button>
                 </div>
               )}
             </div>

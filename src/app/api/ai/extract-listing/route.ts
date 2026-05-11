@@ -48,7 +48,7 @@ const SYSTEM_INSTRUCTION = `أنت محلل بيانات متخصص في منص�
 const FEW_SHOT_EXAMPLES = [
   {
     input:  'شاحنة مرسيدس أكتروس 2020 مستعملة حمولة 30 طن عداد 180 ألف كم أبيعها بـ 350 ألف ريال في الرياض',
-    output: '{"section":"fleet","listing_type":"for_sale","fields":{"vehicle_type":"truck","year":"2020","mileage":"180000","capacity":"30","city":"الرياض","price":"350000"},"missing":["condition"]}',
+    output: '{"section":"fleet","listing_type":"sale","fields":{"vehicle_type":"truck","year":"2020","mileage":"180000","capacity":"30","city":"الرياض","price":"350000"},"missing":["condition"]}',
   },
   {
     input:  'مطلوب 50 سائق توصيل للعمل في تطبيق نينجا والراتب 5000 ريال شامل للعمل في منطقة الرياض',
@@ -56,7 +56,7 @@ const FEW_SHOT_EXAMPLES = [
   },
   {
     input:  'يوجد عقد كيتا معروض في جدة مدة 6 أشهر',
-    output: '{"section":"contracts","listing_type":"offering","fields":{"contract_type":"delivery","duration":"6 أشهر","city":"جدة"},"missing":["price"]}',
+    output: '{"section":"contracts","listing_type":"offer","fields":{"contract_type":"delivery","duration":"6 أشهر","city":"جدة"},"missing":["price"]}',
   },
   {
     input:  'مطلوب سيارات بلوحة صفراء سوزوكي عدد 20 في منطقة الرياض',
@@ -68,20 +68,20 @@ const FEW_SHOT_EXAMPLES = [
   },
   {
     input:  'للإيجار مستودع مبرد في الدمام مساحة 500 متر إيجار شهري',
-    output: '{"section":"contracts","listing_type":"offering","fields":{"contract_type":"warehousing","city":"الدمام","duration":"شهري"},"missing":["price"]}',
+    output: '{"section":"contracts","listing_type":"offer","fields":{"contract_type":"warehousing","city":"الدمام","duration":"شهري"},"missing":["price"]}',
   },
   // ── Real-world examples from Saudi logistics WhatsApp groups ─────────────
   {
     input:  'متوفر تاجير كمية دراجات نارية لعقود الماركت وشركات التوصيل شامل تامين استلام فوري موديلات حديثة الرياض',
-    output: '{"section":"fleet","listing_type":"for_rent","fields":{"vehicle_type":"motorcycle","city":"الرياض"},"missing":["price","year"]}',
+    output: '{"section":"fleet","listing_type":"rent","fields":{"vehicle_type":"motorcycle","city":"الرياض"},"missing":["price","year"]}',
   },
   {
     input:  'موجود دينات أصفار للإيجار موديل ٢٠٢٥ خمسة طن شاص',
-    output: '{"section":"fleet","listing_type":"for_rent","fields":{"vehicle_type":"truck","year":"2025","capacity":"5"},"missing":["price","city"]}',
+    output: '{"section":"fleet","listing_type":"rent","fields":{"vehicle_type":"truck","year":"2025","capacity":"5"},"missing":["price","city"]}',
   },
   {
     input:  'موجود مؤسسة الرياض ترخيص دبابات ٢٥ دباب سويد ٢٤ كرت تشغيل عقد هنقرستيشن عقد جاهز بدون عمال بدون مديونيات',
-    output: '{"section":"ma","listing_type":"for_sale","fields":{"company_type":"شركة توصيل دراجات","city":"الرياض"},"missing":["price"]}',
+    output: '{"section":"ma","listing_type":"sale","fields":{"company_type":"شركة توصيل دراجات","city":"الرياض"},"missing":["price"]}',
   },
   {
     input:  'مطلوب عقود شركات الطرود دايركت أمازون أرامكس نون إيجكس ناقل إيمايل اللي يعرف يفيدنا',

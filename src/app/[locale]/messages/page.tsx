@@ -9,14 +9,14 @@ import { messagesApi, listingsApi } from '@/lib/api';
 import { useAuthStore } from '@/store/auth';
 import { useAuthGuard } from '@/hooks/useAuthGuard';
 import { useNotificationStore } from '@/store/notifications';
-import { formatDistanceToNow } from '@/lib/utils';
+import { formatDistanceToNow, storageUrl } from '@/lib/utils';
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
 import toast from 'react-hot-toast';
 
 /* ── Types ──────────────────────────────────────────────────────────────── */
 
-interface OtherUser     { id: number; name_ar: string; name_en: string }
+interface OtherUser     { id: number; name_ar: string; name_en: string; avatar_url?: string | null }
 interface ThreadListing { id: number; title_ar: string; title_en: string }
 
 interface Thread {
@@ -31,6 +31,21 @@ interface Message {
   body:    string;
   sent_at: string;
   is_mine: boolean;
+}
+
+/* ── Avatar helper ──────────────────────────────────────────────────────── */
+
+function UserAvatar({ user, userName }: { user: OtherUser; userName: string }) {
+  const url = storageUrl(user.avatar_url);
+  return (
+    <div className="w-9 h-9 rounded-full bg-navy/10 flex items-center justify-center
+                    font-bold text-navy text-sm shrink-0 overflow-hidden">
+      {url
+        ? <img src={url} alt={userName} className="w-full h-full object-cover"
+               onError={(e) => { (e.target as HTMLImageElement).style.display = 'none' }} />
+        : userName[0]?.toUpperCase() ?? '?'}
+    </div>
+  );
 }
 
 /* ── Inner component (uses useSearchParams) ────────────────────────────── */
@@ -309,10 +324,7 @@ function MessagesInner() {
                                 ${isActive ? 'ring-2 ring-emerald bg-emerald/5' : ''}`}
                   >
                     <div className="flex items-start gap-3">
-                      <div className="w-9 h-9 rounded-full bg-navy/10 flex items-center justify-center
-                                      font-bold text-navy text-sm shrink-0">
-                        {userName(thread.other_user)[0]?.toUpperCase() ?? '?'}
-                      </div>
+                      <UserAvatar user={thread.other_user} userName={userName(thread.other_user)} />
                       <div className="flex-1 min-w-0">
                         <div className="flex justify-between items-center mb-0.5">
                           <p className="font-semibold text-navy text-sm truncate">
@@ -368,10 +380,7 @@ function MessagesInner() {
                     <ChevronLeft size={20} className={isRTL ? 'rotate-180' : ''} />
                   </button>
 
-                  <div className="w-9 h-9 rounded-full bg-navy/10 flex items-center justify-center
-                                  font-bold text-navy text-sm shrink-0">
-                    {userName(activeThread.other_user)[0]?.toUpperCase() ?? '?'}
-                  </div>
+                  <UserAvatar user={activeThread.other_user} userName={userName(activeThread.other_user)} />
 
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-1.5">

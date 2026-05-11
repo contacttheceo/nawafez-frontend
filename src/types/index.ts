@@ -81,6 +81,7 @@ export interface ListingUser {
   name_en: string
   is_trusted_payer: boolean
   role: UserRole
+  avatar_url?: string | null
 }
 
 // ─── Interactions ─────────────────────────────────────────────────────────────

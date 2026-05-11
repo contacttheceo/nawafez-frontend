@@ -174,8 +174,8 @@ export const messagesApi = {
 
 // ─── User ─────────────────────────────────────────────────────────────────────
 export const userApi = {
-  getMyListings: (): Promise<any> =>
-    api.get('/user/listings'),
+  getMyListings: (page = 1): Promise<any> =>
+    api.get(`/user/listings?page=${page}`),
 
   getDashboardStats: (): Promise<{
     stats: Record<string, number>;
