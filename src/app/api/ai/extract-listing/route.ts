@@ -7,6 +7,8 @@ const SYSTEM_INSTRUCTION = `أنت محلل بيانات متخصص في منص�
 - "كيتا" و"نينجا" و"جاهز" و"هنقر" و"هنقرستيشن" و"مرسول" = شركات توصيل طلبات → section=jobs أو contract_type=delivery
 - إذا ورد اسم شركة توصيل مع "سائق" → section=jobs, job_title=سائق توصيل
 - إذا ورد اسم شركة توصيل مع "عقد" → section=contracts, contract_type=delivery
+- "لا يشترط الخبرة" أو "بدون خبرة" أو "خبرة غير مطلوبة" → experience_years="لا يشترط" (لا تضعها في missing)
+- "خبرة 1-3 سنوات" → experience_years="1-3"، "خبرة 3-5" → experience_years="3-5"، "خبرة أكثر من 5" → experience_years="5+"
 - "بيك آب"، "هايلوكس" = vehicle_type=pickup
 - "مقطورة"، "تريلا" = vehicle_type=trailer
 - "صهريج"، "ووتر تراك" = vehicle_type=tanker
@@ -36,7 +38,7 @@ const FEW_SHOT_EXAMPLES = [
   },
   {
     input:  'مطلوب سائق 50 للعمل في تطبيق هنقرستيشن براتب ثابت 5500 ريال شامل في منطقة الرياض لا يشترط الخبرة',
-    output: '{"section":"jobs","listing_type":"job","fields":{"job_title":"سائق توصيل","employment_type":"full","salary_min":"5500","city":"الرياض"},"missing":[]}',
+    output: '{"section":"jobs","listing_type":"job","fields":{"job_title":"سائق توصيل","employment_type":"full","salary_min":"5500","city":"الرياض","experience_years":"لا يشترط"},"missing":[]}',
   },
   {
     input:  'للإيجار مستودع مبرد في الدمام مساحة 500 متر إيجار شهري',
@@ -63,9 +65,10 @@ const RESPONSE_SCHEMA = {
         city:            { type: 'string' },
         price:           { type: 'string' },
         job_title:       { type: 'string' },
-        employment_type: { type: 'string' },
-        salary_min:      { type: 'string' },
-        salary_max:      { type: 'string' },
+        employment_type:  { type: 'string' },
+        experience_years: { type: 'string' },
+        salary_min:       { type: 'string' },
+        salary_max:       { type: 'string' },
         contract_type:   { type: 'string' },
         duration:        { type: 'string' },
         company_type:    { type: 'string' },

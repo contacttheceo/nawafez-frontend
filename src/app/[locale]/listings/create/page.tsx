@@ -158,7 +158,8 @@ export default function CreateListingPage() {
           setValue('job_title', res.fields.job_title);
           setValue('title_ar',  res.fields.job_title); // عنوان الإعلان = المسمى
         }
-        if (res.fields.employment_type) setValue('employment_type', res.fields.employment_type);
+        if (res.fields.employment_type)  setValue('employment_type',  res.fields.employment_type);
+        if (res.fields.experience_years) setValue('experience_years', res.fields.experience_years);
         if (res.fields.salary_min) {
           setValue('salary_type', 'fixed');
           setValue('salary_min',  res.fields.salary_min);
