@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { callGemini, extractText, parseJsonResponse } from '@/lib/gemini';
 
 export async function POST(req: NextRequest) {
   try {
@@ -9,7 +10,6 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ message: 'بيانات غير صحيحة.' }, { status: 422 });
     }
 
-    // Remove empty values
     const filteredFields: Record<string, string> = {};
     for (const [k, v] of Object.entries(fields)) {
       if (v && String(v).trim()) filteredFields[k] = String(v).trim();
@@ -19,6 +19,14 @@ export async function POST(req: NextRequest) {
       return NextResponse.json(
         { message: 'أدخل بيانات الإعلان أولاً لكي يتمكن الذكاء الاصطناعي من الكتابة.' },
         { status: 422 }
+      );
+    }
+
+    const apiKey = process.env.GEMINI_API_KEY;
+    if (!apiKey) {
+      return NextResponse.json(
+        { message: 'خدمة الذكاء الاصطناعي غير مفعّلة حالياً.' },
+        { status: 503 }
       );
     }
 
@@ -32,9 +40,7 @@ export async function POST(req: NextRequest) {
 
     const sectionAr  = sectionNames[section] ?? section;
     const typeText   = listing_type ? `نوع الإعلان: ${listing_type}` : '';
-    const fieldsText = Object.entries(filteredFields)
-      .map(([k, v]) => `${k}: ${v}`)
-      .join('، ');
+    const fieldsText = Object.entries(filteredFields).map(([k, v]) => `${k}: ${v}`).join('، ');
 
     const prompt = `أنت كاتب إعلانات محترف متخصص في قطاع اللوجستيك السعودي (نقل، مستودعات، توزيع، أسطول، عقود).
 مهمتك: كتابة عنوان ووصف احترافي وجذاب لإعلان على منصة نوافذ B2B.
@@ -58,55 +64,23 @@ ${typeText}
   "description_en": "..."
 }`;
 
-    const apiKey = process.env.GEMINI_API_KEY;
-    if (!apiKey) {
-      return NextResponse.json({ message: 'خدمة الذكاء الاصطناعي غير مفعّلة حالياً.' }, { status: 503 });
-    }
-
-    const geminiRes = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent`,
-      {
-        method: 'POST',
-        headers: {
-          'X-goog-api-key': apiKey.trim(),
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          contents: [{ parts: [{ text: prompt }] }],
-          generationConfig: { maxOutputTokens: 8192, temperature: 0.7 },
-        }),
-        signal: AbortSignal.timeout(20_000),
-      }
+    const { response, model } = await callGemini(
+      apiKey,
+      [{ text: prompt }],
+      { maxOutputTokens: 8192, temperature: 0.7 }
     );
 
-    if (!geminiRes.ok) {
-      const errData = await geminiRes.json().catch(() => ({}));
-      const errMsg  = errData?.error?.message ?? `HTTP ${geminiRes.status}`;
-      return NextResponse.json({ message: `Gemini Error: ${errMsg}` }, { status: 502 });
+    if (!response.ok) {
+      const errData = await response.json().catch(() => ({}));
+      const errMsg  = (errData as any)?.error?.message ?? `HTTP ${response.status}`;
+      return NextResponse.json(
+        { message: `خطأ في خدمة الذكاء الاصطناعي (${model}): ${errMsg}` },
+        { status: 502 }
+      );
     }
 
-    const geminiData = await geminiRes.json();
-    const text: string = geminiData?.candidates?.[0]?.content?.parts?.[0]?.text ?? '';
-
-    // Extract JSON — handle markdown code blocks and raw JSON
-    let data: Record<string, string> | null = null;
-
-    // 1. Strip ```json ... ``` or ``` ... ``` wrappers
-    const stripped = text
-      .replace(/^```(?:json)?\s*/i, '')
-      .replace(/\s*```\s*$/, '')
-      .trim();
-
-    // 2. Try direct parse first
-    try { data = JSON.parse(stripped); } catch { /* continue */ }
-
-    // 3. Fallback: extract first {...} block that contains title_ar
-    if (!data) {
-      const match = text.match(/\{[\s\S]*"title_ar"[\s\S]*\}/);
-      if (match) {
-        try { data = JSON.parse(match[0]); } catch { /* continue */ }
-      }
-    }
+    const text = extractText(await response.json());
+    const data = parseJsonResponse(text) as Record<string, string> | null;
 
     if (!data || !data.title_ar || !data.description_ar) {
       return NextResponse.json(

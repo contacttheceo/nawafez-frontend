@@ -157,41 +157,68 @@ export async function POST(req: NextRequest) {
       { role: 'user', parts: [{ text: String(text).trim() }] },
     ];
 
-    const geminiRes = await fetch(
-      'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent',
-      {
-        method: 'POST',
-        headers: {
-          'X-goog-api-key': apiKey.trim(),
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          // Level 1: System Instruction
-          systemInstruction: {
-            parts: [{ text: SYSTEM_INSTRUCTION }],
-          },
-          // Level 1: Few-Shot + actual query
-          contents,
-          // Level 2: JSON Schema + settings
-          generationConfig: {
-            maxOutputTokens:  8192,
-            temperature:      0,
-            responseMimeType: 'application/json',
-            responseSchema:   RESPONSE_SCHEMA,
-          },
-        }),
-        signal: AbortSignal.timeout(20_000),
-      }
-    );
+    // Try models in order — fall back on overload errors
+    const MODELS = ['gemini-2.5-flash', 'gemini-2.0-flash', 'gemini-1.5-flash'];
+    let geminiData: any = null;
+    let lastErrMsg = '';
 
-    if (!geminiRes.ok) {
+    for (const model of MODELS) {
+      let geminiRes: Response;
+      try {
+        geminiRes = await fetch(
+          `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`,
+          {
+            method: 'POST',
+            headers: {
+              'X-goog-api-key': apiKey.trim(),
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              systemInstruction: { parts: [{ text: SYSTEM_INSTRUCTION }] },
+              contents,
+              generationConfig: {
+                maxOutputTokens:  8192,
+                temperature:      0,
+                responseMimeType: 'application/json',
+                responseSchema:   RESPONSE_SCHEMA,
+              },
+            }),
+            signal: AbortSignal.timeout(20_000),
+          }
+        );
+      } catch {
+        continue; // timeout → try next model
+      }
+
+      if (geminiRes.ok) {
+        geminiData = await geminiRes.json();
+        break;
+      }
+
       const errData = await geminiRes.json().catch(() => ({}));
-      const errMsg  = (errData as any)?.error?.message ?? `HTTP ${geminiRes.status}`;
-      return NextResponse.json({ message: `Gemini Error: ${errMsg}` }, { status: 502 });
+      lastErrMsg    = (errData as any)?.error?.message ?? `HTTP ${geminiRes.status}`;
+      const lower   = lastErrMsg.toLowerCase();
+      const isOverload =
+        geminiRes.status === 503 ||
+        geminiRes.status === 429 ||
+        lower.includes('high demand') ||
+        lower.includes('overload') ||
+        lower.includes('try again');
+
+      if (!isOverload) {
+        return NextResponse.json({ message: `Gemini Error: ${lastErrMsg}` }, { status: 502 });
+      }
+      // overload → try next model
     }
 
-    const geminiData = await geminiRes.json();
-    const rawText: string = (geminiData as any)?.candidates?.[0]?.content?.parts?.[0]?.text ?? '';
+    if (!geminiData) {
+      return NextResponse.json(
+        { message: `جميع نماذج الذكاء الاصطناعي مشغولة حالياً. حاول مجدداً بعد لحظات.` },
+        { status: 503 }
+      );
+    }
+
+    const rawText: string = geminiData?.candidates?.[0]?.content?.parts?.[0]?.text ?? '';
 
     // Parse JSON
     let data: any = null;
