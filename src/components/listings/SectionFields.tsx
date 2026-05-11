@@ -139,8 +139,9 @@ function ContractsFields({ isRTL, reg, errors }: Props) {
         <select {...(reg('contract_type', { required: true }) as object)} className={inputCls}>
           <option value="">{isRTL ? 'اختر النوع' : 'Select type'}</option>
           {[
-            ['distribution', 'توزيع',       'Distribution'],
-            ['transport',    'نقل بضائع',   'Freight Transport'],
+            ['distribution', 'توزيع',          'Distribution'],
+            ['transport',    'نقل بضائع',      'Freight Transport'],
+            ['delivery',     'توصيل طلبات',    'Orders Delivery'],
             ['warehousing',  'تخزين',        'Warehousing'],
             ['lastmile',     'توصيل أخير',  'Last-Mile Delivery'],
             ['customs',      'تخليص جمركي', 'Customs Clearance'],
