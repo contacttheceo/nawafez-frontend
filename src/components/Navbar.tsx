@@ -9,6 +9,7 @@ import { useAuthStore } from '@/store/auth'
 import { useNotificationStore } from '@/store/notifications'
 import { authApi, messagesApi } from '@/lib/api'
 import { storageUrl } from '@/lib/utils'
+import MessagesDrawer from '@/components/ui/MessagesDrawer'
 
 export default function Navbar() {
   const t = useTranslations('nav')
@@ -17,6 +18,7 @@ export default function Navbar() {
   const pathname = usePathname()
   const [mobileOpen, setMobileOpen]     = useState(false)
   const [dropdownOpen, setDropdownOpen] = useState(false)
+  const [drawerOpen, setDrawerOpen]     = useState(false)
   const dropdownRef = useRef<HTMLDivElement>(null)
   const isRTL = locale === 'ar'
   const { user, isAuthenticated, clearAuth } = useAuthStore()
@@ -72,6 +74,7 @@ export default function Navbar() {
   ]
 
   return (
+    <>
     <header className="bg-navy sticky top-0 z-50 shadow-lg">
       <div className="max-w-7xl mx-auto px-4 sm:px-6">
         <div className="flex items-center justify-between h-16">
@@ -127,9 +130,9 @@ export default function Navbar() {
                   {t('post')}
                 </Link>
 
-                {/* Messages icon with badge */}
-                <Link
-                  href={`/${locale}/messages`}
+                {/* Messages icon with badge — opens drawer */}
+                <button
+                  onClick={() => setDrawerOpen(true)}
                   className="relative p-2 rounded-lg text-white/80 hover:text-white
                              hover:bg-white/10 transition-colors"
                   title={isRTL ? 'الرسائل' : 'Messages'}
@@ -138,11 +141,11 @@ export default function Navbar() {
                   {unread > 0 && (
                     <span className="absolute -top-0.5 -end-0.5 min-w-[16px] h-4 bg-red-500
                                      text-white text-[9px] font-black rounded-full flex items-center
-                                     justify-center px-0.5 leading-none">
+                                     justify-center px-0.5 leading-none animate-pulse">
                       {unread > 9 ? '9+' : unread}
                     </span>
                   )}
-                </Link>
+                </button>
 
                 {/* User dropdown */}
                 <div className="relative" ref={dropdownRef}>
@@ -178,10 +181,10 @@ export default function Navbar() {
                         <LayoutDashboard size={15} className="text-navy" />
                         {isRTL ? 'لوحة التحكم' : 'Dashboard'}
                       </Link>
-                      <Link href={`/${locale}/messages`}
-                        onClick={() => { setDropdownOpen(false); setUnreadMessages(0); }}
+                      <button
+                        onClick={() => { setDropdownOpen(false); setDrawerOpen(true); }}
                         className="flex items-center gap-2.5 px-4 py-2.5 text-sm text-gray-700
-                                   hover:bg-gray-50 transition-colors">
+                                   hover:bg-gray-50 transition-colors w-full text-start">
                         <MessageSquare size={15} className="text-navy" />
                         {isRTL ? 'الرسائل' : 'Messages'}
                         {unread > 0 && (
@@ -190,7 +193,7 @@ export default function Navbar() {
                             {unread > 9 ? '9+' : unread}
                           </span>
                         )}
-                      </Link>
+                      </button>
                       <Link href={`/${locale}/profile`}
                         onClick={() => setDropdownOpen(false)}
                         className="flex items-center gap-2.5 px-4 py-2.5 text-sm text-gray-700
@@ -311,5 +314,9 @@ export default function Navbar() {
         </div>
       )}
     </header>
+
+    {/* Messages drawer */}
+    <MessagesDrawer open={drawerOpen} onClose={() => setDrawerOpen(false)} />
+    </>
   )
 }

@@ -223,25 +223,26 @@ function MessagesInner() {
     return () => clearInterval(tid);
   }, [activeThread?.other_user.id, activeThread?.listing.id, clearUnread]);
 
-  /* ── Poll inbox every 15 s ── */
+  /* ── Poll inbox every 15 s — also syncs Zustand badge ── */
   useEffect(() => {
     if (!isAuthenticated) return;
     const tid = setInterval(async () => {
       try {
         const res: any = await messagesApi.getInbox();
-        // Only update unread counts for threads NOT currently open
-        setThreads(prev => {
-          const fresh: Thread[] = res.data ?? [];
-          return fresh.map((ft: Thread) => {
-            const isOpen = activeThread?.other_user.id === ft.other_user.id
-                        && activeThread?.listing.id     === ft.listing.id;
-            return isOpen ? { ...ft, unread_count: 0 } : ft;
-          });
+        const fresh: Thread[] = res.data ?? [];
+        // Zero out the active thread's unread_count locally
+        const updated = fresh.map((ft: Thread) => {
+          const isOpen = activeThread?.other_user.id === ft.other_user.id
+                      && activeThread?.listing.id     === ft.listing.id;
+          return isOpen ? { ...ft, unread_count: 0 } : ft;
         });
+        setThreads(updated);
+        // ✅ Sync Navbar badge so it reflects actual server state
+        setUnreadMessages(updated.reduce((s: number, t: Thread) => s + t.unread_count, 0));
       } catch {}
     }, 15000);
     return () => clearInterval(tid);
-  }, [isAuthenticated, activeThread]);
+  }, [isAuthenticated, activeThread, setUnreadMessages]);
 
   /* ── Send message ── */
   const sendMessage = async () => {
