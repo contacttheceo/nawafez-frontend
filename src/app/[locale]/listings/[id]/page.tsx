@@ -9,8 +9,7 @@ import {
   DollarSign, Phone, MessageSquare, Bookmark, Flag,
   ArrowRight, MessageCircle, ChevronLeft, ChevronRight,
   Share2, Check, AlertTriangle, Clock, BadgeCheck,
-  Send, Trash2, ChevronDown, FileText, Upload, X,
-  ChevronUp, Info, Zap,
+  Send, Trash2, ChevronDown, Zap,
 } from 'lucide-react';
 import { listingsApi, interactionsApi, commentsApi } from '@/lib/api';
 import type { ListingComment } from '@/lib/api';
@@ -63,27 +62,6 @@ const FIELD_LABELS: Record<string, { ar: string; en: string }> = {
   job_title:        { ar: 'المسمى الوظيفي',     en: 'Job Title'         },
 };
 
-/* ── Contract Analysis Result type ─────────────────────────────────────────  */
-
-interface ContractRisk {
-  level: 'high' | 'medium' | 'low';
-  description: string;
-}
-
-interface ContractAnalysisResult {
-  summary?: string;
-  contract_type?: string;
-  duration?: string;
-  value?: string;
-  payment_terms?: string;
-  key_terms?: string[];
-  risks?: ContractRisk[];
-  penalties?: string;
-  termination_clauses?: string;
-  recommendations?: string[];
-  overall_risk?: 'low' | 'medium' | 'high';
-}
-
 /* ── Component ──────────────────────────────────────────────────────────────  */
 
 export default function ListingDetailPage() {
@@ -120,11 +98,6 @@ export default function ListingDetailPage() {
   const [commentLoading,    setCommentLoading]    = useState(true);
   const [loadingMoreCom,    setLoadingMoreCom]    = useState(false);
 
-  // Contract Analyzer state
-  const [contractFile,     setContractFile]     = useState<File | null>(null);
-  const [analyzing,        setAnalyzing]        = useState(false);
-  const [contractAnalysis, setContractAnalysis] = useState<ContractAnalysisResult | null>(null);
-  const [analyzerOpen,     setAnalyzerOpen]     = useState(false);
 
   /* ── Load listing ── */
   useEffect(() => {
@@ -295,27 +268,6 @@ export default function ListingDetailPage() {
       toast.success(isRTL ? 'تم الإبلاغ عن الإعلان' : 'Report submitted');
     } catch {
       toast.error(isRTL ? 'حدث خطأ' : 'Error');
-    }
-  };
-
-  /* ── Contract Analyzer ── */
-  const handleAnalyzeContract = async () => {
-    if (!contractFile) return;
-    setAnalyzing(true);
-    setContractAnalysis(null);
-    try {
-      const fd = new FormData();
-      fd.append('contract', contractFile);
-      const res = await fetch('/api/ai/analyze-contract', { method: 'POST', body: fd });
-      const json = await res.json();
-      if (!res.ok) throw new Error(json.message ?? 'فشل التحليل');
-      setContractAnalysis(json.data);
-      toast.success(isRTL ? '✅ تم تحليل العقد بنجاح' : '✅ Contract analyzed');
-    } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : 'خطأ غير معروف';
-      toast.error(msg);
-    } finally {
-      setAnalyzing(false);
     }
   };
 
@@ -610,295 +562,31 @@ export default function ListingDetailPage() {
                 </div>
               )}
 
-              {/* ── AI Contract Analyzer (contracts section only) ───── */}
+              {/* ── AI Contract Analyzer teaser (contracts section only) ── */}
               {listing.section === 'contracts' && (
-                <div className="card overflow-hidden">
-                  {/* Header — always visible, toggles panel */}
-                  <button
-                    type="button"
-                    onClick={() => setAnalyzerOpen(v => !v)}
-                    className="w-full flex items-center justify-between px-5 py-4 text-start
-                               hover:bg-gray-50 transition-colors"
-                  >
-                    <div className="flex items-center gap-3">
-                      <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-violet-500 to-purple-600
-                                      flex items-center justify-center shadow-md shadow-purple-200">
-                        <Zap size={16} className="text-white" />
-                      </div>
-                      <div>
-                        <p className="font-bold text-navy text-sm">
-                          {isRTL ? '🤖 محلل العقود بالذكاء الاصطناعي' : '🤖 AI Contract Analyzer'}
-                        </p>
-                        <p className="text-xs text-gray-400">
-                          {isRTL
-                            ? 'ارفع نسخة العقد PDF للحصول على تحليل فوري'
-                            : 'Upload a PDF contract for instant AI analysis'}
-                        </p>
-                      </div>
-                    </div>
-                    {analyzerOpen ? <ChevronUp size={16} className="text-gray-400" /> : <ChevronDown size={16} className="text-gray-400" />}
-                  </button>
-
-                  {analyzerOpen && (
-                    <div className="border-t border-gray-100 px-5 pb-5 pt-4 space-y-4">
-                      {/* Upload area */}
-                      {!contractAnalysis && (
-                        <div>
-                          <label
-                            className={`flex flex-col items-center justify-center gap-3 border-2 border-dashed
-                                        rounded-2xl py-8 px-4 cursor-pointer transition-colors
-                                        ${contractFile
-                                          ? 'border-violet-300 bg-violet-50'
-                                          : 'border-gray-200 hover:border-violet-300 hover:bg-violet-50/40'
-                                        }`}
-                          >
-                            <input
-                              type="file"
-                              accept=".pdf,application/pdf"
-                              className="sr-only"
-                              onChange={e => {
-                                const f = e.target.files?.[0];
-                                if (f) { setContractFile(f); setContractAnalysis(null); }
-                              }}
-                            />
-                            {contractFile ? (
-                              <>
-                                <FileText size={32} className="text-violet-500" />
-                                <div className="text-center">
-                                  <p className="text-sm font-semibold text-violet-700">{contractFile.name}</p>
-                                  <p className="text-xs text-gray-400 mt-0.5">
-                                    {(contractFile.size / 1024).toFixed(0)} KB
-                                    {' · '}
-                                    {isRTL ? 'انقر للتغيير' : 'Click to change'}
-                                  </p>
-                                </div>
-                              </>
-                            ) : (
-                              <>
-                                <Upload size={28} className="text-gray-300" />
-                                <div className="text-center">
-                                  <p className="text-sm font-semibold text-gray-600">
-                                    {isRTL ? 'اسحب ملف PDF هنا أو انقر للاختيار' : 'Drag PDF here or click to select'}
-                                  </p>
-                                  <p className="text-xs text-gray-400 mt-1">
-                                    {isRTL ? 'الحد الأقصى 10 ميجابايت' : 'Max 10 MB'}
-                                  </p>
-                                </div>
-                              </>
-                            )}
-                          </label>
-
-                          {contractFile && (
-                            <div className="flex gap-2 mt-3">
-                              <button
-                                type="button"
-                                onClick={handleAnalyzeContract}
-                                disabled={analyzing}
-                                className="flex-1 flex items-center justify-center gap-2 py-2.5
-                                           bg-gradient-to-r from-violet-500 to-purple-600
-                                           text-white text-sm font-bold rounded-xl
-                                           hover:opacity-90 transition disabled:opacity-60 shadow-lg shadow-purple-200"
-                              >
-                                {analyzing ? (
-                                  <>
-                                    <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                                    {isRTL ? 'جارٍ التحليل…' : 'Analyzing…'}
-                                  </>
-                                ) : (
-                                  <>
-                                    <Zap size={15} />
-                                    {isRTL ? 'تحليل العقد' : 'Analyze Contract'}
-                                  </>
-                                )}
-                              </button>
-                              <button
-                                type="button"
-                                onClick={() => { setContractFile(null); setContractAnalysis(null); }}
-                                className="px-3 py-2.5 rounded-xl border border-gray-200 hover:bg-gray-50 transition"
-                                title={isRTL ? 'إزالة الملف' : 'Remove file'}
-                              >
-                                <X size={15} className="text-gray-400" />
-                              </button>
-                            </div>
-                          )}
-                        </div>
-                      )}
-
-                      {/* Analysis Results */}
-                      {contractAnalysis && (
-                        <div className="space-y-4">
-                          {/* Summary */}
-                          <div className="bg-violet-50 border border-violet-100 rounded-xl p-4">
-                            <p className="text-xs font-bold text-violet-600 uppercase tracking-wider mb-1.5">
-                              {isRTL ? 'ملخص العقد' : 'Contract Summary'}
-                            </p>
-                            <p className="text-sm text-gray-700 leading-relaxed">
-                              {contractAnalysis.summary}
-                            </p>
-                          </div>
-
-                          {/* Meta grid */}
-                          <div className="grid grid-cols-2 gap-3">
-                            {contractAnalysis.contract_type && (
-                              <div className="bg-gray-50 rounded-xl px-3 py-2.5">
-                                <p className="text-[10px] text-gray-400 uppercase tracking-wider mb-0.5">
-                                  {isRTL ? 'نوع العقد' : 'Contract Type'}
-                                </p>
-                                <p className="text-sm font-semibold text-gray-800">{contractAnalysis.contract_type}</p>
-                              </div>
-                            )}
-                            {contractAnalysis.duration && (
-                              <div className="bg-gray-50 rounded-xl px-3 py-2.5">
-                                <p className="text-[10px] text-gray-400 uppercase tracking-wider mb-0.5">
-                                  {isRTL ? 'المدة' : 'Duration'}
-                                </p>
-                                <p className="text-sm font-semibold text-gray-800">{contractAnalysis.duration}</p>
-                              </div>
-                            )}
-                            {contractAnalysis.value && (
-                              <div className="bg-gray-50 rounded-xl px-3 py-2.5">
-                                <p className="text-[10px] text-gray-400 uppercase tracking-wider mb-0.5">
-                                  {isRTL ? 'القيمة المالية' : 'Contract Value'}
-                                </p>
-                                <p className="text-sm font-semibold text-emerald">{contractAnalysis.value}</p>
-                              </div>
-                            )}
-                            {contractAnalysis.payment_terms && (
-                              <div className="bg-gray-50 rounded-xl px-3 py-2.5">
-                                <p className="text-[10px] text-gray-400 uppercase tracking-wider mb-0.5">
-                                  {isRTL ? 'شروط الدفع' : 'Payment Terms'}
-                                </p>
-                                <p className="text-sm font-semibold text-gray-800">{contractAnalysis.payment_terms}</p>
-                              </div>
-                            )}
-                          </div>
-
-                          {/* Overall risk badge */}
-                          {contractAnalysis.overall_risk && (
-                            <div className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-bold ${
-                              contractAnalysis.overall_risk === 'high'
-                                ? 'bg-red-50 text-red-600 border border-red-100'
-                                : contractAnalysis.overall_risk === 'medium'
-                                ? 'bg-amber-50 text-amber-600 border border-amber-100'
-                                : 'bg-emerald-50 text-emerald-700 border border-emerald-100'
-                            }`}>
-                              <AlertTriangle size={15} />
-                              {isRTL
-                                ? `مستوى المخاطرة الكلي: ${
-                                    contractAnalysis.overall_risk === 'high' ? 'عالٍ ⚠️' :
-                                    contractAnalysis.overall_risk === 'medium' ? 'متوسط' : 'منخفض ✓'
-                                  }`
-                                : `Overall Risk: ${
-                                    contractAnalysis.overall_risk === 'high' ? 'High ⚠️' :
-                                    contractAnalysis.overall_risk === 'medium' ? 'Medium' : 'Low ✓'
-                                  }`
-                              }
-                            </div>
-                          )}
-
-                          {/* Risks */}
-                          {contractAnalysis.risks && contractAnalysis.risks.length > 0 && (
-                            <div>
-                              <p className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">
-                                {isRTL ? 'المخاطر المحتملة' : 'Potential Risks'}
-                              </p>
-                              <div className="space-y-2">
-                                {contractAnalysis.risks.map((risk, i) => (
-                                  <div key={i} className={`flex gap-2.5 p-3 rounded-xl text-sm ${
-                                    risk.level === 'high'
-                                      ? 'bg-red-50 border border-red-100'
-                                      : risk.level === 'medium'
-                                      ? 'bg-amber-50 border border-amber-100'
-                                      : 'bg-gray-50 border border-gray-100'
-                                  }`}>
-                                    <AlertTriangle size={14} className={`shrink-0 mt-0.5 ${
-                                      risk.level === 'high' ? 'text-red-500' :
-                                      risk.level === 'medium' ? 'text-amber-500' : 'text-gray-400'
-                                    }`} />
-                                    <p className="text-gray-700 leading-snug">{risk.description}</p>
-                                  </div>
-                                ))}
-                              </div>
-                            </div>
-                          )}
-
-                          {/* Key Terms */}
-                          {contractAnalysis.key_terms && contractAnalysis.key_terms.length > 0 && (
-                            <div>
-                              <p className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">
-                                {isRTL ? 'البنود الرئيسية' : 'Key Terms'}
-                              </p>
-                              <ul className="space-y-1.5">
-                                {contractAnalysis.key_terms.map((term, i) => (
-                                  <li key={i} className="flex gap-2 text-sm text-gray-700">
-                                    <Check size={14} className="text-emerald shrink-0 mt-0.5" />
-                                    {term}
-                                  </li>
-                                ))}
-                              </ul>
-                            </div>
-                          )}
-
-                          {/* Recommendations */}
-                          {contractAnalysis.recommendations && contractAnalysis.recommendations.length > 0 && (
-                            <div className="bg-blue-50 border border-blue-100 rounded-xl p-4">
-                              <p className="text-xs font-bold text-blue-600 uppercase tracking-wider mb-2 flex items-center gap-1.5">
-                                <Info size={13} />
-                                {isRTL ? 'توصيات للمراجعة' : 'Recommendations'}
-                              </p>
-                              <ul className="space-y-1.5">
-                                {contractAnalysis.recommendations.map((rec, i) => (
-                                  <li key={i} className="text-sm text-blue-800 flex gap-2">
-                                    <span className="text-blue-400 font-bold shrink-0">{i + 1}.</span>
-                                    {rec}
-                                  </li>
-                                ))}
-                              </ul>
-                            </div>
-                          )}
-
-                          {/* Termination / penalties */}
-                          {(contractAnalysis.termination_clauses || contractAnalysis.penalties) && (
-                            <div className="bg-orange-50 border border-orange-100 rounded-xl p-4 space-y-2">
-                              {contractAnalysis.termination_clauses && (
-                                <div>
-                                  <p className="text-xs font-bold text-orange-600 mb-1">
-                                    {isRTL ? 'شروط الإنهاء المبكر' : 'Termination Clauses'}
-                                  </p>
-                                  <p className="text-sm text-gray-700">{contractAnalysis.termination_clauses}</p>
-                                </div>
-                              )}
-                              {contractAnalysis.penalties && (
-                                <div>
-                                  <p className="text-xs font-bold text-orange-600 mb-1">
-                                    {isRTL ? 'الغرامات' : 'Penalties'}
-                                  </p>
-                                  <p className="text-sm text-gray-700">{contractAnalysis.penalties}</p>
-                                </div>
-                              )}
-                            </div>
-                          )}
-
-                          {/* Analyze another */}
-                          <button
-                            type="button"
-                            onClick={() => { setContractFile(null); setContractAnalysis(null); }}
-                            className="w-full py-2 text-xs text-gray-400 hover:text-violet-600 transition border border-dashed border-gray-200 rounded-xl hover:border-violet-300"
-                          >
-                            {isRTL ? '↑ تحليل عقد آخر' : '↑ Analyze another contract'}
-                          </button>
-                        </div>
-                      )}
-
-                      {/* Disclaimer */}
-                      <p className="text-[10px] text-gray-300 text-center leading-relaxed">
-                        {isRTL
-                          ? 'هذا التحليل استرشادي فقط ولا يُغني عن المراجعة القانونية المتخصصة.'
-                          : 'This analysis is for informational purposes only and does not replace legal advice.'}
-                      </p>
-                    </div>
-                  )}
-                </div>
+                <Link
+                  href={`/${locale}/tools/contract-analyzer`}
+                  className="card flex items-center gap-4 px-5 py-4 hover:shadow-md transition-shadow group"
+                >
+                  <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-violet-500 to-purple-600
+                                  flex items-center justify-center shadow-md shadow-purple-200 shrink-0">
+                    <Zap size={18} className="text-white" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="font-bold text-navy text-sm">
+                      {isRTL ? '🤖 محلل العقود بالذكاء الاصطناعي' : '🤖 AI Contract Analyzer'}
+                    </p>
+                    <p className="text-xs text-gray-400 mt-0.5">
+                      {isRTL
+                        ? 'استلمت عقداً من هذه الشركة؟ حلّله قبل التوقيع في ثوانٍ'
+                        : 'Received a contract from this company? Analyze it before signing'}
+                    </p>
+                  </div>
+                  {isRTL
+                    ? <ChevronLeft size={16} className="text-gray-300 group-hover:text-violet-500 transition-colors shrink-0" />
+                    : <ChevronRight size={16} className="text-gray-300 group-hover:text-violet-500 transition-colors shrink-0" />
+                  }
+                </Link>
               )}
 
               {/* ── Comments ─────────────────────────────────────── */}

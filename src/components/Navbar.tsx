@@ -4,7 +4,7 @@ import { useTranslations, useLocale } from 'next-intl'
 import { useRouter, usePathname } from 'next/navigation'
 import Link from 'next/link'
 import { useState, useRef, useEffect } from 'react'
-import { Menu, X, Globe, Plus, LogIn, ChevronDown, LayoutDashboard, User, MessageSquare, LogOut, Shield } from 'lucide-react'
+import { Menu, X, Globe, Plus, LogIn, ChevronDown, LayoutDashboard, User, MessageSquare, LogOut, Shield, Zap } from 'lucide-react'
 import { useAuthStore } from '@/store/auth'
 import { useNotificationStore } from '@/store/notifications'
 import { authApi, messagesApi } from '@/lib/api'
@@ -197,6 +197,13 @@ export default function Navbar() {
                                    hover:bg-gray-50 transition-colors">
                         <User size={15} className="text-navy" />
                         {isRTL ? 'الملف الشخصي' : 'Profile'}
+                      </Link>
+                      <Link href={`/${locale}/tools/contract-analyzer`}
+                        onClick={() => setDropdownOpen(false)}
+                        className="flex items-center gap-2.5 px-4 py-2.5 text-sm text-violet-600
+                                   hover:bg-violet-50 transition-colors">
+                        <Zap size={15} />
+                        {isRTL ? 'محلل العقود AI' : 'AI Contract Analyzer'}
                       </Link>
                       {user.role === 'admin' && (
                         <Link href={`/${locale}/admin`}
