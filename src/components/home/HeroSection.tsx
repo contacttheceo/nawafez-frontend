@@ -4,8 +4,8 @@ import { useState, useEffect, useRef } from 'react'
 import { useTranslations, useLocale } from 'next-intl'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { Search, X } from 'lucide-react'
-import { statsApi } from '@/lib/api'
+import { Search, X, Loader2 } from 'lucide-react'
+import { statsApi, aiApi } from '@/lib/api'
 
 export default function HeroSection() {
   const t      = useTranslations('hero')
@@ -13,9 +13,17 @@ export default function HeroSection() {
   const router = useRouter()
   const isRTL  = locale === 'ar'
 
-  const [query,  setQuery]  = useState('')
-  const [stats,  setStats]  = useState<{ total_listings: number; total_users: number } | null>(null)
+  const [query,      setQuery]      = useState('')
+  const [stats,      setStats]      = useState<{ total_listings: number; total_users: number } | null>(null)
+  const [aiSearching, setAiSearching] = useState(false)
   const inputRef = useRef<HTMLInputElement>(null)
+
+  const SAUDI_CITIES = ['الرياض','جدة','مكة المكرمة','المدينة المنورة','الدمام','الخبر','تبوك','أبها','نجران','حائل','القصيم','بريدة','ينبع']
+  const SECTION_TYPES: Record<string, string[]> = {
+    fleet: ['for_sale', 'for_rent', 'wanted'],
+    contracts: ['offering', 'wanted'],
+    ma: [], jobs: [], forum: [],
+  }
 
   useEffect(() => {
     statsApi.get()
@@ -35,6 +43,37 @@ export default function HeroSection() {
   const handleClear = () => {
     setQuery('')
     inputRef.current?.focus()
+  }
+
+  const handleAiSearch = async () => {
+    if (!query.trim() || aiSearching) return
+    setAiSearching(true)
+    try {
+      const res = await aiApi.extractListing({ text: query.trim() })
+      const params = new URLSearchParams()
+
+      if (res.section && res.section !== 'forum') params.set('section', res.section)
+
+      if (res.listing_type && (SECTION_TYPES[res.section ?? ''] ?? []).includes(res.listing_type)) {
+        params.append('listing_type', res.listing_type)
+      }
+
+      if (res.fields?.city) {
+        const c = res.fields.city.replace(/^(منطقة|مدينة|محافظة)\s+/u, '').trim()
+        if (SAUDI_CITIES.includes(c)) params.set('city', c)
+      }
+
+      if (res.fields?.price)      params.set('price_max', res.fields.price)
+      if (res.fields?.salary_max) params.set('price_max', res.fields.salary_max)
+      if (res.fields?.salary_min) params.set('price_min', res.fields.salary_min)
+
+      router.push(`/${locale}/listings?${params.toString()}`)
+    } catch {
+      // Fallback: regular text search
+      router.push(`/${locale}/listings?search=${encodeURIComponent(query.trim())}`)
+    } finally {
+      setAiSearching(false)
+    }
   }
 
   const fmt = (n: number) =>
@@ -95,7 +134,7 @@ export default function HeroSection() {
 
         {/* Search bar */}
         <form onSubmit={handleSearch}
-              className="flex gap-2 max-w-xl mx-auto mb-8">
+              className="flex gap-2 max-w-2xl mx-auto mb-2">
           <div className="relative flex-1">
             <Search size={18}
                     className="absolute start-3 top-1/2 -translate-y-1/2
@@ -107,14 +146,13 @@ export default function HeroSection() {
               onChange={(e) => setQuery(e.target.value)}
               placeholder={
                 isRTL
-                  ? 'ابحث عن شاحنة، عقد، وظيفة...'
-                  : 'Search trucks, contracts, jobs...'
+                  ? 'ابحث… أو اكتب وصفاً كاملاً واضغط ✨'
+                  : 'Search… or describe what you need and press ✨'
               }
               className="w-full ps-10 pe-10 py-3.5 rounded-xl bg-white text-gray-900
                          placeholder-gray-400 text-sm focus:outline-none
                          focus:ring-2 focus:ring-emerald"
             />
-            {/* Clear button — shows only when there's text */}
             {query && (
               <button
                 type="button"
@@ -127,6 +165,23 @@ export default function HeroSection() {
               </button>
             )}
           </div>
+
+          {/* ✨ AI Search */}
+          <button
+            type="button"
+            onClick={handleAiSearch}
+            disabled={!query.trim() || aiSearching}
+            title={isRTL ? 'تحليل النص وضبط الفلاتر تلقائياً' : 'Analyse and set filters automatically'}
+            className="px-4 py-3.5 rounded-xl bg-violet-600 hover:bg-violet-700
+                       text-white text-sm font-bold flex items-center gap-1.5
+                       transition-colors disabled:opacity-40 whitespace-nowrap shrink-0"
+          >
+            {aiSearching
+              ? <Loader2 size={16} className="animate-spin" />
+              : <span className="text-base leading-none">✨</span>}
+            <span className="hidden sm:inline">{isRTL ? 'بحث ذكي' : 'AI'}</span>
+          </button>
+
           <button
             type="submit"
             className="bg-emerald hover:bg-emerald-dark text-white px-6 py-3.5
@@ -135,6 +190,13 @@ export default function HeroSection() {
             {isRTL ? 'بحث' : 'Search'}
           </button>
         </form>
+
+        {/* AI hint */}
+        <p className="text-white/40 text-xs text-center mb-8">
+          {isRTL
+            ? '✨ جرّب: "أريد شاحنة مبردة في جدة بأقل من 8000" ← يضبط الفلاتر تلقائياً'
+            : '✨ Try: "refrigerated truck for rent in Jeddah under 8000" → filters set automatically'}
+        </p>
 
         {/* Section quick-filter pills — click redirects with section param */}
         <div className="flex flex-wrap gap-2 justify-center mb-8">
