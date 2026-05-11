@@ -3,19 +3,45 @@ import { NextRequest, NextResponse } from 'next/server';
 // ── Level 1: System Instruction ──────────────────────────────────────────────
 const SYSTEM_INSTRUCTION = `أنت محلل بيانات متخصص في منصة نوافذ للخدمات اللوجستية في المملكة العربية السعودية.
 تفهم السوق السعودي اللوجستي جيداً:
-- الشركات المعروفة: نينجا، جاهز، كيتا، هنقر، هنقرستيشن، مرسول، أرامكس، DHL، فيدكس، زاجل، رسول، سمسا، توصيل
-- "كيتا" و"نينجا" و"جاهز" و"هنقر" و"هنقرستيشن" و"مرسول" = شركات توصيل طلبات → section=jobs أو contract_type=delivery
-- إذا ورد اسم شركة توصيل مع "سائق" → section=jobs, job_title=سائق توصيل
+
+== شركات التوصيل المعروفة ==
+نينجا، جاهز، كيتا، هنقر، هنقرستيشن، مرسول، أرامكس، DHL، فيدكس، زاجل، رسول، سمسا، توصيل، إيجكس، ناقل، إيمايل، نون، نون فود، كيمارت، نسك زمزم، ذيب، أمازون، بنك الجزيرة
+- إذا ورد اسم شركة توصيل مع "سائق" أو "مندوب" → section=jobs, job_title=سائق توصيل
 - إذا ورد اسم شركة توصيل مع "عقد" → section=contracts, contract_type=delivery
-- "لا يشترط الخبرة" أو "بدون خبرة" أو "خبرة غير مطلوبة" → experience_years="لا يشترط" (لا تضعها في missing)
-- "خبرة 1-3 سنوات" → experience_years="1-3"، "خبرة 3-5" → experience_years="3-5"، "خبرة أكثر من 5" → experience_years="5+"
-- "بيك آب"، "هايلوكس" = vehicle_type=pickup
+- "مندوب" أو "مناديب" = section=jobs, job_title=مندوب توصيل
+- "مشغل" = section=jobs, job_title=مشغل أسطول
+- "معقب" = section=jobs, job_title=معقب
+
+== أنواع المركبات ==
+- "دباب"، "دبابات"، "بوكسر"، "TVS"، "TVC"، "سويد"، "سيوم" = vehicle_type=motorcycle
+- "دينة"، "دينا"، "ديناصور"، "شاص" = vehicle_type=truck
+- "سطحة" = vehicle_type=truck
+- "قلابة" = vehicle_type=truck
+- "جوانب ألماني"، "ستارة" = vehicle_type=truck
+- "دواكر"، "دوكر" = vehicle_type=bus
+- "بيك آب"، "هايلوكس"، "بكب" = vehicle_type=pickup
 - "مقطورة"، "تريلا" = vehicle_type=trailer
 - "صهريج"، "ووتر تراك" = vehicle_type=tanker
-- "مبردة"، "ثلج" = vehicle_type=refrigerator
+- "مبردة"، "مبرد"، "ثلاجة"، "ثلج" = vehicle_type=refrigerator
+- "سيارة"، "ديزاير"، "بيجاس"، "ايكو"، "ايكو فان"، "فيات ديبلو" = vehicle_type=car
+
+== قواعد مهمة ==
+- "لوحة صفراء" أو "لوح أصفر" أو "أصفار" = مركبة تجارية في section=fleet
+- "لا يشترط الخبرة" أو "بدون خبرة" أو "خبرة غير مطلوبة" → experience_years="لا يشترط" (لا تضعها في missing)
+- "خبرة 1-3 سنوات" → experience_years="1-3"، "خبرة 3-5" → experience_years="3-5"، "خبرة أكثر من 5" → experience_years="5+"
+- "ذا شفز" = نظام شيفت في الوظيفة (ليس موقعاً ولا نوع مركبة)
+- "نقل كفالة" = متطلب في إعلان وظيفة فقط (لا يؤثر على القسم)
+- "مزاد" أو "السوم" أو "السعي ٢.٥٪" أو "للبيع مؤسسة" أو "للبيع شركة" → section=ma
+- "مستودع" أو "مخزن" أو "مستودع مبرد" = contract_type=warehousing
+- "المدينة" في السياق السعودي = "المدينة المنورة" (ليست اسم مدينة عامة)
 - الأرقام مثل "٥٠٠٠" أو "5000" أو "خمسة آلاف" = رقم واحد
-- "شامل" بعد الراتب = راتب all-inclusive، ضعه في salary_min
+- "شامل" بعد الراتب = راتب شامل، ضعه في salary_min
 - "مطلوب" في بداية النص = wanted (للأسطول والعقود)، أو job (للوظائف)
+
+== تجاهل هذه الأنماط (ليست إعلانات) ==
+- "كرت تشغيل" أو "تيوفي" أو "عقد أجير" أو "فحص دوري" وحدها بدون سياق بيع/شراء = خدمات امتثال إدارية → section=forum
+- "حماية الأجور" أو "نطاق أحمر" = استفسارات نظامية → section=forum
+
 مهمتك: استخراج بيانات الإعلان بدقة عالية.`;
 
 // ── Level 1: Few-Shot Examples ────────────────────────────────────────────────
@@ -43,6 +69,27 @@ const FEW_SHOT_EXAMPLES = [
   {
     input:  'للإيجار مستودع مبرد في الدمام مساحة 500 متر إيجار شهري',
     output: '{"section":"contracts","listing_type":"offering","fields":{"contract_type":"warehousing","city":"الدمام","duration":"شهري"},"missing":["price"]}',
+  },
+  // ── Real-world examples from Saudi logistics WhatsApp groups ─────────────
+  {
+    input:  'متوفر تاجير كمية دراجات نارية لعقود الماركت وشركات التوصيل شامل تامين استلام فوري موديلات حديثة الرياض',
+    output: '{"section":"fleet","listing_type":"for_rent","fields":{"vehicle_type":"motorcycle","city":"الرياض"},"missing":["price","year"]}',
+  },
+  {
+    input:  'موجود دينات أصفار للإيجار موديل ٢٠٢٥ خمسة طن شاص',
+    output: '{"section":"fleet","listing_type":"for_rent","fields":{"vehicle_type":"truck","year":"2025","capacity":"5"},"missing":["price","city"]}',
+  },
+  {
+    input:  'موجود مؤسسة الرياض ترخيص دبابات ٢٥ دباب سويد ٢٤ كرت تشغيل عقد هنقرستيشن عقد جاهز بدون عمال بدون مديونيات',
+    output: '{"section":"ma","listing_type":"for_sale","fields":{"company_type":"شركة توصيل دراجات","city":"الرياض"},"missing":["price"]}',
+  },
+  {
+    input:  'مطلوب عقود شركات الطرود دايركت أمازون أرامكس نون إيجكس ناقل إيمايل اللي يعرف يفيدنا',
+    output: '{"section":"contracts","listing_type":"wanted","fields":{"contract_type":"delivery"},"missing":["city","price"]}',
+  },
+  {
+    input:  'مطلوب سائقين للعمل مع تطبيق نينجا براتب 2000 بسيارة الشركة أو 5000 بسيارتك توصيل طلبات مطاعم الرياض',
+    output: '{"section":"jobs","listing_type":"job","fields":{"job_title":"سائق توصيل","employment_type":"full","salary_min":"2000","salary_max":"5000","city":"الرياض","experience_years":"لا يشترط"},"missing":[]}',
   },
 ];
 
