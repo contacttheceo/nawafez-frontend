@@ -63,6 +63,27 @@ const FIELD_LABELS: Record<string, { ar: string; en: string }> = {
   job_title:        { ar: 'المسمى الوظيفي',     en: 'Job Title'         },
 };
 
+/* ── Contract Analysis Result type ─────────────────────────────────────────  */
+
+interface ContractRisk {
+  level: 'high' | 'medium' | 'low';
+  description: string;
+}
+
+interface ContractAnalysisResult {
+  summary?: string;
+  contract_type?: string;
+  duration?: string;
+  value?: string;
+  payment_terms?: string;
+  key_terms?: string[];
+  risks?: ContractRisk[];
+  penalties?: string;
+  termination_clauses?: string;
+  recommendations?: string[];
+  overall_risk?: 'low' | 'medium' | 'high';
+}
+
 /* ── Component ──────────────────────────────────────────────────────────────  */
 
 export default function ListingDetailPage() {
@@ -102,7 +123,7 @@ export default function ListingDetailPage() {
   // Contract Analyzer state
   const [contractFile,     setContractFile]     = useState<File | null>(null);
   const [analyzing,        setAnalyzing]        = useState(false);
-  const [contractAnalysis, setContractAnalysis] = useState<Record<string, unknown> | null>(null);
+  const [contractAnalysis, setContractAnalysis] = useState<ContractAnalysisResult | null>(null);
   const [analyzerOpen,     setAnalyzerOpen]     = useState(false);
 
   /* ── Load listing ── */
@@ -712,7 +733,7 @@ export default function ListingDetailPage() {
                               {isRTL ? 'ملخص العقد' : 'Contract Summary'}
                             </p>
                             <p className="text-sm text-gray-700 leading-relaxed">
-                              {contractAnalysis.summary as string}
+                              {contractAnalysis.summary}
                             </p>
                           </div>
 
@@ -723,7 +744,7 @@ export default function ListingDetailPage() {
                                 <p className="text-[10px] text-gray-400 uppercase tracking-wider mb-0.5">
                                   {isRTL ? 'نوع العقد' : 'Contract Type'}
                                 </p>
-                                <p className="text-sm font-semibold text-gray-800">{contractAnalysis.contract_type as string}</p>
+                                <p className="text-sm font-semibold text-gray-800">{contractAnalysis.contract_type}</p>
                               </div>
                             )}
                             {contractAnalysis.duration && (
@@ -731,7 +752,7 @@ export default function ListingDetailPage() {
                                 <p className="text-[10px] text-gray-400 uppercase tracking-wider mb-0.5">
                                   {isRTL ? 'المدة' : 'Duration'}
                                 </p>
-                                <p className="text-sm font-semibold text-gray-800">{contractAnalysis.duration as string}</p>
+                                <p className="text-sm font-semibold text-gray-800">{contractAnalysis.duration}</p>
                               </div>
                             )}
                             {contractAnalysis.value && (
@@ -739,7 +760,7 @@ export default function ListingDetailPage() {
                                 <p className="text-[10px] text-gray-400 uppercase tracking-wider mb-0.5">
                                   {isRTL ? 'القيمة المالية' : 'Contract Value'}
                                 </p>
-                                <p className="text-sm font-semibold text-emerald">{contractAnalysis.value as string}</p>
+                                <p className="text-sm font-semibold text-emerald">{contractAnalysis.value}</p>
                               </div>
                             )}
                             {contractAnalysis.payment_terms && (
@@ -747,7 +768,7 @@ export default function ListingDetailPage() {
                                 <p className="text-[10px] text-gray-400 uppercase tracking-wider mb-0.5">
                                   {isRTL ? 'شروط الدفع' : 'Payment Terms'}
                                 </p>
-                                <p className="text-sm font-semibold text-gray-800">{contractAnalysis.payment_terms as string}</p>
+                                <p className="text-sm font-semibold text-gray-800">{contractAnalysis.payment_terms}</p>
                               </div>
                             )}
                           </div>
@@ -776,13 +797,13 @@ export default function ListingDetailPage() {
                           )}
 
                           {/* Risks */}
-                          {Array.isArray(contractAnalysis.risks) && (contractAnalysis.risks as any[]).length > 0 && (
+                          {contractAnalysis.risks && contractAnalysis.risks.length > 0 && (
                             <div>
                               <p className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">
                                 {isRTL ? 'المخاطر المحتملة' : 'Potential Risks'}
                               </p>
                               <div className="space-y-2">
-                                {(contractAnalysis.risks as any[]).map((risk: any, i: number) => (
+                                {contractAnalysis.risks.map((risk, i) => (
                                   <div key={i} className={`flex gap-2.5 p-3 rounded-xl text-sm ${
                                     risk.level === 'high'
                                       ? 'bg-red-50 border border-red-100'
@@ -802,13 +823,13 @@ export default function ListingDetailPage() {
                           )}
 
                           {/* Key Terms */}
-                          {Array.isArray(contractAnalysis.key_terms) && (contractAnalysis.key_terms as string[]).length > 0 && (
+                          {contractAnalysis.key_terms && contractAnalysis.key_terms.length > 0 && (
                             <div>
                               <p className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">
                                 {isRTL ? 'البنود الرئيسية' : 'Key Terms'}
                               </p>
                               <ul className="space-y-1.5">
-                                {(contractAnalysis.key_terms as string[]).map((term, i) => (
+                                {contractAnalysis.key_terms.map((term, i) => (
                                   <li key={i} className="flex gap-2 text-sm text-gray-700">
                                     <Check size={14} className="text-emerald shrink-0 mt-0.5" />
                                     {term}
@@ -819,14 +840,14 @@ export default function ListingDetailPage() {
                           )}
 
                           {/* Recommendations */}
-                          {Array.isArray(contractAnalysis.recommendations) && (contractAnalysis.recommendations as string[]).length > 0 && (
+                          {contractAnalysis.recommendations && contractAnalysis.recommendations.length > 0 && (
                             <div className="bg-blue-50 border border-blue-100 rounded-xl p-4">
                               <p className="text-xs font-bold text-blue-600 uppercase tracking-wider mb-2 flex items-center gap-1.5">
                                 <Info size={13} />
                                 {isRTL ? 'توصيات للمراجعة' : 'Recommendations'}
                               </p>
                               <ul className="space-y-1.5">
-                                {(contractAnalysis.recommendations as string[]).map((rec, i) => (
+                                {contractAnalysis.recommendations.map((rec, i) => (
                                   <li key={i} className="text-sm text-blue-800 flex gap-2">
                                     <span className="text-blue-400 font-bold shrink-0">{i + 1}.</span>
                                     {rec}
@@ -844,7 +865,7 @@ export default function ListingDetailPage() {
                                   <p className="text-xs font-bold text-orange-600 mb-1">
                                     {isRTL ? 'شروط الإنهاء المبكر' : 'Termination Clauses'}
                                   </p>
-                                  <p className="text-sm text-gray-700">{contractAnalysis.termination_clauses as string}</p>
+                                  <p className="text-sm text-gray-700">{contractAnalysis.termination_clauses}</p>
                                 </div>
                               )}
                               {contractAnalysis.penalties && (
@@ -852,7 +873,7 @@ export default function ListingDetailPage() {
                                   <p className="text-xs font-bold text-orange-600 mb-1">
                                     {isRTL ? 'الغرامات' : 'Penalties'}
                                   </p>
-                                  <p className="text-sm text-gray-700">{contractAnalysis.penalties as string}</p>
+                                  <p className="text-sm text-gray-700">{contractAnalysis.penalties}</p>
                                 </div>
                               )}
                             </div>
