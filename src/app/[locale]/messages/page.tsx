@@ -43,7 +43,7 @@ function MessagesInner() {
   // ✅ Auth guard — waits for store hydration before redirecting
   const { isAuthenticated, isReady } = useAuthGuard();
   const { user } = useAuthStore();
-  const { clearThreadUnread } = useNotificationStore();
+  const { clearThreadUnread, setUnreadMessages } = useNotificationStore();
 
   const toParam      = params.get('to');
   const listingParam = params.get('listing');
@@ -72,15 +72,20 @@ function MessagesInner() {
 
   /* ── ✅ clearUnread defined FIRST — before any effect that uses it ── */
   const clearUnread = useCallback((otherId: number, lstId: number) => {
-    setThreads(prev => prev.map(t => {
-      if (t.other_user.id === otherId && t.listing.id === lstId && t.unread_count > 0) {
-        // Also decrement the shared Navbar counter
-        clearThreadUnread(t.unread_count);
-        return { ...t, unread_count: 0 };
-      }
-      return t;
-    }));
-  }, [clearThreadUnread]);
+    setThreads(prev => {
+      const updated = prev.map(t => {
+        if (t.other_user.id === otherId && t.listing.id === lstId && t.unread_count > 0) {
+          clearThreadUnread(t.unread_count);
+          return { ...t, unread_count: 0 };
+        }
+        return t;
+      });
+      // ✅ Sync Navbar badge with the exact recalculated total — prevents poll override
+      const newTotal = updated.reduce((s, t) => s + t.unread_count, 0);
+      setUnreadMessages(newTotal);
+      return updated;
+    });
+  }, [clearThreadUnread, setUnreadMessages]);
 
   /* ── Open a thread ── */
   const openThread = useCallback(async (thread: Thread) => {
@@ -226,10 +231,13 @@ function MessagesInner() {
       // Update inbox threads — keep active thread unread_count at 0
       const otherId = activeThread.other_user.id;
       const lstId   = activeThread.listing.id;
-      setThreads((inboxRes.data ?? []).map((t: Thread) => {
+      const freshThreads = (inboxRes.data ?? []).map((t: Thread) => {
         const isActive = t.other_user.id === otherId && t.listing.id === lstId;
         return isActive ? { ...t, unread_count: 0 } : t;
-      }));
+      });
+      setThreads(freshThreads);
+      // ✅ Sync Navbar badge with fresh inbox data after sending
+      setUnreadMessages(freshThreads.reduce((s: number, t: Thread) => s + t.unread_count, 0));
     } catch {}
 
     scrollToBottom(true);
@@ -445,7 +453,7 @@ function MessagesInner() {
                   >
                     {sending
                       ? <Loader2 size={16} className="animate-spin" />
-                      : <Send size={16} className={isRTL ? 'rotate-180' : ''} />}
+                      : <Send size={16} />}
                   </button>
                 </div>
               </>
