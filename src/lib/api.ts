@@ -268,6 +268,24 @@ export const commentsApi = {
 
 export const aiApi = {
   // Calls Next.js API route (not Laravel) — Vercel has no outbound restrictions
+  // Extract structured fields from free Arabic/English text
+  extractListing: async (data: { text: string }): Promise<{
+    section: string;
+    listing_type: string;
+    fields: Record<string, string>;
+    missing: string[];
+    summary_ar: string;
+  }> => {
+    const res = await fetch('/api/ai/extract-listing', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data),
+    });
+    const json = await res.json();
+    if (!res.ok) throw { response: { data: json } };
+    return json;
+  },
+
   writeListing: async (data: {
     section: string;
     listing_type?: string;

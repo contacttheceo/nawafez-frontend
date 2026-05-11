@@ -71,8 +71,10 @@ function FleetFields({ isRTL, reg, errors }: Props) {
             ['crane',      'رافعة',         'Crane'],
             ['tanker',     'صهريج',         'Tanker'],
             ['refrigerator','مبرّدة',       'Refrigerated'],
-            ['pickup',     'بيك آب',        'Pickup'],
-            ['other',      'أخرى',          'Other'],
+            ['pickup',      'بيك آب',        'Pickup'],
+            ['car',         'سيارة',         'Car'],
+            ['motorcycle',  'دراجة نارية',   'Motorcycle'],
+            ['other',       'أخرى',          'Other'],
           ].map(([v, ar, en]) => (
             <option key={v} value={v}>{isRTL ? ar : en}</option>
           ))}

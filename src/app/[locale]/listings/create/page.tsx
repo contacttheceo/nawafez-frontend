@@ -68,11 +68,23 @@ export default function CreateListingPage() {
   const isRTL    = locale === 'ar';
   const { isAuthenticated, user } = useAuthStore();
 
-  const [step,       setStep]       = useState(1);
-  const [images,     setImages]     = useState<File[]>([]);
-  const [previews,   setPreviews]   = useState<string[]>([]);
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [aiWriting,  setAiWriting]  = useState(false);
+  const [step,          setStep]          = useState(1);
+  const [images,        setImages]        = useState<File[]>([]);
+  const [previews,      setPreviews]      = useState<string[]>([]);
+  const [isSubmitting,  setIsSubmitting]  = useState(false);
+  const [aiWriting,     setAiWriting]     = useState(false);
+
+  // Step 0 — AI Smart Fill
+  const [showAiIntro,   setShowAiIntro]   = useState(true);
+  const [aiText,        setAiText]        = useState('');
+  const [aiExtracting,  setAiExtracting]  = useState(false);
+  const [extractedData, setExtractedData] = useState<{
+    section: string; listing_type: string;
+    fields: Record<string, string>; missing: string[]; summary_ar: string;
+  } | null>(null);
+
+  // Duplicate detection
+  const [duplicateWarning, setDuplicateWarning] = useState<any | null>(null);
 
   /* ── Auth guard ─────────────────────────────────────────────────── */
   useEffect(() => {
@@ -110,6 +122,53 @@ export default function CreateListingPage() {
     URL.revokeObjectURL(previews[i]);
     setImages((p)   => p.filter((_, idx) => idx !== i));
     setPreviews((p) => p.filter((_, idx) => idx !== i));
+  };
+
+  /* ── AI Smart Extract (Step 0) ─────────────────────────────────────── */
+  const handleAiExtract = async () => {
+    if (!aiText.trim()) return;
+    setAiExtracting(true);
+    try {
+      const res = await aiApi.extractListing({ text: aiText });
+      // Pre-fill form fields
+      if (res.section)              setValue('section',          res.section as any);
+      if (res.listing_type)         setValue('listing_type',     res.listing_type);
+      if (res.fields.vehicle_type)  setValue('vehicle_type',     res.fields.vehicle_type);
+      if (res.fields.year)          setValue('year',             res.fields.year);
+      if (res.fields.mileage)       setValue('mileage',          res.fields.mileage);
+      if (res.fields.capacity)      setValue('capacity',         res.fields.capacity);
+      if (res.fields.city)          setValue('city',             res.fields.city);
+      if (res.fields.price)         setValue('price',            res.fields.price);
+      if (res.fields.job_title)     setValue('job_title',        res.fields.job_title);
+      if (res.fields.employment_type) setValue('employment_type', res.fields.employment_type);
+      if (res.fields.contract_type) setValue('contract_type',    res.fields.contract_type);
+      if (res.fields.company_type)  setValue('company_type',     res.fields.company_type);
+      setExtractedData(res);
+    } catch (err: any) {
+      toast.error(err?.response?.data?.message ?? (isRTL ? 'فشل التحليل، حاول مجدداً' : 'Analysis failed, try again'));
+    } finally {
+      setAiExtracting(false);
+    }
+  };
+
+  const handleConfirmExtract = () => {
+    setShowAiIntro(false);
+  };
+
+  /* ── Duplicate detection ────────────────────────────────────────────── */
+  const checkDuplicate = async (): Promise<boolean> => {
+    if (!user?.id) return false;
+    try {
+      const res = await listingsApi.getAll({ section: selectedSection, sort: 'newest' });
+      const listings: any[] = res.data ?? [];
+      const myRecent = listings.find((l: any) => {
+        if (Number(l.user_id) !== Number(user.id)) return false;
+        const ageInDays = (Date.now() - new Date(l.created_at).getTime()) / (1000 * 60 * 60 * 24);
+        return ageInDays < 90;
+      });
+      if (myRecent) { setDuplicateWarning(myRecent); return true; }
+    } catch { /* ignore — don't block */ }
+    return false;
   };
 
   /* ── AI Listing Writer ─────────────────────────────────────────────── */
@@ -170,7 +229,13 @@ export default function CreateListingPage() {
       [],
     ];
     const valid = await trigger(fieldsToValidate[step - 1]);
-    if (valid) setStep((s) => Math.min(s + 1, 5));
+    if (!valid) return;
+    // Duplicate check after step 2 (we now know section + listing_type)
+    if (step === 2) {
+      const hasDuplicate = await checkDuplicate();
+      if (hasDuplicate) return; // modal handles navigation
+    }
+    setStep((s) => Math.min(s + 1, 5));
   };
 
   const goBack = () => setStep((s) => Math.max(s - 1, 1));
@@ -233,6 +298,97 @@ export default function CreateListingPage() {
       </div>
 
       <main className="flex-1 max-w-2xl mx-auto w-full px-4 py-8">
+
+        {/* ══════════ STEP 0 — AI Smart Fill (optional) ══════════ */}
+        {showAiIntro ? (
+          <div className="card p-6">
+            <div className="flex items-center gap-2 mb-1">
+              <span className="text-2xl">✨</span>
+              <h2 className="text-lg font-bold text-navy">
+                {isRTL ? 'صف إعلانك ونملأ النموذج تلقائياً' : 'Describe your listing — we\'ll fill the form'}
+              </h2>
+            </div>
+            <p className="text-sm text-gray-400 mb-4">
+              {isRTL
+                ? 'اكتب جملة أو أكثر بكلماتك الطبيعية وسيستخرج الذكاء الاصطناعي كل التفاصيل'
+                : 'Write naturally and AI will extract all details for you'}
+            </p>
+
+            <textarea
+              value={aiText}
+              onChange={(e) => { setAiText(e.target.value); setExtractedData(null); }}
+              className="input text-sm min-h-[100px] resize-none mb-4 w-full"
+              dir="rtl"
+              placeholder={isRTL
+                ? 'مثال: شاحنة مرسيدس أكتروس 2020 حمولة 30 طن مستعملة أبيعها بـ 350 ألف ريال في الرياض'
+                : 'e.g. Selling a used 2020 Mercedes Actros 30-ton truck for 350k SAR in Riyadh'}
+            />
+
+            {/* Extracted summary */}
+            {extractedData && (
+              <div className="bg-emerald/5 border border-emerald/20 rounded-xl p-4 mb-4">
+                <p className="text-xs font-bold text-emerald mb-2">
+                  ✅ {isRTL ? 'تم استخراج البيانات التالية:' : 'Extracted data:'}
+                </p>
+                <div className="flex flex-wrap gap-2 mb-2">
+                  {Object.entries(extractedData.fields).map(([k, v]) =>
+                    v ? (
+                      <span key={k} className="bg-white border border-emerald/30 rounded-lg px-2 py-1 text-xs text-gray-700">
+                        {v}
+                      </span>
+                    ) : null
+                  )}
+                </div>
+                {extractedData.missing.length > 0 && (
+                  <p className="text-xs text-amber-600">
+                    ⚠️ {isRTL
+                      ? `لم أجد: ${extractedData.missing.join('، ')} — يمكنك إضافتها في الخطوة التالية`
+                      : `Not found: ${extractedData.missing.join(', ')} — add them in the next step`}
+                  </p>
+                )}
+              </div>
+            )}
+
+            <div className="flex items-center justify-between gap-3 flex-wrap">
+              <button
+                type="button"
+                onClick={() => setShowAiIntro(false)}
+                className="text-sm text-gray-400 hover:text-gray-600 transition flex items-center gap-1"
+              >
+                {isRTL ? <ArrowRight size={14} /> : <ArrowLeft size={14} />}
+                {isRTL ? 'تخطي — أملأ يدوياً' : 'Skip — fill manually'}
+              </button>
+
+              <div className="flex gap-2">
+                {extractedData && (
+                  <button
+                    type="button"
+                    onClick={handleConfirmExtract}
+                    className="btn-primary text-sm"
+                  >
+                    {isRTL ? 'تأكيد والمتابعة →' : 'Confirm & Continue →'}
+                  </button>
+                )}
+                <button
+                  type="button"
+                  onClick={handleAiExtract}
+                  disabled={aiExtracting || !aiText.trim()}
+                  className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-violet-500
+                             to-purple-600 text-white text-sm font-bold rounded-xl hover:opacity-90
+                             transition disabled:opacity-40 shadow-md"
+                >
+                  {aiExtracting
+                    ? <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                    : <span>✨</span>}
+                  {isRTL
+                    ? (aiExtracting ? 'جارٍ التحليل…' : 'تحليل وملء الحقول')
+                    : (aiExtracting ? 'Analyzing…'    : 'Analyze & Fill')}
+                </button>
+              </div>
+            </div>
+          </div>
+        ) : (
+          <>
         <StepIndicator current={step} isRTL={isRTL} />
 
         <form onSubmit={handleSubmit(onSubmit)}>
@@ -505,6 +661,45 @@ export default function CreateListingPage() {
             )}
           </div>
         </form>
+          </>
+        )}
+
+        {/* ── Duplicate Warning Modal ──────────────────────────────── */}
+        {duplicateWarning && (
+          <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4">
+            <div className="bg-white rounded-2xl max-w-sm w-full p-6 shadow-2xl">
+              <div className="text-3xl mb-3 text-center">⚠️</div>
+              <h3 className="font-bold text-navy text-lg mb-2 text-center">
+                {isRTL ? 'لديك إعلان مشابه' : 'Similar listing found'}
+              </h3>
+              <p className="text-sm text-gray-500 mb-1 text-center">
+                {isRTL ? 'منشور منذ' : 'Posted'}{' '}
+                {Math.ceil((Date.now() - new Date(duplicateWarning.created_at).getTime()) / (1000 * 60 * 60 * 24))}{' '}
+                {isRTL ? 'يوماً' : 'days ago'}
+              </p>
+              <p className="text-sm font-semibold text-center text-navy mb-5 line-clamp-2">
+                {isRTL ? duplicateWarning.title_ar : (duplicateWarning.title_en || duplicateWarning.title_ar)}
+              </p>
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  onClick={() => router.push(`/${locale}/listings/${duplicateWarning.id}/edit`)}
+                  className="flex-1 btn-secondary text-sm py-2.5"
+                >
+                  {isRTL ? 'تحديث القديم' : 'Update old listing'}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => { setDuplicateWarning(null); setStep(3); }}
+                  className="flex-1 btn-primary text-sm py-2.5"
+                >
+                  {isRTL ? 'نشر جديد' : 'Post new'}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
       </main>
     </div>
   );
