@@ -13,52 +13,20 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ message: 'خدمة الذكاء الاصطناعي غير مفعّلة.' }, { status: 503 });
     }
 
-    const prompt = `أنت محلل بيانات متخصص في قطاع اللوجستيك السعودي.
-مهمتك: تحليل النص التالي واستخراج بيانات إعلان لوجستي بصيغة JSON دقيقة.
+    const prompt = `حلل النص وأعد JSON فقط بدون أي نص إضافي.
 
 النص: "${String(text).trim()}"
 
 القواعد:
-1. section: اختر الأنسب من (fleet, contracts, jobs, forum, ma)
-   - fleet = مركبات وشاحنات وسيارات
-   - contracts = عقود ومناقصات وتوزيع
-   - jobs = وظائف وتوظيف
-   - forum = نقاشات وأسئلة
-   - ma = استحواذ ودمج شركات
+- section: fleet(مركبات) | contracts(عقود) | jobs(وظائف) | forum(نقاش) | ma(استحواذ)
+- listing_type: fleet→(for_sale|for_rent|wanted) contracts→(offering|wanted) jobs→job forum→discussion ma→acquisition
+- fields: أضف فقط الحقول الموجودة في النص، احذف الفارغة
+- الحقول الممكنة: vehicle_type, year, mileage, capacity, city, price, job_title, employment_type, salary_min, salary_max, contract_type, duration, company_type, employees_count
+- vehicle_type: truck|semi|trailer|crane|tanker|refrigerator|pickup|car|motorcycle|other
+- المدن: الرياض|جدة|الدمام|مكة المكرمة|المدينة المنورة|الخبر|تبوك|أبها|ينبع|بريدة
+- missing: الحقول المهمة غير الموجودة في النص (2-3 فقط)
 
-2. listing_type حسب القسم:
-   - fleet: for_sale (للبيع) | for_rent (للإيجار) | wanted (مطلوب)
-   - contracts: offering (معروض) | wanted (مطلوب)
-   - jobs: job
-   - forum: discussion
-   - ma: acquisition
-
-3. vehicle_type (للأسطول فقط): truck | semi | trailer | crane | tanker | refrigerator | pickup | car | motorcycle | other
-
-4. المدن السعودية الصحيحة: الرياض، جدة، الدمام، مكة المكرمة، المدينة المنورة، الخبر، تبوك، أبها، ينبع، بريدة، حائل، نجران، الجوف، القصيم، الظهران
-
-5. استخرج فقط ما هو صريح في النص — لا تخمّن
-6. missing: قائمة بالحقول المهمة غير المذكورة في النص
-
-أعد JSON فقط (بدون markdown) بهذا الشكل بالضبط:
-{
-  "section": "fleet",
-  "listing_type": "for_sale",
-  "fields": {
-    "vehicle_type": "truck",
-    "year": "2020",
-    "mileage": "180000",
-    "capacity": "10",
-    "city": "الرياض",
-    "price": "180000",
-    "job_title": "",
-    "employment_type": "",
-    "contract_type": "",
-    "company_type": ""
-  },
-  "missing": ["mileage", "capacity"],
-  "summary_ar": "جملة قصيرة تصف الإعلان"
-}`;
+{"section":"...","listing_type":"...","fields":{"city":"..."},"missing":["price"]}`;
 
     const geminiRes = await fetch(
       'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent',
