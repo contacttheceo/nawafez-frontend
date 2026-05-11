@@ -1,5 +1,81 @@
 import { NextRequest, NextResponse } from 'next/server';
 
+// ── Level 1: System Instruction ──────────────────────────────────────────────
+const SYSTEM_INSTRUCTION = `أنت محلل بيانات متخصص في منصة نوافذ للخدمات اللوجستية في المملكة العربية السعودية.
+تفهم السوق السعودي اللوجستي جيداً:
+- الشركات المعروفة: نينجا، جاهز، كيتا، أرامكس، DHL، فيدكس، زاجل، رسول، سمسا
+- "كيتا" و"نينجا" و"جاهز" = شركات توصيل طلبات → contract_type=delivery أو section=jobs
+- "بيك آب"، "هايلوكس" = vehicle_type=pickup
+- "مقطورة"، "تريلا" = vehicle_type=trailer
+- "صهريج"، "ووتر تراك" = vehicle_type=tanker
+- "مبردة"، "ثلج" = vehicle_type=refrigerator
+- الأرقام مثل "٥٠٠٠" أو "5000" أو "خمسة آلاف" = رقم واحد
+- "شامل" بعد الراتب = راتب all-inclusive، ضعه في salary_min
+- "مطلوب" في بداية النص = wanted (للأسطول والعقود)، أو job (للوظائف)
+مهمتك: استخراج بيانات الإعلان بدقة عالية.`;
+
+// ── Level 1: Few-Shot Examples ────────────────────────────────────────────────
+const FEW_SHOT_EXAMPLES = [
+  {
+    input:  'شاحنة مرسيدس أكتروس 2020 مستعملة حمولة 30 طن عداد 180 ألف كم أبيعها بـ 350 ألف ريال في الرياض',
+    output: '{"section":"fleet","listing_type":"for_sale","fields":{"vehicle_type":"truck","year":"2020","mileage":"180000","capacity":"30","city":"الرياض","price":"350000"},"missing":["condition"]}',
+  },
+  {
+    input:  'مطلوب 50 سائق توصيل للعمل في تطبيق نينجا والراتب 5000 ريال شامل للعمل في منطقة الرياض',
+    output: '{"section":"jobs","listing_type":"job","fields":{"job_title":"سائق توصيل","employment_type":"full","salary_min":"5000","city":"الرياض"},"missing":["experience_years"]}',
+  },
+  {
+    input:  'يوجد عقد كيتا معروض في جدة مدة 6 أشهر',
+    output: '{"section":"contracts","listing_type":"offering","fields":{"contract_type":"delivery","duration":"6 أشهر","city":"جدة"},"missing":["price"]}',
+  },
+  {
+    input:  'مطلوب سيارات بلوحة صفراء سوزوكي عدد 20 في منطقة الرياض',
+    output: '{"section":"fleet","listing_type":"wanted","fields":{"vehicle_type":"car","city":"الرياض"},"missing":["year","price"]}',
+  },
+  {
+    input:  'للإيجار مستودع مبرد في الدمام مساحة 500 متر إيجار شهري',
+    output: '{"section":"contracts","listing_type":"offering","fields":{"contract_type":"warehousing","city":"الدمام","duration":"شهري"},"missing":["price"]}',
+  },
+];
+
+// ── Level 2: JSON Schema ──────────────────────────────────────────────────────
+const RESPONSE_SCHEMA = {
+  type: 'object',
+  properties: {
+    section: {
+      type: 'string',
+      enum: ['fleet', 'contracts', 'jobs', 'forum', 'ma'],
+    },
+    listing_type: { type: 'string' },
+    fields: {
+      type: 'object',
+      properties: {
+        vehicle_type:    { type: 'string' },
+        year:            { type: 'string' },
+        mileage:         { type: 'string' },
+        capacity:        { type: 'string' },
+        city:            { type: 'string' },
+        price:           { type: 'string' },
+        job_title:       { type: 'string' },
+        employment_type: { type: 'string' },
+        salary_min:      { type: 'string' },
+        salary_max:      { type: 'string' },
+        contract_type:   { type: 'string' },
+        duration:        { type: 'string' },
+        company_type:    { type: 'string' },
+        employees_count: { type: 'string' },
+      },
+    },
+    missing: {
+      type: 'array',
+      items: { type: 'string' },
+    },
+  },
+  required: ['section', 'listing_type', 'fields', 'missing'],
+};
+
+// ─────────────────────────────────────────────────────────────────────────────
+
 export async function POST(req: NextRequest) {
   try {
     const { text } = await req.json();
@@ -13,20 +89,17 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ message: 'خدمة الذكاء الاصطناعي غير مفعّلة.' }, { status: 503 });
     }
 
-    const prompt = `حلل النص وأعد JSON فقط بدون أي نص إضافي.
+    // Build few-shot conversation
+    const fewShotContents = FEW_SHOT_EXAMPLES.flatMap((ex) => [
+      { role: 'user',  parts: [{ text: ex.input  }] },
+      { role: 'model', parts: [{ text: ex.output }] },
+    ]);
 
-النص: "${String(text).trim()}"
-
-القواعد:
-- section: fleet(مركبات) | contracts(عقود) | jobs(وظائف) | forum(نقاش) | ma(استحواذ)
-- listing_type: fleet→(for_sale|for_rent|wanted) contracts→(offering|wanted) jobs→job forum→discussion ma→acquisition
-- fields: أضف فقط الحقول الموجودة في النص، احذف الفارغة
-- الحقول الممكنة: vehicle_type, year, mileage, capacity, city, price, job_title, employment_type, salary_min, salary_max, contract_type, duration, company_type, employees_count
-- vehicle_type: truck|semi|trailer|crane|tanker|refrigerator|pickup|car|motorcycle|other
-- المدن: الرياض|جدة|الدمام|مكة المكرمة|المدينة المنورة|الخبر|تبوك|أبها|ينبع|بريدة
-- missing: الحقول المهمة غير الموجودة في النص (2-3 فقط)
-
-{"section":"...","listing_type":"...","fields":{"city":"..."},"missing":["price"]}`;
+    // Add the actual user query
+    const contents = [
+      ...fewShotContents,
+      { role: 'user', parts: [{ text: String(text).trim() }] },
+    ];
 
     const geminiRes = await fetch(
       'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent',
@@ -37,8 +110,19 @@ export async function POST(req: NextRequest) {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          contents: [{ parts: [{ text: prompt }] }],
-          generationConfig: { maxOutputTokens: 2000, temperature: 0, responseMimeType: 'application/json' },
+          // Level 1: System Instruction
+          systemInstruction: {
+            parts: [{ text: SYSTEM_INSTRUCTION }],
+          },
+          // Level 1: Few-Shot + actual query
+          contents,
+          // Level 2: JSON Schema + settings
+          generationConfig: {
+            maxOutputTokens:  500,
+            temperature:      0,
+            responseMimeType: 'application/json',
+            responseSchema:   RESPONSE_SCHEMA,
+          },
         }),
         signal: AbortSignal.timeout(20_000),
       }
@@ -53,17 +137,10 @@ export async function POST(req: NextRequest) {
     const geminiData = await geminiRes.json();
     const rawText: string = (geminiData as any)?.candidates?.[0]?.content?.parts?.[0]?.text ?? '';
 
-    // Parse JSON — multiple strategies
+    // Parse JSON
     let data: any = null;
+    try { data = JSON.parse(rawText); } catch { /* continue */ }
 
-    // Strategy 1: strip markdown code fences then parse
-    const stripped = rawText
-      .replace(/^```(?:json)?\s*/im, '')
-      .replace(/\s*```\s*$/m, '')
-      .trim();
-    try { data = JSON.parse(stripped); } catch { /* continue */ }
-
-    // Strategy 2: find outermost { ... } block
     if (!data) {
       const start = rawText.indexOf('{');
       const end   = rawText.lastIndexOf('}');
@@ -72,9 +149,9 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    if (!data || !data.section) {
+    if (!data?.section) {
       return NextResponse.json(
-        { message: `لم أتمكن من تحليل النص. الرد: ${rawText.slice(0, 300)}` },
+        { message: `لم أتمكن من تحليل النص. الرد: ${rawText.slice(0, 200)}` },
         { status: 500 }
       );
     }
@@ -86,12 +163,12 @@ export async function POST(req: NextRequest) {
     }
 
     return NextResponse.json({
-      section:      data.section ?? 'fleet',
+      section:      data.section,
       listing_type: data.listing_type ?? '',
       fields,
       missing:      Array.isArray(data.missing) ? data.missing : [],
-      summary_ar:   data.summary_ar ?? '',
     });
+
   } catch (err: unknown) {
     const msg = err instanceof Error ? err.message : 'Unknown error';
     return NextResponse.json({ message: `Server Error: ${msg}` }, { status: 500 });
