@@ -26,7 +26,9 @@ api.interceptors.response.use(
   (response) => response.data,      // always return the JSON body directly
   (error) => {
     if (error.response?.status === 401 && typeof window !== 'undefined') {
+      // Clear both the token key AND the Zustand-persisted auth store
       localStorage.removeItem('nawafez_token');
+      localStorage.removeItem('nawafez-auth');
       const locale = document.documentElement.lang ?? 'ar';
       window.location.href = `/${locale}/auth/login`;
     }

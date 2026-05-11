@@ -2,10 +2,13 @@ import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import type { User } from '@/types';
 
+const SESSION_MS = 30 * 24 * 60 * 60 * 1000; // 30 days
+
 interface AuthState {
   user:            User | null;
   token:           string | null;
   isAuthenticated: boolean;
+  expiresAt:       number | null;   // Unix timestamp ms — session deadline
   _hasHydrated:    boolean;
 
   setAuth:         (user: User, token: string) => void;
@@ -20,16 +23,22 @@ export const useAuthStore = create<AuthState>()(
       user:            null,
       token:           null,
       isAuthenticated: false,
+      expiresAt:       null,
       _hasHydrated:    false,
 
       setAuth: (user, token) =>
-        set({ user, token, isAuthenticated: true }),
+        set({
+          user,
+          token,
+          isAuthenticated: true,
+          expiresAt: Date.now() + SESSION_MS,
+        }),
 
       setUser: (user) =>
         set({ user }),
 
       clearAuth: () =>
-        set({ user: null, token: null, isAuthenticated: false }),
+        set({ user: null, token: null, isAuthenticated: false, expiresAt: null }),
 
       setHasHydrated: (v) =>
         set({ _hasHydrated: v }),
@@ -39,15 +48,23 @@ export const useAuthStore = create<AuthState>()(
       storage: createJSONStorage(() =>
         typeof window !== 'undefined' ? localStorage : ({} as Storage)
       ),
-      // ✅ الآن isAuthenticated يُحفظ أيضاً
       partialize: (state) => ({
         token:           state.token,
         user:            state.user,
         isAuthenticated: state.isAuthenticated,
+        expiresAt:       state.expiresAt,
       }),
-      // ✅ بعد قراءة localStorage نُخبر التطبيق أن الـ store جاهز
       onRehydrateStorage: () => (state) => {
-        state?.setHasHydrated(true);
+        if (state) {
+          // Auto-logout if session has expired on the frontend
+          if (state.expiresAt && Date.now() > state.expiresAt) {
+            state.clearAuth();
+            if (typeof window !== 'undefined') {
+              localStorage.removeItem('nawafez_token');
+            }
+          }
+          state.setHasHydrated(true);
+        }
       },
     }
   )

@@ -5,6 +5,7 @@ import { useLocale } from 'next-intl';
 import Link from 'next/link';
 import {
   X, MessageSquare, Send, ChevronLeft, Loader2, Package, ArrowUpRight,
+  Sparkles, RefreshCw,
 } from 'lucide-react';
 import { messagesApi } from '@/lib/api';
 import { useAuthStore } from '@/store/auth';
@@ -55,7 +56,7 @@ export default function MessagesDrawer({ open, onClose }: MessagesDrawerProps) {
   const locale = useLocale();
   const isRTL  = locale === 'ar';
   const { user } = useAuthStore();
-  const { setUnreadMessages, clearThreadUnread } = useNotificationStore();
+  const { setUnreadMessages } = useNotificationStore();
 
   const [threads,       setThreads]       = useState<Thread[]>([]);
   const [loadingInbox,  setLoadingInbox]  = useState(false);
@@ -64,6 +65,10 @@ export default function MessagesDrawer({ open, onClose }: MessagesDrawerProps) {
   const [loadingThread, setLoadingThread] = useState(false);
   const [newMessage,    setNewMessage]    = useState('');
   const [sending,       setSending]       = useState(false);
+
+  /* ── AI suggestions ── */
+  const [suggestions,   setSuggestions]  = useState<string[]>([]);
+  const [loadingSugg,   setLoadingSugg]  = useState(false);
 
   const bottomRef   = useRef<HTMLDivElement>(null);
   const inputRef    = useRef<HTMLInputElement>(null);
@@ -84,37 +89,69 @@ export default function MessagesDrawer({ open, onClose }: MessagesDrawerProps) {
     if (messages.length) bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
 
-  /* ── Clear unread helper ── */
-  const clearUnread = useCallback((otherId: number, lstId: number) => {
-    setThreads(prev => {
-      const updated = prev.map(t => {
-        if (t.other_user.id === otherId && t.listing.id === lstId && t.unread_count > 0) {
-          clearThreadUnread(t.unread_count);
-          return { ...t, unread_count: 0 };
-        }
-        return t;
+  /* ── Fetch AI suggestions ── */
+  const fetchSuggestions = useCallback(async (thread: Thread, msgs: Message[]) => {
+    if (!thread || msgs.length === 0) return;
+    setLoadingSugg(true);
+    setSuggestions([]);
+    try {
+      const last = msgs.slice(-6).map(m => (m.is_mine ? (isRTL ? 'أنا: ' : 'Me: ') : (isRTL ? 'الطرف الآخر: ' : 'Other: ')) + m.body);
+      const res = await fetch('/api/ai/suggest-replies', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          listing_title:   isRTL ? thread.listing.title_ar : (thread.listing.title_en || thread.listing.title_ar),
+          listing_section: '',
+          listing_type:    '',
+          last_messages:   last,
+          is_buyer:        true,
+        }),
       });
-      setUnreadMessages(updated.reduce((s, t) => s + t.unread_count, 0));
-      return updated;
-    });
-  }, [clearThreadUnread, setUnreadMessages]);
+      const data = await res.json();
+      setSuggestions(data.suggestions ?? []);
+    } catch {
+      setSuggestions([]);
+    } finally {
+      setLoadingSugg(false);
+    }
+  }, [isRTL]);
 
-  /* ── Open a thread ── */
+  /* ── Open a thread (fetch messages + fresh inbox in parallel for accurate unread) ── */
   const openThread = useCallback(async (thread: Thread) => {
     setActiveThread(thread);
     setMessages([]);
+    setSuggestions([]);
     setLoadingThread(true);
-    clearUnread(thread.other_user.id, thread.listing.id);
+
     try {
-      const res: any = await messagesApi.getThread(thread.other_user.id, thread.listing.id);
-      setMessages(res.data ?? []);
+      const [threadRes, inboxRes]: any[] = await Promise.all([
+        messagesApi.getThread(thread.other_user.id, thread.listing.id),
+        messagesApi.getInbox(),
+      ]);
+
+      const msgs: Message[] = threadRes.data ?? [];
+      setMessages(msgs);
+
+      /* Use server-confirmed inbox to set accurate unread counts */
+      const freshThreads: Thread[] = inboxRes.data ?? [];
+      const updated = freshThreads.map((ft: Thread) => {
+        const isOpen =
+          ft.other_user.id === thread.other_user.id &&
+          ft.listing.id    === thread.listing.id;
+        return isOpen ? { ...ft, unread_count: 0 } : ft;
+      });
+      setThreads(updated);
+      setUnreadMessages(updated.reduce((s: number, t: Thread) => s + t.unread_count, 0));
+
+      /* Fetch AI suggestions after messages are loaded */
+      fetchSuggestions(thread, msgs);
     } catch {
       setMessages([]);
     } finally {
       setLoadingThread(false);
       setTimeout(() => inputRef.current?.focus(), 100);
     }
-  }, [clearUnread]);
+  }, [fetchSuggestions, setUnreadMessages]);
 
   /* ── Send ── */
   const sendMessage = async () => {
@@ -123,6 +160,7 @@ export default function MessagesDrawer({ open, onClose }: MessagesDrawerProps) {
     sendingRef.current = true;
     const body = newMessage.trim();
     setNewMessage('');
+    setSuggestions([]);
 
     const tempId = Date.now();
     setMessages(prev => [...prev, { id: tempId, body, sent_at: new Date().toISOString(), is_mine: true }]);
@@ -134,7 +172,10 @@ export default function MessagesDrawer({ open, onClose }: MessagesDrawerProps) {
         body,
       });
       const res: any = await messagesApi.getThread(activeThread.other_user.id, activeThread.listing.id);
-      setMessages(res.data ?? []);
+      const msgs: Message[] = res.data ?? [];
+      setMessages(msgs);
+      /* Refresh suggestions after sending */
+      fetchSuggestions(activeThread, msgs);
     } catch {
       toast.error(isRTL ? 'فشل إرسال الرسالة' : 'Failed to send');
       setMessages(prev => prev.filter(m => m.id !== tempId));
@@ -169,7 +210,7 @@ export default function MessagesDrawer({ open, onClose }: MessagesDrawerProps) {
         <div className="flex items-center justify-between px-4 py-3 bg-navy text-white shrink-0">
           {activeThread ? (
             <button
-              onClick={() => setActiveThread(null)}
+              onClick={() => { setActiveThread(null); setSuggestions([]); }}
               className="flex items-center gap-2 text-white/80 hover:text-white transition text-sm"
             >
               <ChevronLeft size={16} className={isRTL ? 'rotate-180' : ''} />
@@ -326,6 +367,49 @@ export default function MessagesDrawer({ open, onClose }: MessagesDrawerProps) {
               )}
               <div ref={bottomRef} />
             </div>
+
+            {/* AI Suggestion chips */}
+            {(loadingSugg || suggestions.length > 0) && (
+              <div className="px-3 pt-2 pb-1 bg-white border-t border-gray-100 shrink-0">
+                <div className="flex items-center gap-1.5 mb-1.5">
+                  <Sparkles size={11} className="text-violet-500" />
+                  <span className="text-[10px] text-violet-500 font-semibold">
+                    {isRTL ? 'ردود مقترحة' : 'Suggested replies'}
+                  </span>
+                  {!loadingSugg && (
+                    <button
+                      onClick={() => fetchSuggestions(activeThread, messages)}
+                      className="ms-auto text-gray-400 hover:text-violet-500 transition"
+                      title={isRTL ? 'اقتراحات جديدة' : 'Refresh suggestions'}
+                    >
+                      <RefreshCw size={11} />
+                    </button>
+                  )}
+                </div>
+                {loadingSugg ? (
+                  <div className="flex gap-1.5">
+                    {[1, 2, 3].map(i => (
+                      <div key={i} className="h-7 w-24 rounded-full bg-gray-100 animate-pulse" />
+                    ))}
+                  </div>
+                ) : (
+                  <div className="flex flex-wrap gap-1.5">
+                    {suggestions.map((s, i) => (
+                      <button
+                        key={i}
+                        onClick={() => setNewMessage(s)}
+                        className="text-xs px-3 py-1.5 rounded-full border border-violet-200
+                                   bg-violet-50 text-violet-700 hover:bg-violet-100
+                                   transition-colors truncate max-w-[180px]"
+                        title={s}
+                      >
+                        {s}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
 
             {/* Input */}
             <div className="p-3 border-t border-gray-100 bg-white flex gap-2 items-center shrink-0">

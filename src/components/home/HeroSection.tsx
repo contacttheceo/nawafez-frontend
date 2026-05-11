@@ -103,6 +103,32 @@ export default function HeroSection() {
                         rounded-full blur-2xl" />
         <div className="absolute top-1/2 start-0 w-48 h-48 bg-emerald/5
                         rounded-full blur-2xl" />
+
+        {/* Floating AI feature badges — Animation 1 */}
+        {[
+          { text: '✨ بحث ذكي',          delay: '0s',    x: '8%',  y: '20%' },
+          { text: '✍️ كاتب إعلانات',     delay: '1.8s',  x: '82%', y: '15%' },
+          { text: '📄 محلل العقود',       delay: '3.2s',  x: '5%',  y: '65%' },
+          { text: '💬 ردود مقترحة',       delay: '0.9s',  x: '78%', y: '60%' },
+          { text: '📊 مستشار الإعلانات',  delay: '2.5s',  x: '15%', y: '82%' },
+          { text: '🔍 AI Search',          delay: '1.2s',  x: '72%', y: '80%' },
+        ].map((badge) => (
+          <div
+            key={badge.text}
+            className="absolute hidden lg:flex items-center gap-1.5
+                       bg-white/8 backdrop-blur-sm border border-white/15
+                       text-white/60 text-[11px] font-medium
+                       px-3 py-1.5 rounded-full
+                       animate-[floatBadge_6s_ease-in-out_infinite]"
+            style={{
+              left: badge.x,
+              top:  badge.y,
+              animationDelay: badge.delay,
+            }}
+          >
+            {badge.text}
+          </div>
+        ))}
       </div>
 
       <div className="relative max-w-4xl mx-auto text-center">

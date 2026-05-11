@@ -122,6 +122,33 @@
 .scrollbar-hide::-webkit-scrollbar { display: none; }
 .scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
 
+/* ── AI Hero: floating badge animation ────────────────────────── */
+@keyframes floatBadge {
+  0%   { opacity: 0; transform: translateY(12px) scale(0.95); }
+  15%  { opacity: 1; transform: translateY(0)     scale(1);    }
+  75%  { opacity: 1; transform: translateY(-6px)  scale(1);    }
+  90%  { opacity: 0; transform: translateY(-14px) scale(0.95); }
+  100% { opacity: 0; transform: translateY(12px)  scale(0.95); }
+}
+
+/* ── AI Features: card fade-in from left ─────────────────────── */
+@keyframes fadeInLeft {
+  from { opacity: 0; transform: translateX(-20px); }
+  to   { opacity: 1; transform: translateX(0);     }
+}
+
+/* ── AI Demo: field pop-in ───────────────────────────────────── */
+@keyframes fadeInScale {
+  from { opacity: 0; transform: scale(0.85); }
+  to   { opacity: 1; transform: scale(1);    }
+}
+
+/* ── Cursor blink for typing demo ────────────────────────────── */
+@keyframes blink {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0; }
+}
+
 /* Messages drawer slide-in */
 @keyframes slide-in-right {
   from { transform: translateX(100%); opacity: 0; }
