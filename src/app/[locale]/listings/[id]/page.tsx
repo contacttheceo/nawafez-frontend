@@ -14,7 +14,7 @@ import {
 import { listingsApi, interactionsApi, commentsApi } from '@/lib/api';
 import type { ListingComment } from '@/lib/api';
 import { useAuthStore } from '@/store/auth';
-import { formatPrice, formatDistanceToNow } from '@/lib/utils';
+import { formatPrice, formatDistanceToNow, storageUrl } from '@/lib/utils';
 import type { Listing } from '@/types';
 import toast from 'react-hot-toast';
 import Navbar from '@/components/Navbar';
@@ -650,9 +650,10 @@ export default function ListingDetailPage() {
                           {/* Avatar */}
                           <div className="w-9 h-9 rounded-full bg-navy/10 border border-navy/10
                                           flex items-center justify-center text-navy font-bold text-sm shrink-0 overflow-hidden">
-                            {c.user?.avatar_url
-                              ? <img src={`${process.env.NEXT_PUBLIC_API_URL?.replace('/api', '')}/storage/${c.user.avatar_url}`}
-                                     alt="" className="w-full h-full object-cover" />
+                            {c.user?.avatar_url && storageUrl(c.user.avatar_url)
+                              ? <img src={storageUrl(c.user.avatar_url)!}
+                                     alt="" className="w-full h-full object-cover"
+                                     onError={(e) => { (e.target as HTMLImageElement).style.display = 'none' }} />
                               : (name?.[0]?.toUpperCase() ?? '؟')
                             }
                           </div>
