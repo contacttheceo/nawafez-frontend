@@ -48,13 +48,13 @@ export default function Footer() {
                   info@creativealphat.com
                 </a>
                 <a
-                  href="https://creativealphat.com"
+                  href="https://www.nwafizlogi.com"
                   target="_blank"
                   rel="noopener noreferrer"
                   className="flex items-center gap-2 hover:text-white transition-colors"
                 >
                   <Globe size={11} className="text-emerald shrink-0" />
-                  creativealphat.com
+                  nwafizlogi.com
                 </a>
               </div>
             </div>
