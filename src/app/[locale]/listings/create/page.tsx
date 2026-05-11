@@ -131,18 +131,40 @@ export default function CreateListingPage() {
     try {
       const res = await aiApi.extractListing({ text: aiText });
       // Pre-fill form fields
-      if (res.section)              setValue('section',          res.section as any);
-      if (res.listing_type)         setValue('listing_type',     res.listing_type);
-      if (res.fields.vehicle_type)  setValue('vehicle_type',     res.fields.vehicle_type);
-      if (res.fields.year)          setValue('year',             res.fields.year);
-      if (res.fields.mileage)       setValue('mileage',          res.fields.mileage);
-      if (res.fields.capacity)      setValue('capacity',         res.fields.capacity);
-      if (res.fields.city)          setValue('city',             res.fields.city);
-      if (res.fields.price)         setValue('price',            res.fields.price);
-      if (res.fields.job_title)     setValue('job_title',        res.fields.job_title);
+      if (res.section)              setValue('section',       res.section as any);
+      if (res.listing_type)         setValue('listing_type',  res.listing_type);
+
+      // Common fields
+      if (res.fields.city)          setValue('city',          res.fields.city);
+      if (res.fields.price)         setValue('price',         res.fields.price);
+
+      // Fleet
+      if (res.fields.vehicle_type)  setValue('vehicle_type',  res.fields.vehicle_type);
+      if (res.fields.year)          setValue('year',          res.fields.year);
+      if (res.fields.mileage)       setValue('mileage',       res.fields.mileage);
+      if (res.fields.capacity)      setValue('capacity',      res.fields.capacity);
+
+      // Jobs
+      if (res.fields.job_title) {
+        setValue('job_title', res.fields.job_title);
+        // Use job title as listing title if not already set
+        setValue('title_ar', res.fields.job_title);
+      }
       if (res.fields.employment_type) setValue('employment_type', res.fields.employment_type);
-      if (res.fields.contract_type) setValue('contract_type',    res.fields.contract_type);
-      if (res.fields.company_type)  setValue('company_type',     res.fields.company_type);
+      if (res.fields.salary_min) {
+        setValue('salary_type', 'fixed');          // راتب ثابت
+        setValue('salary_min',  res.fields.salary_min);
+        setValue('price',       res.fields.salary_min); // يملأ حقل السعر في الخطوة 3
+      }
+      if (res.fields.salary_max) setValue('salary_max', res.fields.salary_max);
+
+      // Contracts
+      if (res.fields.contract_type) setValue('contract_type', res.fields.contract_type);
+      if (res.fields.duration)      setValue('duration',      res.fields.duration);
+
+      // M&A
+      if (res.fields.company_type)     setValue('company_type',     res.fields.company_type);
+      if (res.fields.employees_count)  setValue('employees_count',  res.fields.employees_count);
       setExtractedData(res);
     } catch (err: any) {
       toast.error(err?.response?.data?.message ?? (isRTL ? 'فشل التحليل، حاول مجدداً' : 'Analysis failed, try again'));
