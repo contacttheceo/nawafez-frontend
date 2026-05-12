@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { callGemini, extractText, parseJsonResponse } from '@/lib/gemini';
+import { callGemini, extractText, parseJsonResponse, FAST_MODELS } from '@/lib/gemini';
 
 /* ─── Human-readable labels for raw field values ─────────────────── */
 const VALUE_LABELS: Record<string, Record<string, string>> = {
@@ -165,7 +165,9 @@ ${fieldsText}
     const { response, model } = await callGemini(
       apiKey,
       [{ text: prompt }],
-      { maxOutputTokens: 4096, temperature: 0.2 }
+      { maxOutputTokens: 1024, temperature: 0.2 },
+      30_000,
+      FAST_MODELS   // use non-thinking model — avoids token exhaustion
     );
 
     if (!response.ok) {

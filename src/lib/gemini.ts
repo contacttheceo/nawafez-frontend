@@ -1,16 +1,25 @@
 /**
  * Gemini API helper with automatic model fallback.
  *
- * Tries models in order: gemini-2.5-flash → gemini-2.0-flash → gemini-1.5-flash
- * Fallback triggers only on overload / high-demand errors (503 or matching message).
+ * Default models (thinking): gemini-2.5-flash → gemini-2.5-pro
+ * Fast models (no thinking): gemini-2.0-flash → gemini-1.5-flash
+ *
+ * Use FAST_MODELS for simple JSON-generation tasks to avoid token exhaustion
+ * caused by thinking models consuming tokens on internal reasoning.
  */
 
-// Retry gemini-2.5-flash up to 2 times (overload is usually temporary),
-// then fall back to gemini-2.5-pro.
+// Thinking models — for complex analysis (contract analyzer, etc.)
 const MODELS = [
   'gemini-2.5-flash',
   'gemini-2.5-flash',   // retry #2
   'gemini-2.5-pro',
+];
+
+// Non-thinking models — for structured JSON tasks (write-listing, listing-tips)
+export const FAST_MODELS = [
+  'gemini-2.0-flash',
+  'gemini-2.0-flash',   // retry #2
+  'gemini-1.5-flash',   // fallback
 ];
 
 const GEMINI_BASE = 'https://generativelanguage.googleapis.com/v1beta/models';
@@ -49,16 +58,17 @@ export async function callGemini(
   apiKey: string,
   parts: GeminiPart[],
   config: GeminiConfig = {},
-  timeoutMs = 55_000
+  timeoutMs = 55_000,
+  modelList: string[] = MODELS
 ): Promise<GeminiResult> {
   let lastResponse: Response | null = null;
-  let lastModel = MODELS[0];
+  let lastModel = modelList[0];
 
-  for (let i = 0; i < MODELS.length; i++) {
-    const model = MODELS[i];
+  for (let i = 0; i < modelList.length; i++) {
+    const model = modelList[i];
     lastModel = model;
 
-    if (RETRY_DELAYS[i]) await sleep(RETRY_DELAYS[i]);
+    if (i < RETRY_DELAYS.length && RETRY_DELAYS[i]) await sleep(RETRY_DELAYS[i]);
 
     let response: Response;
     try {
