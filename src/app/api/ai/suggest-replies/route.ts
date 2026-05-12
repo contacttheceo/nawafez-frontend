@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { callGemini, extractText, parseJsonResponse, FAST_MODELS } from '@/lib/gemini';
+import { callGemini, extractText, parseJsonResponse } from '@/lib/gemini';
 
 export async function POST(req: NextRequest) {
   try {
@@ -54,9 +54,8 @@ ${conversationText}
     const { response, model } = await callGemini(
       apiKey,
       [{ text: prompt }],
-      { maxOutputTokens: 512, temperature: 0.5 },
-      30_000,
-      FAST_MODELS
+      { maxOutputTokens: 512, temperature: 0.5, disableThinking: true },
+      30_000
     );
 
     if (!response.ok) {

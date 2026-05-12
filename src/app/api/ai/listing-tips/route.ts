@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { callGemini, extractText, parseJsonResponse, FAST_MODELS } from '@/lib/gemini';
+import { callGemini, extractText, parseJsonResponse } from '@/lib/gemini';
 
 export async function POST(req: NextRequest) {
   try {
@@ -62,9 +62,8 @@ IMPORTANT: Reply with RAW JSON only. No markdown, no code fences, no explanation
     const { response, model } = await callGemini(
       apiKey,
       [{ text: prompt }],
-      { maxOutputTokens: 512, temperature: 0.2 },
-      30_000,
-      FAST_MODELS   // non-thinking model — simple JSON task
+      { maxOutputTokens: 512, temperature: 0.2, disableThinking: true },
+      30_000
     );
 
     if (!response.ok) {

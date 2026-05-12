@@ -1,26 +1,18 @@
 /**
  * Gemini API helper with automatic model fallback.
  *
- * Default models (thinking): gemini-2.5-flash → gemini-2.5-pro
- * Fast models (no thinking): gemini-2.0-flash → gemini-1.5-flash
- *
- * Use FAST_MODELS for simple JSON-generation tasks to avoid token exhaustion
- * caused by thinking models consuming tokens on internal reasoning.
+ * Uses gemini-2.5-flash for all tasks.
+ * For simple JSON tasks, pass disableThinking:true to set thinkingBudget:0
+ * which prevents the model from spending tokens on internal reasoning.
  */
-
-// Thinking models — for complex analysis (contract analyzer, etc.)
 const MODELS = [
   'gemini-2.5-flash',
   'gemini-2.5-flash',   // retry #2
   'gemini-2.5-pro',
 ];
 
-// Non-thinking models — for structured JSON tasks (write-listing, listing-tips)
-export const FAST_MODELS = [
-  'gemini-1.5-flash',
-  'gemini-1.5-flash',      // retry #2
-  'gemini-1.5-flash-8b',   // smaller fallback
-];
+/** @deprecated — use disableThinking option instead */
+export const FAST_MODELS = MODELS;
 
 const GEMINI_BASE = 'https://generativelanguage.googleapis.com/v1beta/models';
 
@@ -32,6 +24,7 @@ interface GeminiPart {
 interface GeminiConfig {
   maxOutputTokens?: number;
   temperature?: number;
+  disableThinking?: boolean; // set thinkingBudget:0 for simple JSON tasks
 }
 
 interface GeminiResult {
@@ -83,6 +76,9 @@ export async function callGemini(
           generationConfig: {
             maxOutputTokens: config.maxOutputTokens ?? 8192,
             temperature: config.temperature ?? 0.3,
+            ...(config.disableThinking && {
+              thinkingConfig: { thinkingBudget: 0 },
+            }),
           },
         }),
         signal: AbortSignal.timeout(timeoutMs),
