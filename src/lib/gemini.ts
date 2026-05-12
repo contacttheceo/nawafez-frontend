@@ -129,25 +129,36 @@ export function extractText(json: unknown): string {
 
 /** Strip markdown code fences and return parsed JSON, or null on failure */
 export function parseJsonResponse(text: string): Record<string, unknown> | null {
+  // 1. Strip ALL code fences (opening and closing), anywhere in the string
   const stripped = text
-    .replace(/^```(?:json)?\s*/i, '')
-    .replace(/\s*```\s*$/, '')
+    .replace(/```(?:json)?/gi, '')   // remove all ``` or ```json occurrences
     .trim();
 
+  // 2. Try parsing the stripped text directly
   try {
     return JSON.parse(stripped);
-  } catch {
-    /* try to extract first {...} block */
+  } catch { /* continue */ }
+
+  // 3. Try to extract the first complete JSON object {...}
+  const objMatch = stripped.match(/\{[\s\S]*\}/);
+  if (objMatch) {
+    try {
+      return JSON.parse(objMatch[0]);
+    } catch { /* continue */ }
   }
 
-  const match = text.match(/\{[\s\S]*\}/);
-  if (match) {
+  // 4. Try to extract the first complete JSON array [...]
+  const arrMatch = stripped.match(/\[[\s\S]*\]/);
+  if (arrMatch) {
     try {
-      return JSON.parse(match[0]);
-    } catch {
-      /* fall through */
-    }
+      return JSON.parse(arrMatch[0]) as any;
+    } catch { /* continue */ }
   }
+
+  // 5. Fallback: try raw text (maybe there's no code fence at all)
+  try {
+    return JSON.parse(text.trim());
+  } catch { /* fall through */ }
 
   return null;
 }
