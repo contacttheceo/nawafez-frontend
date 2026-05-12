@@ -110,9 +110,21 @@ export async function callGemini(
   throw new Error('All Gemini models are currently unavailable. Please try again later.');
 }
 
-/** Extract text from a successful Gemini response JSON */
+/** Extract text from a successful Gemini response JSON.
+ *  Thinking models (gemini-2.5-*) return multiple parts:
+ *  parts[0] = internal thought (thought: true), parts[1] = actual reply.
+ *  We skip thought parts and return the first real text part.
+ */
 export function extractText(json: unknown): string {
-  return (json as any)?.candidates?.[0]?.content?.parts?.[0]?.text ?? '';
+  const parts: any[] = (json as any)?.candidates?.[0]?.content?.parts ?? [];
+  // Prefer non-thought parts (actual model output)
+  for (const part of parts) {
+    if (!part.thought && typeof part.text === 'string' && part.text.trim()) {
+      return part.text;
+    }
+  }
+  // Fallback: return first part text regardless
+  return parts[0]?.text ?? '';
 }
 
 /** Strip markdown code fences and return parsed JSON, or null on failure */
