@@ -17,9 +17,9 @@ const MODELS = [
 
 // Non-thinking models — for structured JSON tasks (write-listing, listing-tips)
 export const FAST_MODELS = [
-  'gemini-2.0-flash',
-  'gemini-2.0-flash',   // retry #2
-  'gemini-1.5-flash',   // fallback
+  'gemini-1.5-flash',
+  'gemini-1.5-flash',      // retry #2
+  'gemini-1.5-flash-8b',   // smaller fallback
 ];
 
 const GEMINI_BASE = 'https://generativelanguage.googleapis.com/v1beta/models';
