@@ -129,36 +129,38 @@ export function extractText(json: unknown): string {
 
 /** Strip markdown code fences and return parsed JSON, or null on failure */
 export function parseJsonResponse(text: string): Record<string, unknown> | null {
-  // 1. Strip ALL code fences (opening and closing), anywhere in the string
+  // 1. Strip ALL code fences anywhere in the string
   const stripped = text
-    .replace(/```(?:json)?/gi, '')   // remove all ``` or ```json occurrences
+    .replace(/```(?:json)?/gi, '')
     .trim();
 
-  // 2. Try parsing the stripped text directly
-  try {
-    return JSON.parse(stripped);
-  } catch { /* continue */ }
+  // 2. Try parsing stripped text directly
+  try { return JSON.parse(stripped); } catch { /* continue */ }
 
   // 3. Try to extract the first complete JSON object {...}
   const objMatch = stripped.match(/\{[\s\S]*\}/);
   if (objMatch) {
-    try {
-      return JSON.parse(objMatch[0]);
-    } catch { /* continue */ }
+    try { return JSON.parse(objMatch[0]); } catch { /* continue */ }
   }
 
   // 4. Try to extract the first complete JSON array [...]
   const arrMatch = stripped.match(/\[[\s\S]*\]/);
   if (arrMatch) {
-    try {
-      return JSON.parse(arrMatch[0]) as any;
-    } catch { /* continue */ }
+    try { return JSON.parse(arrMatch[0]) as any; } catch { /* continue */ }
   }
 
-  // 5. Fallback: try raw text (maybe there's no code fence at all)
-  try {
-    return JSON.parse(text.trim());
-  } catch { /* fall through */ }
+  // 5. Try raw text (no code fence)
+  try { return JSON.parse(text.trim()); } catch { /* continue */ }
+
+  // 6. Partial-JSON recovery: extract individual key:"value" pairs
+  //    Handles truncated responses where the closing braces are cut off
+  const partial: Record<string, unknown> = {};
+  const keyValueRe = /"([^"]+)"\s*:\s*"((?:[^"\\]|\\.)*)"/g;
+  let m: RegExpExecArray | null;
+  while ((m = keyValueRe.exec(stripped)) !== null) {
+    partial[m[1]] = m[2].replace(/\\n/g, '\n').replace(/\\"/g, '"');
+  }
+  if (Object.keys(partial).length > 0) return partial;
 
   return null;
 }

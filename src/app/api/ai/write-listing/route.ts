@@ -165,7 +165,7 @@ ${fieldsText}
     const { response, model } = await callGemini(
       apiKey,
       [{ text: prompt }],
-      { maxOutputTokens: 1024, temperature: 0.2 }
+      { maxOutputTokens: 4096, temperature: 0.2 }
     );
 
     if (!response.ok) {
