@@ -92,7 +92,7 @@ function humanize(key: string, value: string): string {
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
-    const { section, listing_type, fields } = body;
+    const { section, listing_type, fields, original_text } = body;
 
     if (!section || !fields || typeof fields !== 'object') {
       return NextResponse.json({ message: 'بيانات غير صحيحة.' }, { status: 422 });
@@ -139,20 +139,26 @@ export async function POST(req: NextRequest) {
       .map(([k, v]) => `• ${humanize(k, v)}`)
       .join('\n');
 
+    // Build the context block: original text takes priority as it has the most detail
+    const originalTextBlock = original_text?.trim()
+      ? `النص الأصلي الذي كتبه المُعلِن (المصدر الرئيسي للمعلومات):\n"${original_text.trim()}"\n\n`
+      : '';
+
     const prompt = `أنت كاتب إعلانات لمنصة نوافذ B2B اللوجستية السعودية.
 
 المهمة: اكتب عنواناً ووصفاً لإعلان في قسم "${sectionAr}".
 
-البيانات المُدخلة من المُعلِن:
+${originalTextBlock}البيانات المُستخرجة من النموذج:
 ${fieldsText}
 
 ⚠️ تعليمات صارمة جداً:
-1. اعتمد فقط على البيانات المذكورة أعلاه — لا تضف أي معلومة غير موجودة
-2. لا تخترع مميزات أو خدمات أو أرقام لم يذكرها المُعلِن
-3. العنوان يجب أن يذكر النوع والمواصفة الرئيسية من البيانات المُعطاة
-4. الوصف: 2-3 جمل فقط تعكس البيانات الفعلية — إذا كانت البيانات قليلة، الوصف يكون قصيراً
-5. لا كلام تسويقي عام مثل "نضمن لك" أو "خبرة واسعة" أو "أسطول حديث" ما لم يذكرها المُعلِن
-6. الرد بصيغة JSON فقط
+1. إذا وُجد "النص الأصلي" أعلاه — استخدمه كمصدر رئيسي واستخرج منه كل التفاصيل (أسماء شركات، أسعار، مدن، شروط)
+2. اذكر أسماء الشركات والأرقام كما هي في النص (مثلاً: كيتا، أمازون، ٥ ريال/كم)
+3. لا تخترع معلومات غير موجودة في النص أو الحقول
+4. العنوان: قصير يذكر أهم تفصيلة (الشركة أو النوع أو السعر)
+5. الوصف: 2-3 جمل تعكس التفاصيل الفعلية — إذا كانت البيانات قليلة، اجعل الوصف قصيراً
+6. لا كلام تسويقي عام ("نضمن لك"، "خبرة واسعة") إلا إذا ذكرها المُعلِن
+7. الرد بصيغة JSON فقط
 
 {"title_ar":"...","title_en":"...","description_ar":"...","description_en":"..."}`;
 

@@ -292,6 +292,7 @@ export const aiApi = {
     section: string;
     listing_type?: string;
     fields: Record<string, string>;
+    original_text?: string;
   }): Promise<{
     data: {
       title_ar: string;

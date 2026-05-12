@@ -217,6 +217,7 @@ export default function CreateListingPage() {
       'contract_type', 'duration',
       'company_type', 'employees_count', 'annual_revenue',
       'listing_type',
+      'city', 'price', 'price_type',  // include location & price as context
     ];
     const fields: Record<string, string> = {};
     dynamicKeys.forEach(k => { if (v[k]) fields[k] = String(v[k]); });
@@ -229,9 +230,10 @@ export default function CreateListingPage() {
     setAiWriting(true);
     try {
       const res = await aiApi.writeListing({
-        section:      v.section,
-        listing_type: v.listing_type || undefined,
+        section:       v.section,
+        listing_type:  v.listing_type || undefined,
         fields,
+        original_text: aiText.trim() || undefined,  // pass user's original typed text
       });
       setValue('title_ar',       res.data.title_ar);
       setValue('title_en',       res.data.title_en);
