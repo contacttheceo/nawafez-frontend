@@ -187,8 +187,27 @@ export default function CreateListingPage() {
     }
   };
 
-  const handleConfirmExtract = () => {
+  const handleConfirmExtract = async () => {
     setShowAiIntro(false);
+
+    // Auto-write title & description immediately using original text + extracted fields
+    if (!extractedData) return;
+    setAiWriting(true);
+    try {
+      const res = await aiApi.writeListing({
+        section:       extractedData.section,
+        listing_type:  extractedData.listing_type,
+        fields:        extractedData.fields,
+        original_text: aiText.trim() || undefined,
+      });
+      if (res.data.title_ar)       setValue('title_ar',       res.data.title_ar);
+      if (res.data.title_en)       setValue('title_en',       res.data.title_en);
+      if (res.data.description_ar) setValue('description_ar', res.data.description_ar);
+    } catch {
+      // Silent — user can still fill manually or press "أعد الكتابة"
+    } finally {
+      setAiWriting(false);
+    }
   };
 
   /* ── Duplicate detection ────────────────────────────────────────────── */
@@ -501,7 +520,7 @@ export default function CreateListingPage() {
                   </p>
                 </div>
 
-                {/* ✨ AI Writer Button */}
+                {/* ✨ AI Writer Button — shows as "Rewrite" if auto-write already happened */}
                 <button
                   type="button"
                   onClick={handleAiWrite}
@@ -516,13 +535,25 @@ export default function CreateListingPage() {
                     <span className="w-4 h-4 border-2 border-white border-t-transparent
                                      rounded-full animate-spin inline-block" />
                   ) : (
-                    <span>✨</span>
+                    <span>{extractedData ? '🔄' : '✨'}</span>
                   )}
                   {isRTL
-                    ? (aiWriting ? 'جارٍ الكتابة…' : 'اكتب بالذكاء الاصطناعي')
-                    : (aiWriting ? 'Writing…'       : 'Write with AI')}
+                    ? (aiWriting ? 'جارٍ الكتابة…' : extractedData ? 'أعد الكتابة' : 'اكتب بالذكاء الاصطناعي')
+                    : (aiWriting ? 'Writing…'       : extractedData ? 'Rewrite'     : 'Write with AI')}
                 </button>
               </div>
+
+              {/* Auto-writing indicator */}
+              {aiWriting && extractedData && (
+                <div className="flex items-center gap-2 mb-4 px-3 py-2 bg-violet-50
+                                border border-violet-200 rounded-lg text-xs text-violet-700">
+                  <span className="w-3.5 h-3.5 border-2 border-violet-500 border-t-transparent
+                                   rounded-full animate-spin shrink-0" />
+                  {isRTL
+                    ? 'الذكاء الاصطناعي يكتب العنوان والوصف تلقائياً…'
+                    : 'AI is writing the title & description automatically…'}
+                </div>
+              )}
 
               <SectionFields
                 section={selectedSection}
