@@ -86,11 +86,22 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const text = extractText(await response.json());
+    const rawJson = await response.json();
+    const text = extractText(rawJson);
+
+    console.log('[listing-tips] model:', model);
+    console.log('[listing-tips] raw text preview:', text.slice(0, 300));
+
     const data = parseJsonResponse(text) as { tips?: Array<{ icon: string; message: string; priority: string }> } | null;
 
     if (!data?.tips || !Array.isArray(data.tips)) {
-      return NextResponse.json({ tips: [] });
+      console.error('[listing-tips] failed to parse tips. text was:', text.slice(0, 500));
+      return NextResponse.json({ tips: [], debug: `parse_failed: ${text.slice(0, 200)}` });
+    }
+
+    if (data.tips.length === 0) {
+      console.warn('[listing-tips] AI returned empty tips array');
+      return NextResponse.json({ tips: [], debug: 'empty_tips_from_ai' });
     }
 
     return NextResponse.json({ tips: data.tips.slice(0, 3) });

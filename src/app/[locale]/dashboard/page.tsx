@@ -61,6 +61,7 @@ export default function DashboardPage() {
   const [tipsListingId, setTipsListingId] = useState<number | null>(null); // which listing shows tips
   const [tips,          setTips]          = useState<Array<{icon:string;message:string;priority:string}>>([]);
   const [loadingTips,   setLoadingTips]   = useState(false);
+  const [tipsError,     setTipsError]     = useState<string>('');
 
   const loadStats = async () => {
     const [dashData, bidsData] = await Promise.all([
@@ -150,6 +151,7 @@ export default function DashboardPage() {
     if (tipsListingId === listing.id) { setTipsListingId(null); return; }
     setTipsListingId(listing.id);
     setTips([]);
+    setTipsError('');
     setLoadingTips(true);
     try {
       const res = await fetch('/api/ai/listing-tips', {
@@ -166,11 +168,20 @@ export default function DashboardPage() {
           city:         listing.city,
         }),
       });
+      const data = await res.json();
       if (res.ok) {
-        const data = await res.json();
-        setTips(data.tips ?? []);
+        const tips = data.tips ?? [];
+        if (tips.length === 0) {
+          setTipsError(data.debug ?? 'empty');
+        } else {
+          setTips(tips);
+        }
+      } else {
+        setTipsError(data.message ?? `HTTP ${res.status}`);
       }
-    } catch { setTips([]); }
+    } catch (e: any) {
+      setTipsError(e?.message ?? 'network_error');
+    }
     finally  { setLoadingTips(false); }
   };
 
@@ -593,22 +604,29 @@ export default function DashboardPage() {
                                   ))}
                                 </div>
                               ) : tips.length === 0 ? (
-                                <div className="flex items-center justify-between gap-2.5 py-1">
-                                  <div className="flex items-center gap-2">
-                                    <span className="text-xl">🔄</span>
-                                    <p className="text-xs text-violet-600">
-                                      {isRTL ? 'لم يتمكن المستشار من التحليل' : 'Advisor could not analyze'}
-                                    </p>
+                                <div className="flex flex-col gap-2 py-1">
+                                  <div className="flex items-center justify-between gap-2.5">
+                                    <div className="flex items-center gap-2">
+                                      <span className="text-xl">🔄</span>
+                                      <p className="text-xs text-violet-600">
+                                        {isRTL ? 'لم يتمكن المستشار من التحليل' : 'Advisor could not analyze'}
+                                      </p>
+                                    </div>
+                                    <button
+                                      onClick={() => {
+                                        const listings_list = listings.find((l: any) => l.id === tipsListingId);
+                                        if (listings_list) { setTipsListingId(null); setTimeout(() => handleFetchTips(listings_list), 50); }
+                                      }}
+                                      className="text-[10px] text-violet-600 hover:text-violet-800 underline shrink-0"
+                                    >
+                                      {isRTL ? 'أعد المحاولة' : 'Retry'}
+                                    </button>
                                   </div>
-                                  <button
-                                    onClick={() => {
-                                      const listings_list = listings.find((l: any) => l.id === tipsListingId);
-                                      if (listings_list) { setTipsListingId(null); setTimeout(() => handleFetchTips(listings_list), 50); }
-                                    }}
-                                    className="text-[10px] text-violet-600 hover:text-violet-800 underline shrink-0"
-                                  >
-                                    {isRTL ? 'أعد المحاولة' : 'Retry'}
-                                  </button>
+                                  {tipsError && (
+                                    <p className="text-[9px] text-gray-400 font-mono break-all leading-relaxed">
+                                      {tipsError}
+                                    </p>
+                                  )}
                                 </div>
                               ) : (
                                 <div className="space-y-2.5">
