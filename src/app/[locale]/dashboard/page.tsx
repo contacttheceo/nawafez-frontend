@@ -593,11 +593,22 @@ export default function DashboardPage() {
                                   ))}
                                 </div>
                               ) : tips.length === 0 ? (
-                                <div className="flex items-center gap-2.5 py-1">
-                                  <span className="text-xl">✅</span>
-                                  <p className="text-sm font-medium text-emerald-700">
-                                    {isRTL ? 'إعلانك يبدو مكتملاً — استمر!' : 'Your listing looks complete — great job!'}
-                                  </p>
+                                <div className="flex items-center justify-between gap-2.5 py-1">
+                                  <div className="flex items-center gap-2">
+                                    <span className="text-xl">🔄</span>
+                                    <p className="text-xs text-violet-600">
+                                      {isRTL ? 'لم يتمكن المستشار من التحليل' : 'Advisor could not analyze'}
+                                    </p>
+                                  </div>
+                                  <button
+                                    onClick={() => {
+                                      const listings_list = listings.find((l: any) => l.id === tipsListingId);
+                                      if (listings_list) { setTipsListingId(null); setTimeout(() => handleFetchTips(listings_list), 50); }
+                                    }}
+                                    className="text-[10px] text-violet-600 hover:text-violet-800 underline shrink-0"
+                                  >
+                                    {isRTL ? 'أعد المحاولة' : 'Retry'}
+                                  </button>
                                 </div>
                               ) : (
                                 <div className="space-y-2.5">
