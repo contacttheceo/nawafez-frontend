@@ -268,6 +268,57 @@ export const commentsApi = {
     api.delete(`/listings/${listingId}/comments/${commentId}`),
 };
 
+// ─── Admin ────────────────────────────────────────────────────────────────────
+export const adminApi = {
+  getDashboard: (): Promise<any> =>
+    api.get('/admin/dashboard'),
+
+  getAnalytics: (): Promise<any> =>
+    api.get('/admin/analytics'),
+
+  getListings: (params?: {
+    status?: string;
+    section?: string;
+    page?: number;
+    search?: string;
+  }): Promise<any> =>
+    api.get('/admin/listings', { params }),
+
+  approveListing: (id: number): Promise<any> =>
+    api.patch(`/admin/listings/${id}/approve`),
+
+  rejectListing: (id: number, reason: string): Promise<any> =>
+    api.patch(`/admin/listings/${id}/reject`, { reason }),
+
+  toggleFeatured: (id: number): Promise<any> =>
+    api.patch(`/admin/listings/${id}/feature`),
+
+  getVerifications: (): Promise<any> =>
+    api.get('/admin/verifications'),
+
+  approveVerification: (id: number): Promise<any> =>
+    api.post(`/admin/verifications/${id}/approve`),
+
+  rejectVerification: (id: number, reason: string): Promise<any> =>
+    api.post(`/admin/verifications/${id}/reject`, { reason }),
+
+  getReports: (params?: { page?: number }): Promise<any> =>
+    api.get('/admin/reports', { params }),
+
+  resolveReport: (id: number): Promise<any> =>
+    api.patch(`/admin/reports/${id}/resolve`),
+
+  getUsers: (params?: {
+    search?: string;
+    role?: string;
+    page?: number;
+  }): Promise<any> =>
+    api.get('/admin/users', { params }),
+
+  toggleTrustedPayer: (id: number): Promise<any> =>
+    api.patch(`/admin/users/${id}/trusted-payer`),
+};
+
 export const aiApi = {
   // Calls Next.js API route (not Laravel) — Vercel has no outbound restrictions
   // Extract structured fields from free Arabic/English text

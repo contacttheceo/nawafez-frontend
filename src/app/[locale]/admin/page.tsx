@@ -109,6 +109,13 @@ export default function AdminPage() {
   const [crPreview, setCrPreview]           = useState<{ url: string; name: string; cr: string } | null>(null);
   const [listingPreview, setListingPreview] = useState<any | null>(null);
   const [listingPreviewLoading, setListingPreviewLoading] = useState(false);
+  const [userDetail, setUserDetail]         = useState<any | null>(null);
+
+  /* ── Pagination for users + reports ── */
+  const [userPage, setUserPage]         = useState(1);
+  const [userLastPage, setUserLastPage] = useState(1);
+  const [reportPage, setReportPage]     = useState(1);
+  const [reportLastPage, setReportLastPage] = useState(1);
 
   // Guard: only admin
   useEffect(() => {
@@ -154,12 +161,13 @@ export default function AdminPage() {
     }
   }, [listingStatus, listingSection, listingSearch, isRTL]);
 
-  // Load users
-  const loadUsers = useCallback(async () => {
+  // Load users (paginated)
+  const loadUsers = useCallback(async (page: number = 1) => {
     setIsLoading(true);
     try {
-      const res: any = await adminApi.getUsers({ search: userSearch, role: userRole });
+      const res: any = await adminApi.getUsers({ search: userSearch, role: userRole, page });
       setUsers(res.data ?? []);
+      setUserLastPage(res.last_page ?? 1);
     } catch {
       toast.error(isRTL ? 'فشل التحميل' : 'Failed to load');
     } finally {
@@ -167,11 +175,25 @@ export default function AdminPage() {
     }
   }, [userSearch, userRole, isRTL]);
 
+  // Load reports (paginated)
+  const loadReports = useCallback(async (page: number = 1) => {
+    setIsLoading(true);
+    try {
+      const res: any = await adminApi.getReports({ page });
+      setReports(res.data ?? []);
+      setReportLastPage(res.last_page ?? 1);
+    } catch {
+      toast.error(isRTL ? 'فشل التحميل' : 'Failed to load');
+    } finally {
+      setIsLoading(false);
+    }
+  }, [isRTL]);
+
   // Tab effect
   useEffect(() => {
     if (user?.role !== 'admin') return;
     if (activeTab === 'listings')      loadListings(1);
-    if (activeTab === 'users')         loadUsers();
+    if (activeTab === 'users')         { setUserPage(1); loadUsers(1); }
     if (activeTab === 'verifications') {
       setIsLoading(true);
       adminApi.getVerifications()
@@ -179,13 +201,7 @@ export default function AdminPage() {
         .catch(() => {})
         .finally(() => setIsLoading(false));
     }
-    if (activeTab === 'reports') {
-      setIsLoading(true);
-      adminApi.getReports()
-        .then((res: any) => setReports(res.data ?? []))
-        .catch(() => {})
-        .finally(() => setIsLoading(false));
-    }
+    if (activeTab === 'reports')       { setReportPage(1); loadReports(1); }
     if (activeTab === 'analytics') loadAnalytics();
   }, [activeTab, user]);
 
@@ -995,6 +1011,29 @@ export default function AdminPage() {
                 </div>
               );
             })}
+
+            {/* Pagination */}
+            {!isLoading && reports.length > 0 && reportLastPage > 1 && (
+              <div className="flex items-center justify-center gap-3 py-4">
+                <button
+                  onClick={() => { const p = reportPage - 1; setReportPage(p); loadReports(p); }}
+                  disabled={reportPage === 1}
+                  className="px-4 py-2 text-sm border border-gray-200 rounded-xl disabled:opacity-40 hover:bg-gray-50 transition font-medium"
+                >
+                  {isRTL ? 'السابق →' : '← Prev'}
+                </button>
+                <span className="text-sm text-gray-500 font-medium">
+                  {reportPage} / {reportLastPage}
+                </span>
+                <button
+                  onClick={() => { const p = reportPage + 1; setReportPage(p); loadReports(p); }}
+                  disabled={reportPage === reportLastPage}
+                  className="px-4 py-2 text-sm border border-gray-200 rounded-xl disabled:opacity-40 hover:bg-gray-50 transition font-medium"
+                >
+                  {isRTL ? '← التالي' : 'Next →'}
+                </button>
+              </div>
+            )}
           </div>
         )}
 
@@ -1010,7 +1049,7 @@ export default function AdminPage() {
                 <input
                   value={userSearch}
                   onChange={e => setUserSearch(e.target.value)}
-                  onKeyDown={e => { if (e.key === 'Enter') loadUsers(); }}
+                  onKeyDown={e => { if (e.key === 'Enter') { setUserPage(1); loadUsers(1); } }}
                   placeholder={isRTL ? 'بحث بالاسم أو البريد...' : 'Search by name or email...'}
                   className="input text-sm ps-9 py-2"
                 />
@@ -1024,7 +1063,7 @@ export default function AdminPage() {
                 <option value="individual">{isRTL ? 'أفراد' : 'Individuals'}</option>
                 <option value="business">{isRTL ? 'شركات' : 'Businesses'}</option>
               </select>
-              <button onClick={loadUsers}
+              <button onClick={() => { setUserPage(1); loadUsers(1); }}
                 className="btn-primary text-sm py-2 px-4 flex items-center gap-1.5">
                 <Search size={13} /> {isRTL ? 'بحث' : 'Search'}
               </button>
@@ -1037,44 +1076,52 @@ export default function AdminPage() {
                 {isRTL ? 'لا توجد نتائج' : 'No results found'}
               </div>
             ) : (
+              <>
               <div className="space-y-2">
                 {users.map((u: any) => (
                   <div key={u.id} className="card p-4 flex items-center gap-4">
-                    <div className="w-10 h-10 bg-navy/10 rounded-full flex items-center justify-center
-                                    text-navy font-black text-sm flex-shrink-0">
-                      {(isRTL ? u.name_ar : u.name_en)?.[0]?.toUpperCase() ?? '?'}
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="font-bold text-navy text-sm">
-                        {isRTL ? u.name_ar : u.name_en}
-                      </p>
-                      <p className="text-xs text-gray-400" dir="ltr">{u.email}</p>
-                      <div className="flex items-center gap-2 mt-0.5 flex-wrap">
-                        <span className={`text-xs px-2 py-0.5 rounded-full font-medium
-                          ${u.role === 'business' ? 'bg-blue-100 text-blue-600' :
-                            u.role === 'admin'    ? 'bg-red-100 text-red-600' :
-                                                   'bg-gray-100 text-gray-500'}`}>
-                          {u.role === 'business' ? (isRTL ? 'شركة' : 'Business') :
-                           u.role === 'admin'    ? (isRTL ? 'مشرف' : 'Admin') :
-                                                  (isRTL ? 'فرد' : 'Individual')}
-                        </span>
-                        {u.listings_count > 0 && (
-                          <span className="text-xs text-gray-400">
-                            {u.listings_count} {isRTL ? 'إعلان' : 'listings'}
-                          </span>
-                        )}
-                        {u.is_trusted_payer && (
-                          <span className="text-xs bg-emerald-100 text-emerald-600 px-2 py-0.5 rounded-full font-medium">
-                            ✓ {isRTL ? 'موثوق' : 'Trusted'}
-                          </span>
-                        )}
-                        {u.email_verified_at && (
-                          <span className="text-xs bg-gray-100 text-gray-400 px-2 py-0.5 rounded-full">
-                            {isRTL ? 'بريد موثق' : 'Email verified'}
-                          </span>
-                        )}
+                    <button
+                      onClick={() => setUserDetail(u)}
+                      className="flex items-center gap-4 flex-1 min-w-0 text-start hover:opacity-80 transition"
+                    >
+                      <div className="w-10 h-10 bg-navy/10 rounded-full flex items-center justify-center
+                                      text-navy font-black text-sm flex-shrink-0 overflow-hidden">
+                        {storageUrl(u.avatar)
+                          ? <img src={storageUrl(u.avatar)!} alt="" className="w-full h-full object-cover" />
+                          : (isRTL ? u.name_ar : u.name_en)?.[0]?.toUpperCase() ?? '?'}
                       </div>
-                    </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="font-bold text-navy text-sm hover:underline">
+                          {isRTL ? u.name_ar : u.name_en}
+                        </p>
+                        <p className="text-xs text-gray-400 truncate" dir="ltr">{u.email}</p>
+                        <div className="flex items-center gap-2 mt-0.5 flex-wrap">
+                          <span className={`text-xs px-2 py-0.5 rounded-full font-medium
+                            ${u.role === 'business' ? 'bg-blue-100 text-blue-600' :
+                              u.role === 'admin'    ? 'bg-red-100 text-red-600' :
+                                                     'bg-gray-100 text-gray-500'}`}>
+                            {u.role === 'business' ? (isRTL ? 'شركة' : 'Business') :
+                             u.role === 'admin'    ? (isRTL ? 'مشرف' : 'Admin') :
+                                                    (isRTL ? 'فرد' : 'Individual')}
+                          </span>
+                          {u.listings_count > 0 && (
+                            <span className="text-xs text-gray-400">
+                              {u.listings_count} {isRTL ? 'إعلان' : 'listings'}
+                            </span>
+                          )}
+                          {u.is_trusted_payer && (
+                            <span className="text-xs bg-emerald-100 text-emerald-600 px-2 py-0.5 rounded-full font-medium">
+                              ✓ {isRTL ? 'موثوق' : 'Trusted'}
+                            </span>
+                          )}
+                          {u.email_verified_at && (
+                            <span className="text-xs bg-gray-100 text-gray-400 px-2 py-0.5 rounded-full">
+                              {isRTL ? 'بريد موثق' : 'Email verified'}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    </button>
                     <button
                       onClick={() => toggleTrustedPayer(u.id)}
                       className={`px-3 py-1.5 rounded-xl text-xs font-bold transition flex-shrink-0
@@ -1089,6 +1136,30 @@ export default function AdminPage() {
                   </div>
                 ))}
               </div>
+
+              {/* Pagination */}
+              {userLastPage > 1 && (
+                <div className="flex items-center justify-center gap-3 py-4">
+                  <button
+                    onClick={() => { const p = userPage - 1; setUserPage(p); loadUsers(p); }}
+                    disabled={userPage === 1}
+                    className="px-4 py-2 text-sm border border-gray-200 rounded-xl disabled:opacity-40 hover:bg-gray-50 transition font-medium"
+                  >
+                    {isRTL ? 'السابق →' : '← Prev'}
+                  </button>
+                  <span className="text-sm text-gray-500 font-medium">
+                    {userPage} / {userLastPage}
+                  </span>
+                  <button
+                    onClick={() => { const p = userPage + 1; setUserPage(p); loadUsers(p); }}
+                    disabled={userPage === userLastPage}
+                    className="px-4 py-2 text-sm border border-gray-200 rounded-xl disabled:opacity-40 hover:bg-gray-50 transition font-medium"
+                  >
+                    {isRTL ? '← التالي' : 'Next →'}
+                  </button>
+                </div>
+              )}
+              </>
             )}
           </div>
         )}
@@ -1221,6 +1292,195 @@ export default function AdminPage() {
                   className="max-w-full max-h-[70vh] mx-auto rounded-lg shadow"
                 />
               )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── User Detail Modal ─────────────────────────────────────────────────── */}
+      {userDetail && (
+        <div className="fixed inset-0 z-50 bg-black/70 flex items-center justify-center p-4"
+             onClick={() => setUserDetail(null)}>
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg max-h-[90vh] flex flex-col"
+               onClick={e => e.stopPropagation()}>
+            {/* Header */}
+            <div className="flex items-center justify-between p-4 border-b">
+              <div className="flex items-center gap-2">
+                <Users className="text-navy" size={16} />
+                <span className="font-bold text-navy text-sm">
+                  {isRTL ? 'تفاصيل المستخدم' : 'User Details'}
+                </span>
+              </div>
+              <button
+                onClick={() => setUserDetail(null)}
+                className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-500 transition"
+              >
+                <X size={16} />
+              </button>
+            </div>
+            {/* Body */}
+            <div className="flex-1 overflow-y-auto p-5 space-y-5">
+              {/* Avatar + Identity */}
+              <div className="flex items-center gap-4">
+                <div className="w-16 h-16 rounded-full bg-navy/10 flex items-center justify-center
+                                text-navy font-black text-2xl overflow-hidden">
+                  {storageUrl(userDetail.avatar)
+                    ? <img src={storageUrl(userDetail.avatar)!} alt="" className="w-full h-full object-cover" />
+                    : (isRTL ? userDetail.name_ar : userDetail.name_en)?.[0]?.toUpperCase() ?? '?'}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <h3 className="font-black text-navy text-lg">
+                    {isRTL ? userDetail.name_ar : userDetail.name_en}
+                  </h3>
+                  <p className="text-xs text-gray-400" dir="ltr">{userDetail.email}</p>
+                  <div className="flex items-center gap-2 mt-1.5 flex-wrap">
+                    <span className={`text-xs px-2 py-0.5 rounded-full font-medium
+                      ${userDetail.role === 'business' ? 'bg-blue-100 text-blue-600' :
+                        userDetail.role === 'admin'    ? 'bg-red-100 text-red-600' :
+                                                       'bg-gray-100 text-gray-500'}`}>
+                      {userDetail.role === 'business' ? (isRTL ? 'شركة' : 'Business') :
+                       userDetail.role === 'admin'    ? (isRTL ? 'مشرف' : 'Admin') :
+                                                      (isRTL ? 'فرد' : 'Individual')}
+                    </span>
+                    {userDetail.is_trusted_payer && (
+                      <span className="text-xs bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full font-medium">
+                        🎖️ {isRTL ? 'دافع موثوق' : 'Trusted Payer'}
+                      </span>
+                    )}
+                    {userDetail.email_verified_at && (
+                      <span className="text-xs bg-emerald-100 text-emerald-600 px-2 py-0.5 rounded-full font-medium">
+                        ✓ {isRTL ? 'بريد موثق' : 'Email verified'}
+                      </span>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              {/* Contact info */}
+              <div className="grid grid-cols-2 gap-3">
+                <div className="bg-gray-50 rounded-xl p-3">
+                  <p className="text-[10px] text-gray-400 uppercase tracking-wider mb-1 flex items-center gap-1">
+                    <Mail size={10} /> {isRTL ? 'البريد' : 'Email'}
+                  </p>
+                  <p className="text-xs font-semibold text-gray-800 truncate" dir="ltr">{userDetail.email}</p>
+                </div>
+                <div className="bg-gray-50 rounded-xl p-3">
+                  <p className="text-[10px] text-gray-400 uppercase tracking-wider mb-1 flex items-center gap-1">
+                    <Phone size={10} /> {isRTL ? 'الجوال' : 'Phone'}
+                  </p>
+                  <p className="text-xs font-semibold text-gray-800 truncate" dir="ltr">
+                    {userDetail.phone ?? '—'}
+                  </p>
+                </div>
+              </div>
+
+              {/* Activity stats */}
+              <div>
+                <p className="text-[11px] font-bold text-gray-400 uppercase tracking-wider mb-2">
+                  {isRTL ? 'النشاط' : 'Activity'}
+                </p>
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="bg-blue-50 rounded-xl p-3">
+                    <p className="text-[10px] text-blue-500 uppercase tracking-wider mb-1">
+                      {isRTL ? 'إعلانات' : 'Listings'}
+                    </p>
+                    <p className="text-2xl font-black text-blue-700">{userDetail.listings_count ?? 0}</p>
+                  </div>
+                  <div className="bg-gray-50 rounded-xl p-3">
+                    <p className="text-[10px] text-gray-400 uppercase tracking-wider mb-1 flex items-center gap-1">
+                      <Calendar size={10} /> {isRTL ? 'انضم في' : 'Joined'}
+                    </p>
+                    <p className="text-xs font-semibold text-gray-700">
+                      {userDetail.created_at
+                        ? new Date(userDetail.created_at).toLocaleDateString(isRTL ? 'ar-SA' : 'en-US', {
+                            year: 'numeric', month: 'short', day: 'numeric',
+                          })
+                        : '—'}
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Business Verification */}
+              {userDetail.business_verification && (
+                <div>
+                  <p className="text-[11px] font-bold text-gray-400 uppercase tracking-wider mb-2">
+                    {isRTL ? 'التوثيق التجاري' : 'Business Verification'}
+                  </p>
+                  <div className={`rounded-xl p-3 border
+                    ${userDetail.business_verification.status === 'approved' ? 'bg-emerald-50 border-emerald-200' :
+                      userDetail.business_verification.status === 'pending'  ? 'bg-amber-50 border-amber-200' :
+                                                                              'bg-red-50 border-red-200'}`}>
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="text-xs font-bold uppercase">
+                        {userDetail.business_verification.status === 'approved'
+                          ? (isRTL ? '✓ مقبول' : '✓ Approved')
+                          : userDetail.business_verification.status === 'pending'
+                          ? (isRTL ? '⏳ قيد المراجعة' : '⏳ Pending')
+                          : (isRTL ? '✗ مرفوض' : '✗ Rejected')}
+                      </span>
+                      {(userDetail.business_verification.document || userDetail.business_verification.cr_image_path) && (
+                        <button
+                          onClick={() => openCrPreview(userDetail)}
+                          className="text-xs text-emerald font-bold hover:underline flex items-center gap-1"
+                        >
+                          <FileText size={11} /> {isRTL ? 'عرض الوثيقة' : 'View Doc'}
+                        </button>
+                      )}
+                    </div>
+                    {userDetail.business_verification.company_name && (
+                      <p className="text-sm font-bold text-gray-800">
+                        {userDetail.business_verification.company_name}
+                      </p>
+                    )}
+                    {userDetail.business_verification.cr_number && (
+                      <p className="text-xs text-gray-500" dir="ltr">
+                        CR: {userDetail.business_verification.cr_number}
+                      </p>
+                    )}
+                    {userDetail.business_verification.reject_reason && (
+                      <p className="text-xs text-red-600 mt-1">
+                        {isRTL ? 'سبب الرفض: ' : 'Reason: '}{userDetail.business_verification.reject_reason}
+                      </p>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {/* Subscription */}
+              {userDetail.subscription_data && (
+                <div>
+                  <p className="text-[11px] font-bold text-gray-400 uppercase tracking-wider mb-2">
+                    {isRTL ? 'الاشتراك' : 'Subscription'}
+                  </p>
+                  <div className="bg-violet-50 border border-violet-200 rounded-xl p-3">
+                    <p className="text-sm font-bold text-violet-700 capitalize">
+                      {userDetail.subscription_data.plan ?? '—'}
+                    </p>
+                    {userDetail.subscription_data.expires_at && (
+                      <p className="text-xs text-violet-500 mt-0.5">
+                        {isRTL ? 'تنتهي في ' : 'Expires '}
+                        {new Date(userDetail.subscription_data.expires_at).toLocaleDateString(isRTL ? 'ar-SA' : 'en-US')}
+                      </p>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {/* Quick actions */}
+              <div className="flex gap-2 pt-2 border-t border-gray-100">
+                <button
+                  onClick={() => { toggleTrustedPayer(userDetail.id); setUserDetail({ ...userDetail, is_trusted_payer: !userDetail.is_trusted_payer }); }}
+                  className={`flex-1 py-2.5 rounded-xl text-xs font-bold transition
+                    ${userDetail.is_trusted_payer
+                      ? 'bg-red-50 text-red-500 hover:bg-red-100'
+                      : 'bg-emerald-50 text-emerald-600 hover:bg-emerald-100'}`}
+                >
+                  {userDetail.is_trusted_payer
+                    ? (isRTL ? '🚫 سحب الموثوقية' : '🚫 Remove Trust')
+                    : (isRTL ? '🎖️ منح الموثوقية' : '🎖️ Make Trusted')}
+                </button>
+              </div>
             </div>
           </div>
         </div>
