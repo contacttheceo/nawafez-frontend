@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { useLocale } from 'next-intl'
 import { useForm } from 'react-hook-form'
 import Link from 'next/link'
+import Image from 'next/image'
 import { useRouter } from 'next/navigation'
 import { ArrowRight, ArrowLeft, Mail, Lock, Eye, EyeOff, Loader2 } from 'lucide-react'
 import toast from 'react-hot-toast'
@@ -75,9 +76,15 @@ export default function LoginPage() {
                           border border-white/10 w-5/12 p-10">
             {/* Brand */}
             <div>
-              <div className="w-14 h-14 bg-emerald/20 border border-emerald/40 rounded-2xl
-                              flex items-center justify-center text-3xl font-black text-white mb-6">
-                ن
+              <div className="bg-white/95 rounded-2xl p-3 mb-6 inline-block shadow-lg">
+                <Image
+                  src="/logo.png"
+                  alt="نوافذ"
+                  width={160}
+                  height={125}
+                  priority
+                  className="w-40 h-auto"
+                />
               </div>
               <h2 className="text-2xl font-black text-white leading-snug mb-3">
                 {isRTL

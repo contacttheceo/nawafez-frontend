@@ -2,6 +2,7 @@
 
 import { useEffect } from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import { AlertTriangle, RefreshCw, Home } from 'lucide-react';
 
 export default function LocaleError({
@@ -21,11 +22,8 @@ export default function LocaleError({
     <div className="min-h-screen bg-gray-50 flex items-center justify-center px-4">
       <div className="w-full max-w-lg text-center">
         {/* Logo */}
-        <div className="flex items-center justify-center gap-2 mb-8">
-          <div className="w-10 h-10 bg-navy rounded-xl flex items-center justify-center text-white font-black text-xl">
-            ن
-          </div>
-          <span className="font-black text-navy text-2xl">نوافذ</span>
+        <div className="flex items-center justify-center mb-8">
+          <Image src="/logo.png" alt="نوافذ" width={140} height={110} priority />
         </div>
 
         <div className="card p-8">

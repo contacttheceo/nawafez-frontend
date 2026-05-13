@@ -15,10 +15,22 @@ export const metadata: Metadata = {
   },
   description: 'منصة السوق اللوجستي B2B الأولى في السعودية. تداول الأصول والعقود والتراخيص اللوجستية في بيئة موثوقة.',
   keywords: ['لوجستيك', 'نقل', 'أسطول', 'استحواذ', 'سعودية', 'B2B'],
+  icons: {
+    icon: '/favicon.png',
+    apple: '/favicon.png',
+  },
   openGraph: {
     type: 'website',
     locale: 'ar_SA',
     siteName: 'نوافذ',
+    images: [
+      { url: '/logo.png', width: 800, height: 626, alt: 'نوافذ' },
+    ],
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'نوافذ — منصة اللوجستيك B2B',
+    images: ['/logo.png'],
   },
 }
 
