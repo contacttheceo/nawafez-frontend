@@ -317,6 +317,35 @@ export const adminApi = {
 
   toggleTrustedPayer: (id: number): Promise<any> =>
     api.patch(`/admin/users/${id}/trusted-payer`),
+
+  /* ── Phase 2: bulk actions ── */
+  bulkApproveListings: (ids: number[]): Promise<any> =>
+    api.post('/admin/listings/bulk-approve', { ids }),
+
+  bulkRejectListings: (ids: number[], reason: string): Promise<any> =>
+    api.post('/admin/listings/bulk-reject', { ids, reason }),
+
+  /* ── Phase 2: suspend / delete users ── */
+  suspendUser: (id: number, reason: string): Promise<any> =>
+    api.patch(`/admin/users/${id}/suspend`, { reason }),
+
+  unsuspendUser: (id: number): Promise<any> =>
+    api.patch(`/admin/users/${id}/unsuspend`),
+
+  deleteUser: (id: number): Promise<any> =>
+    api.delete(`/admin/users/${id}`),
+
+  /* ── Phase 2: audit log ── */
+  getAuditLogs: (params?: {
+    admin_id?: number;
+    action?: string;
+    target_type?: string;
+    target_id?: number;
+    from?: string;
+    to?: string;
+    page?: number;
+  }): Promise<any> =>
+    api.get('/admin/audit-logs', { params }),
 };
 
 export const aiApi = {

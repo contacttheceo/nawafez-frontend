@@ -41,7 +41,7 @@ const VERIFICATION_REJECT_TEMPLATES = [
   { ar: 'الوثيقة غير قانونية أو مزوّرة',         en: 'Document appears invalid or forged' },
 ];
 
-type AdminTab = 'dashboard' | 'analytics' | 'listings' | 'verifications' | 'reports' | 'users';
+type AdminTab = 'dashboard' | 'analytics' | 'listings' | 'verifications' | 'reports' | 'users' | 'audit';
 
 const SECTION_LABEL: Record<string, string> = {
   fleet: 'أسطول', contracts: 'عقود', ma: 'M&A', jobs: 'وظائف', forum: 'منتدى',
@@ -117,6 +117,24 @@ export default function AdminPage() {
   const [reportPage, setReportPage]     = useState(1);
   const [reportLastPage, setReportLastPage] = useState(1);
 
+  /* ── Phase 2: Bulk selection on listings tab ── */
+  const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
+  const [bulkRejectModal, setBulkRejectModal] = useState(false);
+  const [bulkRejectReason, setBulkRejectReason] = useState('');
+  const [bulkBusy, setBulkBusy] = useState(false);
+
+  /* ── Phase 2: User suspend/delete modals ── */
+  const [suspendModal, setSuspendModal] = useState<{ user: any } | null>(null);
+  const [suspendReason, setSuspendReason] = useState('');
+  const [suspendBusy, setSuspendBusy] = useState(false);
+  const [deleteConfirm, setDeleteConfirm] = useState<{ user: any } | null>(null);
+
+  /* ── Phase 2: Audit Log tab ── */
+  const [auditLogs, setAuditLogs] = useState<any[]>([]);
+  const [auditPage, setAuditPage] = useState(1);
+  const [auditLastPage, setAuditLastPage] = useState(1);
+  const [auditActionFilter, setAuditActionFilter] = useState('');
+
   // Guard: only admin
   useEffect(() => {
     if (!isAuthenticated) { router.push(`/${locale}/auth/login`); return; }
@@ -175,6 +193,22 @@ export default function AdminPage() {
     }
   }, [userSearch, userRole, isRTL]);
 
+  // Load audit logs (paginated)
+  const loadAuditLogs = useCallback(async (page: number = 1) => {
+    setIsLoading(true);
+    try {
+      const params: Record<string, any> = { page };
+      if (auditActionFilter) params.action = auditActionFilter;
+      const res: any = await adminApi.getAuditLogs(params);
+      setAuditLogs(res.data ?? []);
+      setAuditLastPage(res.last_page ?? 1);
+    } catch {
+      toast.error(isRTL ? 'فشل تحميل سجل التدقيق' : 'Failed to load audit log');
+    } finally {
+      setIsLoading(false);
+    }
+  }, [auditActionFilter, isRTL]);
+
   // Load reports (paginated)
   const loadReports = useCallback(async (page: number = 1) => {
     setIsLoading(true);
@@ -202,16 +236,26 @@ export default function AdminPage() {
         .finally(() => setIsLoading(false));
     }
     if (activeTab === 'reports')       { setReportPage(1); loadReports(1); }
+    if (activeTab === 'audit')         { setAuditPage(1); loadAuditLogs(1); }
     if (activeTab === 'analytics') loadAnalytics();
   }, [activeTab, user]);
 
-  // Re-load listings when filters change
+  // Re-load listings when filters change (clear bulk selection on filter change)
   useEffect(() => {
     if (activeTab === 'listings' && user?.role === 'admin') {
       setListingPage(1);
+      setSelectedIds(new Set());
       loadListings(1);
     }
   }, [listingStatus, listingSection, listingSearch]);
+
+  // Re-load audit logs when filter changes
+  useEffect(() => {
+    if (activeTab === 'audit' && user?.role === 'admin') {
+      setAuditPage(1);
+      loadAuditLogs(1);
+    }
+  }, [auditActionFilter]);
 
   // ── Actions ────────────────────────────────────────────────────────────────
   const approveListing = async (id: number) => {
@@ -250,6 +294,99 @@ export default function AdminPage() {
       await adminApi.toggleTrustedPayer(id);
       setUsers(prev => prev.map(u => u.id === id ? { ...u, is_trusted_payer: !u.is_trusted_payer } : u));
     } catch { toast.error(isRTL ? 'حدث خطأ' : 'Error'); }
+  };
+
+  /* ── Phase 2: Bulk action handlers ─────────────────────────────────────── */
+  const toggleSelection = (id: number) => {
+    setSelectedIds(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
+  };
+
+  const toggleSelectAll = () => {
+    setSelectedIds(prev =>
+      prev.size === listings.length ? new Set() : new Set(listings.map(l => l.id))
+    );
+  };
+
+  const handleBulkApprove = async () => {
+    if (selectedIds.size === 0) return;
+    setBulkBusy(true);
+    try {
+      const res: any = await adminApi.bulkApproveListings(Array.from(selectedIds));
+      toast.success(res?.message ?? (isRTL ? 'تم قبول الإعلانات' : 'Listings approved'));
+      setSelectedIds(new Set());
+      loadListings(listingPage);
+    } catch (e: any) {
+      toast.error(e?.response?.data?.message ?? (isRTL ? 'فشل القبول الجماعي' : 'Bulk approve failed'));
+    } finally {
+      setBulkBusy(false);
+    }
+  };
+
+  const handleBulkReject = async () => {
+    if (selectedIds.size === 0 || !bulkRejectReason.trim()) return;
+    setBulkBusy(true);
+    try {
+      const res: any = await adminApi.bulkRejectListings(Array.from(selectedIds), bulkRejectReason);
+      toast.success(res?.message ?? (isRTL ? 'تم رفض الإعلانات' : 'Listings rejected'));
+      setSelectedIds(new Set());
+      setBulkRejectModal(false);
+      setBulkRejectReason('');
+      loadListings(listingPage);
+    } catch (e: any) {
+      toast.error(e?.response?.data?.message ?? (isRTL ? 'فشل الرفض الجماعي' : 'Bulk reject failed'));
+    } finally {
+      setBulkBusy(false);
+    }
+  };
+
+  /* ── Phase 2: Suspend / Delete user ────────────────────────────────────── */
+  const handleSuspend = async () => {
+    if (!suspendModal || !suspendReason.trim()) return;
+    setSuspendBusy(true);
+    try {
+      await adminApi.suspendUser(suspendModal.user.id, suspendReason);
+      toast.success(isRTL ? 'تم تعليق الحساب' : 'User suspended');
+      setUsers(prev => prev.map(u => u.id === suspendModal.user.id
+        ? { ...u, suspended_at: new Date().toISOString(), suspend_reason: suspendReason }
+        : u));
+      if (userDetail?.id === suspendModal.user.id) {
+        setUserDetail({ ...userDetail, suspended_at: new Date().toISOString(), suspend_reason: suspendReason });
+      }
+      setSuspendModal(null);
+      setSuspendReason('');
+    } catch (e: any) {
+      toast.error(e?.response?.data?.message ?? (isRTL ? 'فشل التعليق' : 'Suspend failed'));
+    } finally {
+      setSuspendBusy(false);
+    }
+  };
+
+  const handleUnsuspend = async (u: any) => {
+    try {
+      await adminApi.unsuspendUser(u.id);
+      toast.success(isRTL ? 'تم إلغاء التعليق' : 'Unsuspended');
+      setUsers(prev => prev.map(x => x.id === u.id ? { ...x, suspended_at: null, suspend_reason: null } : x));
+      if (userDetail?.id === u.id) setUserDetail({ ...userDetail, suspended_at: null, suspend_reason: null });
+    } catch {
+      toast.error(isRTL ? 'فشل' : 'Failed');
+    }
+  };
+
+  const handleDeleteUser = async () => {
+    if (!deleteConfirm) return;
+    try {
+      await adminApi.deleteUser(deleteConfirm.user.id);
+      toast.success(isRTL ? 'تم حذف الحساب' : 'User deleted');
+      setUsers(prev => prev.filter(u => u.id !== deleteConfirm.user.id));
+      if (userDetail?.id === deleteConfirm.user.id) setUserDetail(null);
+      setDeleteConfirm(null);
+    } catch (e: any) {
+      toast.error(e?.response?.data?.message ?? (isRTL ? 'فشل الحذف' : 'Delete failed'));
+    }
   };
 
   /* ── Preview helpers ───────────────────────────────────────────────────── */
@@ -317,6 +454,7 @@ export default function AdminPage() {
     { id: 'verifications', labelAr: 'التوثيقات',     labelEn: 'Verifications', Icon: Shield          },
     { id: 'reports',       labelAr: 'البلاغات',      labelEn: 'Reports',       Icon: AlertTriangle   },
     { id: 'users',         labelAr: 'المستخدمون',    labelEn: 'Users',         Icon: Users           },
+    { id: 'audit',         labelAr: 'سجل التدقيق',   labelEn: 'Audit Log',     Icon: Activity        },
   ] as const;
 
   // Chart data builders
@@ -793,6 +931,41 @@ export default function AdminPage() {
               </select>
             </div>
 
+            {/* Bulk Action Bar (shown when items selected) */}
+            {selectedIds.size > 0 && (
+              <div className="card p-3 bg-navy text-white flex items-center justify-between gap-3 flex-wrap sticky top-2 z-10">
+                <div className="flex items-center gap-3">
+                  <span className="text-sm font-bold">
+                    {isRTL ? `${selectedIds.size} محدد` : `${selectedIds.size} selected`}
+                  </span>
+                  <button
+                    onClick={() => setSelectedIds(new Set())}
+                    className="text-xs text-white/60 hover:text-white underline"
+                  >
+                    {isRTL ? 'إلغاء التحديد' : 'Clear'}
+                  </button>
+                </div>
+                <div className="flex gap-2">
+                  <button
+                    onClick={handleBulkApprove}
+                    disabled={bulkBusy}
+                    className="flex items-center gap-1.5 px-4 py-1.5 bg-emerald hover:bg-emerald-dark rounded-lg text-xs font-bold transition disabled:opacity-50"
+                  >
+                    {bulkBusy ? <Loader2 size={12} className="animate-spin" /> : <CheckCircle size={12} />}
+                    {isRTL ? 'قبول الكل' : 'Approve all'}
+                  </button>
+                  <button
+                    onClick={() => setBulkRejectModal(true)}
+                    disabled={bulkBusy}
+                    className="flex items-center gap-1.5 px-4 py-1.5 bg-red-500 hover:bg-red-600 rounded-lg text-xs font-bold transition disabled:opacity-50"
+                  >
+                    <XCircle size={12} />
+                    {isRTL ? 'رفض الكل' : 'Reject all'}
+                  </button>
+                </div>
+              </div>
+            )}
+
             {isLoading ? (
               <div className="flex justify-center py-16"><Loader2 className="animate-spin text-navy" size={28} /></div>
             ) : listings.length === 0 ? (
@@ -827,9 +1000,29 @@ export default function AdminPage() {
               </div>
             ) : (
               <>
+                {/* Select-all header (only shown when there are items) */}
+                {listings.length > 0 && (
+                  <div className="flex items-center gap-2 px-4 py-2 text-xs text-gray-500 border-b border-gray-100">
+                    <input
+                      type="checkbox"
+                      checked={selectedIds.size === listings.length && listings.length > 0}
+                      ref={el => { if (el) el.indeterminate = selectedIds.size > 0 && selectedIds.size < listings.length; }}
+                      onChange={toggleSelectAll}
+                      className="w-4 h-4 accent-emerald rounded cursor-pointer"
+                    />
+                    <span>{isRTL ? 'تحديد الكل' : 'Select all'}</span>
+                  </div>
+                )}
                 <div className="space-y-2">
                   {listings.map((listing: any) => (
-                    <div key={listing.id} className="card p-4 flex items-start gap-4">
+                    <div key={listing.id} className={`card p-4 flex items-start gap-3 transition
+                      ${selectedIds.has(listing.id) ? 'ring-2 ring-emerald bg-emerald/5' : ''}`}>
+                      <input
+                        type="checkbox"
+                        checked={selectedIds.has(listing.id)}
+                        onChange={() => toggleSelection(listing.id)}
+                        className="w-4 h-4 accent-emerald rounded mt-1 cursor-pointer"
+                      />
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2 flex-wrap">
                           <button
@@ -1164,6 +1357,11 @@ export default function AdminPage() {
                               {isRTL ? 'بريد موثق' : 'Email verified'}
                             </span>
                           )}
+                          {u.suspended_at && (
+                            <span className="text-xs bg-red-100 text-red-700 px-2 py-0.5 rounded-full font-bold">
+                              🚫 {isRTL ? 'مُعلَّق' : 'Suspended'}
+                            </span>
+                          )}
                         </div>
                       </div>
                     </button>
@@ -1204,6 +1402,128 @@ export default function AdminPage() {
                   </button>
                 </div>
               )}
+              </>
+            )}
+          </div>
+        )}
+
+        {/* ══════════════════════════════════════════════════════════════════
+            TAB 7: AUDIT LOG
+        ══════════════════════════════════════════════════════════════════ */}
+        {activeTab === 'audit' && (
+          <div className="space-y-4">
+            {/* Filter */}
+            <div className="card p-4 flex flex-wrap gap-3">
+              <select
+                value={auditActionFilter}
+                onChange={e => setAuditActionFilter(e.target.value)}
+                className="input text-sm py-2 flex-1 min-w-[200px]"
+              >
+                <option value="">{isRTL ? 'كل الأنشطة' : 'All actions'}</option>
+                <option value="listing.">{isRTL ? '— عمليات الإعلانات —' : '— Listing actions —'}</option>
+                <option value="listing.approve">{isRTL ? 'قبول إعلان' : 'Approve listing'}</option>
+                <option value="listing.reject">{isRTL ? 'رفض إعلان' : 'Reject listing'}</option>
+                <option value="listing.bulk_approve">{isRTL ? 'قبول جماعي' : 'Bulk approve'}</option>
+                <option value="listing.bulk_reject">{isRTL ? 'رفض جماعي' : 'Bulk reject'}</option>
+                <option value="listing.toggle_featured">{isRTL ? 'تمييز إعلان' : 'Toggle featured'}</option>
+                <option value="verification.">{isRTL ? '— التوثيقات —' : '— Verifications —'}</option>
+                <option value="verification.approve">{isRTL ? 'قبول توثيق' : 'Approve verification'}</option>
+                <option value="verification.reject">{isRTL ? 'رفض توثيق' : 'Reject verification'}</option>
+                <option value="user.">{isRTL ? '— المستخدمون —' : '— Users —'}</option>
+                <option value="user.toggle_trusted_payer">{isRTL ? 'تبديل الموثوقية' : 'Toggle trusted'}</option>
+                <option value="user.suspend">{isRTL ? 'تعليق حساب' : 'Suspend user'}</option>
+                <option value="user.unsuspend">{isRTL ? 'إلغاء تعليق' : 'Unsuspend user'}</option>
+                <option value="user.delete">{isRTL ? 'حذف حساب' : 'Delete user'}</option>
+                <option value="report.">{isRTL ? '— البلاغات —' : '— Reports —'}</option>
+                <option value="report.resolve">{isRTL ? 'حل بلاغ' : 'Resolve report'}</option>
+              </select>
+            </div>
+
+            {isLoading ? (
+              <div className="flex justify-center py-16"><Loader2 className="animate-spin text-navy" size={28} /></div>
+            ) : auditLogs.length === 0 ? (
+              <div className="card p-10 text-center text-gray-400">
+                <Activity size={32} className="mx-auto mb-2 text-gray-300" />
+                {isRTL ? 'لا توجد عمليات مسجَّلة' : 'No audit records'}
+              </div>
+            ) : (
+              <>
+                <div className="space-y-1.5">
+                  {auditLogs.map((log: any) => {
+                    const actionLabels: Record<string, { ar: string; en: string; color: string; icon: string }> = {
+                      'listing.approve':            { ar: 'قبول إعلان',     en: 'Approved listing',     color: 'text-emerald-600 bg-emerald-50', icon: '✓' },
+                      'listing.reject':             { ar: 'رفض إعلان',      en: 'Rejected listing',     color: 'text-red-600 bg-red-50',         icon: '✗' },
+                      'listing.bulk_approve':       { ar: 'قبول جماعي',     en: 'Bulk approved',         color: 'text-emerald-600 bg-emerald-50', icon: '✓✓' },
+                      'listing.bulk_reject':        { ar: 'رفض جماعي',      en: 'Bulk rejected',         color: 'text-red-600 bg-red-50',         icon: '✗✗' },
+                      'listing.toggle_featured':    { ar: 'تمييز إعلان',    en: 'Toggle featured',       color: 'text-amber-600 bg-amber-50',     icon: '⭐' },
+                      'verification.approve':       { ar: 'قبول توثيق',     en: 'Approved verification', color: 'text-emerald-600 bg-emerald-50', icon: '✓' },
+                      'verification.reject':        { ar: 'رفض توثيق',      en: 'Rejected verification', color: 'text-red-600 bg-red-50',         icon: '✗' },
+                      'user.toggle_trusted_payer':  { ar: 'تبديل الموثوقية', en: 'Toggle trusted payer', color: 'text-amber-600 bg-amber-50',     icon: '🎖️' },
+                      'user.suspend':               { ar: 'تعليق حساب',     en: 'Suspended user',        color: 'text-orange-600 bg-orange-50',   icon: '🚫' },
+                      'user.unsuspend':             { ar: 'إلغاء تعليق',    en: 'Unsuspended user',      color: 'text-emerald-600 bg-emerald-50', icon: '✓' },
+                      'user.delete':                { ar: 'حذف حساب',       en: 'Deleted user',          color: 'text-red-600 bg-red-50',         icon: '🗑️' },
+                      'report.resolve':             { ar: 'حل بلاغ',        en: 'Resolved report',       color: 'text-emerald-600 bg-emerald-50', icon: '✓' },
+                    };
+                    const meta = actionLabels[log.action] ?? { ar: log.action, en: log.action, color: 'text-gray-600 bg-gray-50', icon: '·' };
+                    const adminName = isRTL ? log.admin?.name_ar : log.admin?.name_en;
+                    return (
+                      <div key={log.id} className="card p-3 flex items-start gap-3 hover:bg-gray-50/30 transition">
+                        <div className={`w-9 h-9 rounded-xl flex items-center justify-center text-sm shrink-0 ${meta.color}`}>
+                          {meta.icon}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <span className="text-sm font-bold text-navy">
+                              {isRTL ? meta.ar : meta.en}
+                            </span>
+                            {log.target_type && log.target_id && (
+                              <span className="text-[10px] text-gray-400 bg-gray-100 px-1.5 py-0.5 rounded">
+                                {log.target_type} #{log.target_id}
+                              </span>
+                            )}
+                          </div>
+                          <p className="text-xs text-gray-500 mt-0.5">
+                            {isRTL ? 'بواسطة' : 'By'}{' '}
+                            <span className="font-semibold text-navy">{adminName ?? log.admin?.email}</span>
+                            {log.metadata?.reason && (
+                              <span className="text-gray-400"> · {log.metadata.reason}</span>
+                            )}
+                            {log.metadata?.count && (
+                              <span className="text-gray-400"> · {log.metadata.count} {isRTL ? 'عنصر' : 'items'}</span>
+                            )}
+                          </p>
+                        </div>
+                        <div className="text-[10px] text-gray-400 text-end shrink-0">
+                          <div>{new Date(log.created_at).toLocaleDateString(isRTL ? 'ar-SA' : 'en-US', { month: 'short', day: 'numeric' })}</div>
+                          <div>{new Date(log.created_at).toLocaleTimeString(isRTL ? 'ar-SA' : 'en-US', { hour: '2-digit', minute: '2-digit' })}</div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+
+                {/* Pagination */}
+                {auditLastPage > 1 && (
+                  <div className="flex items-center justify-center gap-3 py-4">
+                    <button
+                      onClick={() => { const p = auditPage - 1; setAuditPage(p); loadAuditLogs(p); }}
+                      disabled={auditPage === 1}
+                      className="px-4 py-2 text-sm border border-gray-200 rounded-xl disabled:opacity-40 hover:bg-gray-50 transition font-medium"
+                    >
+                      {isRTL ? 'السابق →' : '← Prev'}
+                    </button>
+                    <span className="text-sm text-gray-500 font-medium">
+                      {auditPage} / {auditLastPage}
+                    </span>
+                    <button
+                      onClick={() => { const p = auditPage + 1; setAuditPage(p); loadAuditLogs(p); }}
+                      disabled={auditPage === auditLastPage}
+                      className="px-4 py-2 text-sm border border-gray-200 rounded-xl disabled:opacity-40 hover:bg-gray-50 transition font-medium"
+                    >
+                      {isRTL ? '← التالي' : 'Next →'}
+                    </button>
+                  </div>
+                )}
               </>
             )}
           </div>
@@ -1512,11 +1832,24 @@ export default function AdminPage() {
                 </div>
               )}
 
+              {/* Suspended banner */}
+              {userDetail.suspended_at && (
+                <div className="bg-red-50 border border-red-200 rounded-xl p-3">
+                  <p className="text-xs font-bold text-red-700 mb-1">
+                    🚫 {isRTL ? 'الحساب مُعلَّق' : 'Account suspended'}
+                  </p>
+                  {userDetail.suspend_reason && (
+                    <p className="text-xs text-red-600">{userDetail.suspend_reason}</p>
+                  )}
+                </div>
+              )}
+
               {/* Quick actions */}
-              <div className="flex gap-2 pt-2 border-t border-gray-100">
+              <div className="space-y-2 pt-2 border-t border-gray-100">
+                {/* Toggle trusted payer */}
                 <button
                   onClick={() => { toggleTrustedPayer(userDetail.id); setUserDetail({ ...userDetail, is_trusted_payer: !userDetail.is_trusted_payer }); }}
-                  className={`flex-1 py-2.5 rounded-xl text-xs font-bold transition
+                  className={`w-full py-2.5 rounded-xl text-xs font-bold transition
                     ${userDetail.is_trusted_payer
                       ? 'bg-red-50 text-red-500 hover:bg-red-100'
                       : 'bg-emerald-50 text-emerald-600 hover:bg-emerald-100'}`}
@@ -1525,6 +1858,38 @@ export default function AdminPage() {
                     ? (isRTL ? '🚫 سحب الموثوقية' : '🚫 Remove Trust')
                     : (isRTL ? '🎖️ منح الموثوقية' : '🎖️ Make Trusted')}
                 </button>
+
+                {/* Suspend / Unsuspend */}
+                {userDetail.role !== 'admin' && userDetail.id !== user?.id && (
+                  <>
+                    {userDetail.suspended_at ? (
+                      <button
+                        onClick={() => handleUnsuspend(userDetail)}
+                        className="w-full py-2.5 rounded-xl text-xs font-bold transition
+                                   bg-emerald-50 text-emerald-600 hover:bg-emerald-100"
+                      >
+                        ✓ {isRTL ? 'إلغاء التعليق' : 'Unsuspend'}
+                      </button>
+                    ) : (
+                      <button
+                        onClick={() => { setSuspendReason(''); setSuspendModal({ user: userDetail }); }}
+                        className="w-full py-2.5 rounded-xl text-xs font-bold transition
+                                   bg-orange-50 text-orange-600 hover:bg-orange-100"
+                      >
+                        🚫 {isRTL ? 'تعليق الحساب' : 'Suspend account'}
+                      </button>
+                    )}
+
+                    {/* Delete account */}
+                    <button
+                      onClick={() => setDeleteConfirm({ user: userDetail })}
+                      className="w-full py-2.5 rounded-xl text-xs font-bold transition
+                                 bg-red-50 text-red-500 hover:bg-red-100"
+                    >
+                      🗑️ {isRTL ? 'حذف الحساب' : 'Delete account'}
+                    </button>
+                  </>
+                )}
               </div>
             </div>
           </div>
@@ -1705,6 +2070,127 @@ export default function AdminPage() {
                   )}
                 </div>
               )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Bulk Reject Modal ─────────────────────────────────────────────────── */}
+      {bulkRejectModal && (
+        <div className="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-4"
+             onClick={() => setBulkRejectModal(false)}>
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg p-6"
+               onClick={e => e.stopPropagation()}>
+            <h3 className="font-black text-navy text-lg mb-1">
+              {isRTL ? `رفض ${selectedIds.size} إعلان` : `Reject ${selectedIds.size} listings`}
+            </h3>
+            <p className="text-gray-500 text-sm mb-4">
+              {isRTL
+                ? 'سيُرسل نفس السبب لجميع أصحاب الإعلانات المحددة.'
+                : 'The same reason will be emailed to every selected listing owner.'}
+            </p>
+            <p className="text-[11px] font-bold text-gray-400 uppercase tracking-wider mb-2">
+              {isRTL ? 'أسباب جاهزة' : 'Quick reasons'}
+            </p>
+            <div className="flex flex-wrap gap-1.5 mb-4">
+              {LISTING_REJECT_TEMPLATES.map((t, i) => {
+                const text = isRTL ? t.ar : t.en;
+                const selected = bulkRejectReason === text;
+                return (
+                  <button key={i} type="button" onClick={() => setBulkRejectReason(text)}
+                    className={`text-xs px-3 py-1.5 rounded-full border transition
+                      ${selected
+                        ? 'bg-red-50 border-red-400 text-red-700 font-bold'
+                        : 'bg-gray-50 border-gray-200 text-gray-700 hover:border-red-300 hover:bg-red-50'}`}>
+                    {text}
+                  </button>
+                );
+              })}
+            </div>
+            <textarea
+              value={bulkRejectReason}
+              onChange={e => setBulkRejectReason(e.target.value)}
+              className="input text-sm min-h-[100px] resize-none mb-4"
+              dir={isRTL ? 'rtl' : 'ltr'}
+              placeholder={isRTL ? 'اكتب سبب الرفض...' : 'Enter rejection reason...'}
+              autoFocus
+            />
+            <div className="flex gap-3">
+              <button onClick={() => setBulkRejectModal(false)}
+                className="flex-1 py-2.5 rounded-xl border text-sm text-gray-600 hover:bg-gray-50 transition font-medium">
+                {isRTL ? 'إلغاء' : 'Cancel'}
+              </button>
+              <button onClick={handleBulkReject} disabled={!bulkRejectReason.trim() || bulkBusy}
+                className="flex-1 py-2.5 rounded-xl bg-red-500 hover:bg-red-600 text-white text-sm font-bold transition disabled:opacity-40 flex items-center justify-center gap-2">
+                {bulkBusy && <Loader2 size={14} className="animate-spin" />}
+                {isRTL ? `رفض ${selectedIds.size} إعلان` : `Reject ${selectedIds.size}`}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Suspend User Modal ────────────────────────────────────────────────── */}
+      {suspendModal && (
+        <div className="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-4"
+             onClick={() => setSuspendModal(null)}>
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md p-6"
+               onClick={e => e.stopPropagation()}>
+            <h3 className="font-black text-navy text-lg mb-1">
+              🚫 {isRTL ? 'تعليق الحساب' : 'Suspend Account'}
+            </h3>
+            <p className="text-gray-500 text-sm mb-4">
+              {isRTL
+                ? `سيتم تعليق حساب «${suspendModal.user.name_ar}» وإلغاء جلساته الحالية وإرسال إيميل بالسبب.`
+                : `Will suspend «${suspendModal.user.name_en}», revoke active sessions, and email them the reason.`}
+            </p>
+            <textarea
+              value={suspendReason}
+              onChange={e => setSuspendReason(e.target.value)}
+              className="input text-sm min-h-[100px] resize-none mb-4"
+              dir={isRTL ? 'rtl' : 'ltr'}
+              placeholder={isRTL ? 'سبب التعليق (إجباري)...' : 'Suspension reason (required)...'}
+              autoFocus
+            />
+            <div className="flex gap-3">
+              <button onClick={() => setSuspendModal(null)}
+                className="flex-1 py-2.5 rounded-xl border text-sm text-gray-600 hover:bg-gray-50 transition font-medium">
+                {isRTL ? 'إلغاء' : 'Cancel'}
+              </button>
+              <button onClick={handleSuspend} disabled={!suspendReason.trim() || suspendBusy}
+                className="flex-1 py-2.5 rounded-xl bg-orange-500 hover:bg-orange-600 text-white text-sm font-bold transition disabled:opacity-40 flex items-center justify-center gap-2">
+                {suspendBusy && <Loader2 size={14} className="animate-spin" />}
+                {isRTL ? 'تأكيد التعليق' : 'Confirm Suspend'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Delete User Confirm Modal ─────────────────────────────────────────── */}
+      {deleteConfirm && (
+        <div className="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-4"
+             onClick={() => setDeleteConfirm(null)}>
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md p-6"
+               onClick={e => e.stopPropagation()}>
+            <div className="text-4xl mb-3 text-center">⚠️</div>
+            <h3 className="font-black text-red-600 text-lg mb-1 text-center">
+              {isRTL ? 'حذف الحساب نهائياً؟' : 'Delete account permanently?'}
+            </h3>
+            <p className="text-gray-500 text-sm text-center mb-4">
+              {isRTL
+                ? `سيتم حذف حساب «${deleteConfirm.user.name_ar}». السجلات المالية ستبقى محفوظة.`
+                : `Account «${deleteConfirm.user.name_en}» will be removed. Payment records stay intact.`}
+            </p>
+            <div className="flex gap-3">
+              <button onClick={() => setDeleteConfirm(null)}
+                className="flex-1 py-2.5 rounded-xl border text-sm text-gray-600 hover:bg-gray-50 transition font-medium">
+                {isRTL ? 'إلغاء' : 'Cancel'}
+              </button>
+              <button onClick={handleDeleteUser}
+                className="flex-1 py-2.5 rounded-xl bg-red-500 hover:bg-red-600 text-white text-sm font-bold transition">
+                {isRTL ? 'حذف نهائياً' : 'Delete permanently'}
+              </button>
             </div>
           </div>
         </div>
