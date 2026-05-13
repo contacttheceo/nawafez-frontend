@@ -796,9 +796,34 @@ export default function AdminPage() {
             {isLoading ? (
               <div className="flex justify-center py-16"><Loader2 className="animate-spin text-navy" size={28} /></div>
             ) : listings.length === 0 ? (
-              <div className="card p-10 text-center text-gray-400">
-                <Filter size={32} className="mx-auto mb-2 opacity-30" />
-                {isRTL ? 'لا توجد إعلانات بهذه الفلاتر' : 'No listings match these filters'}
+              <div className="card p-10 text-center">
+                <Filter size={32} className="mx-auto mb-3 text-gray-300" />
+                <p className="text-gray-500 font-semibold text-sm mb-1">
+                  {isRTL ? 'لا توجد إعلانات بهذه الفلاتر' : 'No listings match these filters'}
+                </p>
+                {listingStatus === 'pending_review' && (
+                  <>
+                    <p className="text-gray-400 text-xs mb-4">
+                      {isRTL
+                        ? 'كل الإعلانات تمت مراجعتها — لا يوجد ما يحتاج لقرارك.'
+                        : "All caught up — no listings waiting for review."}
+                    </p>
+                    <button
+                      onClick={() => setListingStatus('active')}
+                      className="text-xs text-emerald font-bold hover:underline"
+                    >
+                      {isRTL ? '← اعرض الإعلانات النشطة' : 'View active listings →'}
+                    </button>
+                  </>
+                )}
+                {listingStatus && listingStatus !== 'pending_review' && (
+                  <button
+                    onClick={() => { setListingStatus(''); setListingSection(''); setListingSearch(''); }}
+                    className="text-xs text-emerald font-bold hover:underline mt-2"
+                  >
+                    {isRTL ? 'مسح الفلاتر' : 'Clear all filters'}
+                  </button>
+                )}
               </div>
             ) : (
               <>
@@ -1002,11 +1027,31 @@ export default function AdminPage() {
                     )}
                   </div>
                   {!resolved && (
-                    <button onClick={() => resolveReport(r.id)}
-                      className="px-3 py-1.5 bg-emerald-50 text-emerald-600 rounded-xl text-xs font-bold
-                                 hover:bg-emerald-100 transition flex-shrink-0 whitespace-nowrap">
-                      {isRTL ? '✓ تم الحل' : '✓ Resolve'}
-                    </button>
+                    <div className="flex flex-col gap-1.5 flex-shrink-0">
+                      {r.listing_id && (
+                        <button
+                          onClick={() => openListingPreview(r.listing_id)}
+                          className="px-3 py-1.5 bg-navy/10 text-navy rounded-lg text-[11px] font-bold
+                                     hover:bg-navy/20 transition whitespace-nowrap flex items-center gap-1 justify-center"
+                        >
+                          <Eye size={11} /> {isRTL ? 'عرض الإعلان' : 'View listing'}
+                        </button>
+                      )}
+                      {r.listing_id && r.listing?.status !== 'rejected' && (
+                        <button
+                          onClick={() => { setRejectReason(''); setRejectModal({ type: 'listing', id: r.listing_id }); }}
+                          className="px-3 py-1.5 bg-red-50 text-red-600 rounded-lg text-[11px] font-bold
+                                     hover:bg-red-100 transition whitespace-nowrap flex items-center gap-1 justify-center"
+                        >
+                          <XCircle size={11} /> {isRTL ? 'رفض الإعلان' : 'Reject listing'}
+                        </button>
+                      )}
+                      <button onClick={() => resolveReport(r.id)}
+                        className="px-3 py-1.5 bg-emerald-50 text-emerald-600 rounded-lg text-[11px] font-bold
+                                   hover:bg-emerald-100 transition whitespace-nowrap">
+                        {isRTL ? '✓ تجاهل البلاغ' : '✓ Dismiss'}
+                      </button>
+                    </div>
                   )}
                 </div>
               );
