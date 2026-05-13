@@ -265,6 +265,29 @@ export default function Navbar() {
       {/* Mobile Menu */}
       {mobileOpen && (
         <div className="md:hidden border-t border-white/10 bg-navy-dark px-4 py-3">
+
+          {isAuthenticated && user && (
+            <div className="flex items-center gap-3 mb-3 px-2 py-2 bg-white/5 rounded-xl border border-white/10">
+              <div className="w-9 h-9 rounded-full overflow-hidden bg-emerald flex items-center
+                              justify-center text-white font-bold text-sm shrink-0">
+                {storageUrl(user.avatar_url) ? (
+                  <img src={storageUrl(user.avatar_url)!} alt=""
+                       className="w-full h-full object-cover"
+                       onError={(e) => { (e.target as HTMLImageElement).style.display = 'none' }} />
+                ) : (
+                  (isRTL ? user.name_ar : user.name_en)?.[0]?.toUpperCase() ?? 'U'
+                )}
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-white text-sm font-bold truncate">
+                  {isRTL ? user.name_ar : user.name_en}
+                </p>
+                <p className="text-white/50 text-[10px] truncate">{user.email}</p>
+              </div>
+            </div>
+          )}
+
+          {/* Section nav links */}
           <nav className="flex flex-col gap-1 mb-3">
             {navLinks.map((link) => (
               <Link
@@ -278,39 +301,120 @@ export default function Navbar() {
               </Link>
             ))}
           </nav>
-          <div className="flex gap-2 pt-2 border-t border-white/10">
-            <button
-              onClick={switchLocale}
-              className="flex-1 bg-white/10 text-white text-sm py-2 rounded-lg
-                         hover:bg-white/20 transition-colors"
-            >
-              {locale === 'ar' ? 'English' : 'العربية'}
-            </button>
 
-            {isAuthenticated ? (
-              <>
-                <Link href={`/${locale}/dashboard`} onClick={() => setMobileOpen(false)}
-                  className="flex-1 text-center text-white border border-white/30 py-2 rounded-lg text-sm">
-                  {isRTL ? 'لوحتي' : 'Dashboard'}
+          {isAuthenticated ? (
+            <>
+              {/* Post listing CTA */}
+              <Link
+                href={`/${locale}/listings/create`}
+                onClick={() => setMobileOpen(false)}
+                className="flex items-center justify-center gap-2 w-full bg-emerald
+                           hover:bg-emerald-dark text-white py-2.5 rounded-lg text-sm
+                           font-semibold transition-colors mb-3"
+              >
+                <Plus size={15} />
+                {t('post')}
+              </Link>
+
+              {/* User menu items */}
+              <div className="flex flex-col gap-1 pt-3 border-t border-white/10">
+                <Link
+                  href={`/${locale}/dashboard`}
+                  onClick={() => setMobileOpen(false)}
+                  className="flex items-center gap-2.5 px-3 py-2.5 text-sm text-white/90
+                             hover:bg-white/10 rounded-lg transition-colors"
+                >
+                  <LayoutDashboard size={16} className="text-emerald" />
+                  {isRTL ? 'لوحة التحكم' : 'Dashboard'}
                 </Link>
-                <button onClick={() => { setMobileOpen(false); handleLogout(); }}
-                  className="flex-1 text-center bg-red-500 text-white py-2 rounded-lg text-sm font-semibold">
+
+                <button
+                  onClick={() => { setMobileOpen(false); setDrawerOpen(true); }}
+                  className="flex items-center gap-2.5 px-3 py-2.5 text-sm text-white/90
+                             hover:bg-white/10 rounded-lg transition-colors w-full text-start"
+                >
+                  <MessageSquare size={16} className="text-emerald" />
+                  {isRTL ? 'الرسائل' : 'Messages'}
+                  {unread > 0 && (
+                    <span className="ms-auto min-w-[20px] h-5 bg-red-500 text-white text-[10px]
+                                     font-bold rounded-full flex items-center justify-center px-1">
+                      {unread > 9 ? '9+' : unread}
+                    </span>
+                  )}
+                </button>
+
+                <Link
+                  href={`/${locale}/profile`}
+                  onClick={() => setMobileOpen(false)}
+                  className="flex items-center gap-2.5 px-3 py-2.5 text-sm text-white/90
+                             hover:bg-white/10 rounded-lg transition-colors"
+                >
+                  <User size={16} className="text-emerald" />
+                  {isRTL ? 'الملف الشخصي' : 'Profile'}
+                </Link>
+
+                <Link
+                  href={`/${locale}/tools`}
+                  onClick={() => setMobileOpen(false)}
+                  className="flex items-center gap-2.5 px-3 py-2.5 text-sm text-violet-300
+                             hover:bg-violet-500/10 rounded-lg transition-colors"
+                >
+                  <Zap size={16} />
+                  {isRTL ? 'أدوات الذكاء الاصطناعي' : 'AI Tools'}
+                </Link>
+
+                {user?.role === 'admin' && (
+                  <Link
+                    href={`/${locale}/admin`}
+                    onClick={() => setMobileOpen(false)}
+                    className="flex items-center gap-2.5 px-3 py-2.5 text-sm text-amber-300
+                               hover:bg-amber-500/10 rounded-lg transition-colors"
+                  >
+                    <Shield size={16} />
+                    {isRTL ? 'لوحة الإدارة' : 'Admin Panel'}
+                  </Link>
+                )}
+              </div>
+
+              {/* Locale + Logout */}
+              <div className="flex gap-2 pt-3 mt-2 border-t border-white/10">
+                <button
+                  onClick={switchLocale}
+                  className="flex-1 bg-white/10 text-white text-sm py-2 rounded-lg
+                             hover:bg-white/20 transition-colors"
+                >
+                  {locale === 'ar' ? 'English' : 'العربية'}
+                </button>
+                <button
+                  onClick={() => { setMobileOpen(false); handleLogout(); }}
+                  className="flex-1 flex items-center justify-center gap-1.5 bg-red-500
+                             text-white py-2 rounded-lg text-sm font-semibold
+                             hover:bg-red-600 transition-colors"
+                >
+                  <LogOut size={14} />
                   {isRTL ? 'خروج' : 'Sign Out'}
                 </button>
-              </>
-            ) : (
-              <>
-                <Link href={`/${locale}/auth/login`} onClick={() => setMobileOpen(false)}
-                  className="flex-1 text-center text-white border border-white/30 py-2 rounded-lg text-sm">
-                  {t('login')}
-                </Link>
-                <Link href={`/${locale}/listings/create`} onClick={() => setMobileOpen(false)}
-                  className="flex-1 text-center bg-emerald text-white py-2 rounded-lg text-sm font-semibold">
-                  {t('post')}
-                </Link>
-              </>
-            )}
-          </div>
+              </div>
+            </>
+          ) : (
+            <div className="flex gap-2 pt-2 border-t border-white/10">
+              <button
+                onClick={switchLocale}
+                className="flex-1 bg-white/10 text-white text-sm py-2 rounded-lg
+                           hover:bg-white/20 transition-colors"
+              >
+                {locale === 'ar' ? 'English' : 'العربية'}
+              </button>
+              <Link href={`/${locale}/auth/login`} onClick={() => setMobileOpen(false)}
+                className="flex-1 text-center text-white border border-white/30 py-2 rounded-lg text-sm">
+                {t('login')}
+              </Link>
+              <Link href={`/${locale}/listings/create`} onClick={() => setMobileOpen(false)}
+                className="flex-1 text-center bg-emerald text-white py-2 rounded-lg text-sm font-semibold">
+                {t('post')}
+              </Link>
+            </div>
+          )}
         </div>
       )}
     </header>

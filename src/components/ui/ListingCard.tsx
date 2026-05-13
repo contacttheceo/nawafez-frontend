@@ -17,10 +17,14 @@ interface Props {
 }
 
 const LISTING_TYPE_LABELS: Record<string, { ar: string; en: string; color: string }> = {
-  for_sale:  { ar: 'للبيع',    en: 'For Sale',   color: 'bg-blue-100 text-blue-700'   },
-  for_rent:  { ar: 'للإيجار',  en: 'For Rent',   color: 'bg-amber-100 text-amber-700' },
-  wanted:    { ar: 'مطلوب',    en: 'Wanted',     color: 'bg-purple-100 text-purple-700'},
-  offering:  { ar: 'معروض',    en: 'Offering',   color: 'bg-green-100 text-green-700' },
+  sale:        { ar: 'للبيع',        en: 'For Sale',    color: 'bg-blue-100 text-blue-700'     },
+  rent:        { ar: 'للإيجار',     en: 'For Rent',    color: 'bg-amber-100 text-amber-700'   },
+  wanted:      { ar: 'مطلوب',       en: 'Wanted',      color: 'bg-purple-100 text-purple-700' },
+  offer:       { ar: 'معروض',       en: 'Offering',    color: 'bg-green-100 text-green-700'   },
+  job:         { ar: 'وظيفة',       en: 'Job',         color: 'bg-purple-100 text-purple-700' },
+  job_seeker:  { ar: 'باحث عن عمل', en: 'Job Seeker',  color: 'bg-pink-100 text-pink-700'     },
+  discussion:  { ar: 'نقاش',         en: 'Discussion',  color: 'bg-red-100 text-red-700'       },
+  acquisition: { ar: 'استحواذ',     en: 'Acquisition', color: 'bg-indigo-100 text-indigo-700' },
 }
 
 export function ListingCard({ listing, mode = 'grid' }: Props) {
