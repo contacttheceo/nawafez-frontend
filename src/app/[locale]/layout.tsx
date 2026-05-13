@@ -5,6 +5,7 @@ import { notFound } from 'next/navigation'
 import { routing } from '@/i18n/routing'
 import { Toaster } from 'react-hot-toast'
 import AuthSync from '@/components/AuthSync'
+import InactivityGuard from '@/components/InactivityGuard'
 import './globals.css'
 
 export const metadata: Metadata = {
@@ -41,6 +42,7 @@ export default async function LocaleLayout({ children, params }: Props) {
       <body className={isRTL ? 'font-arabic' : 'font-sans'}>
         <NextIntlClientProvider messages={messages}>
           <AuthSync />
+          <InactivityGuard />
           {children}
           <Toaster
             position={isRTL ? 'bottom-left' : 'bottom-right'}
