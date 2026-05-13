@@ -1,133 +1,286 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { useLocale } from 'next-intl';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import {
   Users, LayoutDashboard, FileText, AlertTriangle,
-  CheckCircle, XCircle, Clock, DollarSign, TrendingUp,
-  Shield, Eye, Star, Loader2,
+  CheckCircle, XCircle, Clock, DollarSign, TrendingUp, TrendingDown,
+  Shield, Eye, Star, Loader2, BarChart2, AlertCircle, Flag,
+  Activity, Search, Filter, X, Download, MapPin, Calendar,
+  Tag, Mail, Phone, ExternalLink,
 } from 'lucide-react';
+import {
+  BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer,
+  LineChart, Line, CartesianGrid,
+} from 'recharts';
 import { useAuthStore } from '@/store/auth';
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
-import api from '@/lib/api';
-import { formatPrice } from '@/lib/utils';
+import { adminApi } from '@/lib/api';
+import { storageUrl } from '@/lib/utils';
 import toast from 'react-hot-toast';
 
-type AdminTab = 'dashboard' | 'listings' | 'users' | 'verifications' | 'reports';
+/* ── Reject reason templates ─────────────────────────────────────────────── */
+const LISTING_REJECT_TEMPLATES = [
+  { ar: 'الصور غير واضحة أو غير كافية',          en: 'Images are unclear or insufficient' },
+  { ar: 'السعر مبالغ به أو غير منطقي',           en: 'Price is unreasonable' },
+  { ar: 'الوصف غير مكتمل أو مضلل',               en: 'Description is incomplete or misleading' },
+  { ar: 'الإعلان مكرر من نفس المستخدم',          en: 'Duplicate listing from same user' },
+  { ar: 'محتوى غير لائق أو مخالف للشروط',        en: 'Content violates terms' },
+  { ar: 'القسم غير مناسب للمحتوى',               en: 'Wrong category for this content' },
+  { ar: 'بيانات تواصل غير صالحة',                en: 'Invalid contact information' },
+];
 
+const VERIFICATION_REJECT_TEMPLATES = [
+  { ar: 'وثيقة السجل التجاري غير واضحة',         en: 'CR document is not clear' },
+  { ar: 'رقم السجل التجاري غير مطابق للوثيقة',  en: 'CR number does not match document' },
+  { ar: 'الوثيقة منتهية الصلاحية',               en: 'Document has expired' },
+  { ar: 'اسم الشركة لا يطابق السجل',             en: 'Company name does not match CR' },
+  { ar: 'الوثيقة غير قانونية أو مزوّرة',         en: 'Document appears invalid or forged' },
+];
+
+type AdminTab = 'dashboard' | 'analytics' | 'listings' | 'verifications' | 'reports' | 'users';
+
+const SECTION_LABEL: Record<string, string> = {
+  fleet: 'أسطول', contracts: 'عقود', ma: 'M&A', jobs: 'وظائف', forum: 'منتدى',
+};
+const SECTION_LABEL_EN: Record<string, string> = {
+  fleet: 'Fleet', contracts: 'Contracts', ma: 'M&A', jobs: 'Jobs', forum: 'Forum',
+};
+
+// ─── KPI Card Component ───────────────────────────────────────────────────────
+function KPICard({
+  title, value, growth, thisWeek, icon, bgClass,
+}: {
+  title: string; value: string | number; growth?: number | null;
+  thisWeek?: number; icon: React.ReactNode; bgClass: string;
+}) {
+  return (
+    <div className="card p-5">
+      <div className="flex justify-between items-start mb-3">
+        <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${bgClass}`}>
+          {icon}
+        </div>
+        {growth != null && (
+          <span className={`text-xs font-bold flex items-center gap-1 ${growth >= 0 ? 'text-emerald-500' : 'text-red-400'}`}>
+            {growth >= 0 ? <TrendingUp size={12} /> : <TrendingDown size={12} />}
+            {Math.abs(growth)}%
+          </span>
+        )}
+      </div>
+      <div className="text-3xl font-black text-navy">{value ?? '—'}</div>
+      <div className="text-xs text-gray-400 mt-1">{title}</div>
+      {thisWeek != null && (
+        <div className="text-xs text-gray-300 mt-0.5">+{thisWeek} هذا الأسبوع</div>
+      )}
+    </div>
+  );
+}
+
+// ─── Main Component ───────────────────────────────────────────────────────────
 export default function AdminPage() {
-  const locale  = useLocale();
-  const router  = useRouter();
-  const isRTL   = locale === 'ar';
+  const locale = useLocale();
+  const router = useRouter();
+  const isRTL  = locale === 'ar';
   const { user, isAuthenticated } = useAuthStore();
 
   const [activeTab, setActiveTab]   = useState<AdminTab>('dashboard');
   const [stats, setStats]           = useState<any>(null);
   const [listings, setListings]     = useState<any[]>([]);
+  const [listingPage, setListingPage] = useState(1);
+  const [listingLastPage, setListingLastPage] = useState(1);
+  const [listingSearch, setListingSearch] = useState('');
+  const [listingSection, setListingSection] = useState('');
+  const [listingStatus, setListingStatus] = useState('pending_review');
   const [users, setUsers]           = useState<any[]>([]);
+  const [userSearch, setUserSearch] = useState('');
+  const [userRole, setUserRole]     = useState('');
   const [verifications, setVerifications] = useState<any[]>([]);
   const [reports, setReports]       = useState<any[]>([]);
+  const [analytics, setAnalytics]   = useState<any>(null);
+  const [analyticsLoading, setAnalyticsLoading] = useState(false);
   const [isLoading, setIsLoading]   = useState(false);
-  const [search, setSearch]         = useState('');
   const [rejectModal, setRejectModal] = useState<{ type: 'listing' | 'verification'; id: number } | null>(null);
   const [rejectReason, setRejectReason] = useState('');
+
+  /* ── Preview modals ── */
+  const [crPreview, setCrPreview]           = useState<{ url: string; name: string; cr: string } | null>(null);
+  const [listingPreview, setListingPreview] = useState<any | null>(null);
+  const [listingPreviewLoading, setListingPreviewLoading] = useState(false);
 
   // Guard: only admin
   useEffect(() => {
     if (!isAuthenticated) { router.push(`/${locale}/auth/login`); return; }
     if (user?.role !== 'admin') { router.push(`/${locale}`); return; }
-  }, [isAuthenticated, user]);
+  }, [isAuthenticated, user, locale, router]);
 
   // Load dashboard stats
   useEffect(() => {
     if (user?.role !== 'admin') return;
-    const load = async () => {
-      try {
-        const res: any = await api.get('/admin/dashboard');
-        setStats(res);
-      } catch {}
-    };
-    load();
+    adminApi.getDashboard().then(setStats).catch(() => {});
   }, [user]);
 
-  // Load data by tab
+  // Load analytics (lazy — first time tab is opened)
+  const loadAnalytics = useCallback(async () => {
+    if (analytics) return;
+    setAnalyticsLoading(true);
+    try {
+      const res = await adminApi.getAnalytics();
+      setAnalytics(res);
+    } catch {
+      toast.error(isRTL ? 'فشل تحميل التحليلات' : 'Failed to load analytics');
+    } finally {
+      setAnalyticsLoading(false);
+    }
+  }, [analytics, isRTL]);
+
+  // Load listings
+  const loadListings = useCallback(async (page: number) => {
+    setIsLoading(true);
+    try {
+      const params: Record<string, any> = { page };
+      if (listingStatus)  params.status  = listingStatus;
+      if (listingSection) params.section = listingSection;
+      if (listingSearch)  params.search  = listingSearch;
+      const res: any = await adminApi.getListings(params);
+      setListings(res.data ?? []);
+      setListingLastPage(res.last_page ?? 1);
+    } catch {
+      toast.error(isRTL ? 'فشل التحميل' : 'Failed to load');
+    } finally {
+      setIsLoading(false);
+    }
+  }, [listingStatus, listingSection, listingSearch, isRTL]);
+
+  // Load users
+  const loadUsers = useCallback(async () => {
+    setIsLoading(true);
+    try {
+      const res: any = await adminApi.getUsers({ search: userSearch, role: userRole });
+      setUsers(res.data ?? []);
+    } catch {
+      toast.error(isRTL ? 'فشل التحميل' : 'Failed to load');
+    } finally {
+      setIsLoading(false);
+    }
+  }, [userSearch, userRole, isRTL]);
+
+  // Tab effect
   useEffect(() => {
     if (user?.role !== 'admin') return;
-    const load = async () => {
+    if (activeTab === 'listings')      loadListings(1);
+    if (activeTab === 'users')         loadUsers();
+    if (activeTab === 'verifications') {
       setIsLoading(true);
-      try {
-        if (activeTab === 'listings') {
-          const res: any = await api.get('/admin/listings');
-          setListings(res.data ?? []);
-        } else if (activeTab === 'users') {
-          const res: any = await api.get('/admin/users', { params: { search } });
-          setUsers(res.data ?? []);
-        } else if (activeTab === 'verifications') {
-          const res: any = await api.get('/admin/verifications');
-          setVerifications(res.data ?? []);
-        } else if (activeTab === 'reports') {
-          const res: any = await api.get('/admin/reports');
-          setReports(res.data ?? []);
-        }
-      } catch {
-        toast.error(isRTL ? 'فشل التحميل' : 'Failed to load');
-      } finally {
-        setIsLoading(false);
-      }
-    };
-    load();
+      adminApi.getVerifications()
+        .then((res: any) => setVerifications(res.data ?? []))
+        .catch(() => {})
+        .finally(() => setIsLoading(false));
+    }
+    if (activeTab === 'reports') {
+      setIsLoading(true);
+      adminApi.getReports()
+        .then((res: any) => setReports(res.data ?? []))
+        .catch(() => {})
+        .finally(() => setIsLoading(false));
+    }
+    if (activeTab === 'analytics') loadAnalytics();
   }, [activeTab, user]);
 
-  const approve = async (id: number) => {
-    await api.patch(`/admin/listings/${id}/approve`);
-    setListings((prev) => prev.map((l) => l.id === id ? { ...l, status: 'active' } : l));
-    toast.success(isRTL ? 'تم قبول الإعلان' : 'Listing approved');
-  };
+  // Re-load listings when filters change
+  useEffect(() => {
+    if (activeTab === 'listings' && user?.role === 'admin') {
+      setListingPage(1);
+      loadListings(1);
+    }
+  }, [listingStatus, listingSection, listingSearch]);
 
-  const reject = (id: number) => {
-    setRejectReason('');
-    setRejectModal({ type: 'listing', id });
+  // ── Actions ────────────────────────────────────────────────────────────────
+  const approveListing = async (id: number) => {
+    try {
+      await adminApi.approveListing(id);
+      setListings(prev => prev.map(l => l.id === id ? { ...l, status: 'active' } : l));
+      toast.success(isRTL ? 'تم قبول الإعلان' : 'Listing approved');
+    } catch { toast.error(isRTL ? 'حدث خطأ' : 'Error'); }
   };
 
   const toggleFeatured = async (id: number, current: boolean) => {
-    await api.patch(`/admin/listings/${id}/feature`);
-    setListings((prev) => prev.map((l) => l.id === id ? { ...l, is_featured: !current } : l));
+    try {
+      await adminApi.toggleFeatured(id);
+      setListings(prev => prev.map(l => l.id === id ? { ...l, is_featured: !current } : l));
+    } catch { toast.error(isRTL ? 'حدث خطأ' : 'Error'); }
   };
 
   const approveVerification = async (id: number) => {
-    await api.post(`/admin/verifications/${id}/approve`);
-    setVerifications((prev) => prev.filter((v) => v.id !== id));
-    toast.success(isRTL ? 'تم قبول التوثيق' : 'Verification approved');
-  };
-
-  const rejectVerification = (id: number) => {
-    setRejectReason('');
-    setRejectModal({ type: 'verification', id });
+    try {
+      await adminApi.approveVerification(id);
+      setVerifications(prev => prev.filter(v => v.id !== id));
+      toast.success(isRTL ? 'تم قبول التوثيق' : 'Verification approved');
+    } catch { toast.error(isRTL ? 'حدث خطأ' : 'Error'); }
   };
 
   const resolveReport = async (id: number) => {
-    await api.patch(`/admin/reports/${id}/resolve`);
-    setReports((prev) => prev.filter((r) => r.id !== id));
-    toast.success(isRTL ? 'تم حل البلاغ' : 'Report resolved');
+    try {
+      await adminApi.resolveReport(id);
+      setReports(prev => prev.filter(r => r.id !== id));
+      toast.success(isRTL ? 'تم حل البلاغ' : 'Report resolved');
+    } catch { toast.error(isRTL ? 'حدث خطأ' : 'Error'); }
   };
 
   const toggleTrustedPayer = async (id: number) => {
-    await api.patch(`/admin/users/${id}/trusted-payer`);
-    setUsers((prev) => prev.map((u) => u.id === id ? { ...u, is_trusted_payer: !u.is_trusted_payer } : u));
+    try {
+      await adminApi.toggleTrustedPayer(id);
+      setUsers(prev => prev.map(u => u.id === id ? { ...u, is_trusted_payer: !u.is_trusted_payer } : u));
+    } catch { toast.error(isRTL ? 'حدث خطأ' : 'Error'); }
+  };
+
+  /* ── Preview helpers ───────────────────────────────────────────────────── */
+  const openCrPreview = (v: any) => {
+    const bv = v.business_verification ?? {};
+    // Backend stores the path under `document`; legacy field was `cr_image_path`
+    const path = bv.document ?? bv.cr_image_path ?? null;
+    if (!path) {
+      toast.error(isRTL ? 'لم يتم رفع وثيقة' : 'No document uploaded');
+      return;
+    }
+    const url = storageUrl(path);
+    if (!url) {
+      toast.error(isRTL ? 'رابط الوثيقة غير صالح' : 'Invalid document URL');
+      return;
+    }
+    setCrPreview({
+      url,
+      name: (isRTL ? v.name_ar : v.name_en) ?? bv.company_name ?? '—',
+      cr:   bv.cr_number ?? '—',
+    });
+  };
+
+  const openListingPreview = async (id: number) => {
+    setListingPreviewLoading(true);
+    setListingPreview({ id, loading: true });
+    try {
+      const { listingsApi } = await import('@/lib/api');
+      const res: any = await listingsApi.getOne(id);
+      setListingPreview(res.data ?? res);
+    } catch {
+      toast.error(isRTL ? 'فشل تحميل الإعلان' : 'Failed to load listing');
+      setListingPreview(null);
+    } finally {
+      setListingPreviewLoading(false);
+    }
   };
 
   const confirmReject = async () => {
     if (!rejectModal || !rejectReason.trim()) return;
     try {
       if (rejectModal.type === 'listing') {
-        await api.patch(`/admin/listings/${rejectModal.id}/reject`, { reason: rejectReason });
+        await adminApi.rejectListing(rejectModal.id, rejectReason);
         setListings(prev => prev.map(l => l.id === rejectModal.id ? { ...l, status: 'rejected' } : l));
         toast.success(isRTL ? 'تم رفض الإعلان' : 'Listing rejected');
       } else {
-        await api.post(`/admin/verifications/${rejectModal.id}/reject`, { notes: rejectReason });
+        await adminApi.rejectVerification(rejectModal.id, rejectReason);
         setVerifications(prev => prev.filter(v => v.id !== rejectModal.id));
         toast.success(isRTL ? 'تم رفض التوثيق' : 'Verification rejected');
       }
@@ -142,12 +295,22 @@ export default function AdminPage() {
   if (!isAuthenticated || user?.role !== 'admin') return null;
 
   const tabConfig = [
-    { id: 'dashboard',     labelAr: 'الإحصائيات', labelEn: 'Dashboard',     Icon: LayoutDashboard },
-    { id: 'listings',      labelAr: 'الإعلانات',   labelEn: 'Listings',      Icon: FileText        },
-    { id: 'verifications', labelAr: 'التوثيقات',   labelEn: 'Verifications', Icon: Shield          },
-    { id: 'reports',       labelAr: 'البلاغات',    labelEn: 'Reports',       Icon: AlertTriangle   },
-    { id: 'users',         labelAr: 'المستخدمون',  labelEn: 'Users',         Icon: Users           },
+    { id: 'dashboard',     labelAr: 'لوحة البيانات', labelEn: 'Dashboard',     Icon: LayoutDashboard },
+    { id: 'analytics',     labelAr: 'التحليلات',     labelEn: 'Analytics',     Icon: BarChart2       },
+    { id: 'listings',      labelAr: 'الإعلانات',     labelEn: 'Listings',      Icon: FileText        },
+    { id: 'verifications', labelAr: 'التوثيقات',     labelEn: 'Verifications', Icon: Shield          },
+    { id: 'reports',       labelAr: 'البلاغات',      labelEn: 'Reports',       Icon: AlertTriangle   },
+    { id: 'users',         labelAr: 'المستخدمون',    labelEn: 'Users',         Icon: Users           },
   ] as const;
+
+  // Chart data builders
+  const sectionChartData = stats ? [
+    { name: isRTL ? 'أسطول' : 'Fleet',     value: stats.listings?.sections?.fleet     ?? 0 },
+    { name: isRTL ? 'عقود' : 'Contracts',  value: stats.listings?.sections?.contracts ?? 0 },
+    { name: isRTL ? 'وظائف' : 'Jobs',      value: stats.listings?.sections?.jobs      ?? 0 },
+    { name: 'M&A',                          value: stats.listings?.sections?.ma        ?? 0 },
+    { name: isRTL ? 'منتدى' : 'Forum',     value: stats.listings?.sections?.forum     ?? 0 },
+  ] : [];
 
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col">
@@ -164,101 +327,409 @@ export default function AdminPage() {
             <h1 className="text-2xl font-black text-navy">
               {isRTL ? 'لوحة الإدارة' : 'Admin Panel'}
             </h1>
-            <p className="text-xs text-gray-500">نوافذ — Nawafez</p>
+            <p className="text-xs text-gray-500">نوافذ لوجستيك — Nawafez</p>
           </div>
         </div>
 
         {/* Tabs */}
         <div className="flex gap-1 overflow-x-auto mb-6 pb-1">
-          {tabConfig.map(({ id, labelAr, labelEn, Icon }) => (
-            <button
-              key={id}
-              onClick={() => setActiveTab(id as AdminTab)}
-              className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold
-                          whitespace-nowrap transition flex-shrink-0
-                          ${activeTab === id ? 'bg-navy text-white' : 'bg-white text-gray-600 hover:bg-gray-100'}`}
-            >
-              <Icon size={15} />
-              {isRTL ? labelAr : labelEn}
-            </button>
-          ))}
+          {tabConfig.map(({ id, labelAr, labelEn, Icon }) => {
+            const badge =
+              id === 'listings'      ? (stats?.listings?.pending_review || null) :
+              id === 'reports'       ? (stats?.reports?.pending || null) :
+              id === 'verifications' ? (verifications.length || null) : null;
+            return (
+              <button
+                key={id}
+                onClick={() => setActiveTab(id as AdminTab)}
+                className={`relative flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold
+                            whitespace-nowrap transition flex-shrink-0
+                            ${activeTab === id ? 'bg-navy text-white' : 'bg-white text-gray-600 hover:bg-gray-100'}`}
+              >
+                <Icon size={15} />
+                {isRTL ? labelAr : labelEn}
+                {badge != null && badge > 0 && (
+                  <span className={`text-[10px] font-black w-4 h-4 rounded-full flex items-center justify-center
+                                    ${activeTab === id ? 'bg-white text-navy' : 'bg-red-500 text-white'}`}>
+                    {badge > 9 ? '9+' : badge}
+                  </span>
+                )}
+              </button>
+            );
+          })}
         </div>
 
-        {/* ── Dashboard Stats ── */}
+        {/* ══════════════════════════════════════════════════════════════════
+            TAB 1: DASHBOARD
+        ══════════════════════════════════════════════════════════════════ */}
         {activeTab === 'dashboard' && (
           <div className="space-y-6">
             {!stats ? (
-              <div className="flex justify-center py-20"><Loader2 className="animate-spin text-navy" size={32} /></div>
+              <div className="flex justify-center py-20">
+                <Loader2 className="animate-spin text-navy" size={32} />
+              </div>
             ) : (
               <>
+                {/* KPI Cards */}
                 <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-                  {[
-                    { label: isRTL ? 'إجمالي المستخدمين' : 'Total Users',     value: stats.users?.total,       Icon: Users,      color: 'text-navy'    },
-                    { label: isRTL ? 'إعلانات نشطة' : 'Active Listings',      value: stats.listings?.active,   Icon: FileText,   color: 'text-emerald' },
-                    { label: isRTL ? 'بانتظار المراجعة' : 'Pending Review',   value: stats.listings?.pending_review, Icon: Clock, color: 'text-amber-500'},
-                    { label: isRTL ? 'الإيرادات (ر.س)' : 'Revenue (SAR)',     value: stats.revenue?.total_sar?.toLocaleString(), Icon: DollarSign, color: 'text-emerald'},
-                  ].map(({ label, value, Icon, color }) => (
-                    <div key={label} className="card p-5">
-                      <div className={`flex items-center gap-2 mb-2 ${color}`}>
-                        <Icon size={18} />
-                        <span className="text-xs font-semibold text-gray-500">{label}</span>
-                      </div>
-                      <p className={`text-3xl font-black ${color}`}>{value ?? '—'}</p>
-                    </div>
-                  ))}
+                  <KPICard
+                    title={isRTL ? 'إجمالي المستخدمين' : 'Total Users'}
+                    value={(stats.users?.total ?? 0).toLocaleString()}
+                    growth={stats.users?.growth_pct}
+                    thisWeek={stats.users?.this_week}
+                    icon={<Users size={18} className="text-blue-600" />}
+                    bgClass="bg-blue-100"
+                  />
+                  <KPICard
+                    title={isRTL ? 'إعلانات نشطة' : 'Active Listings'}
+                    value={(stats.listings?.active ?? 0).toLocaleString()}
+                    growth={stats.listings?.growth_pct}
+                    thisWeek={stats.listings?.this_week}
+                    icon={<FileText size={18} className="text-emerald-600" />}
+                    bgClass="bg-emerald-100"
+                  />
+                  <KPICard
+                    title={isRTL ? 'بانتظار المراجعة' : 'Pending Review'}
+                    value={stats.listings?.pending_review ?? 0}
+                    icon={<Clock size={18} className="text-amber-600" />}
+                    bgClass="bg-amber-100"
+                  />
+                  <KPICard
+                    title={isRTL ? 'إيرادات الشهر (ر.س)' : 'Monthly Revenue (SAR)'}
+                    value={(stats.revenue?.this_month ?? 0).toLocaleString()}
+                    icon={<DollarSign size={18} className="text-purple-600" />}
+                    bgClass="bg-purple-100"
+                  />
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  <div className="card p-5">
-                    <p className="text-xs font-semibold text-gray-500 mb-3 flex items-center gap-1.5">
-                      <TrendingUp size={14} /> {isRTL ? 'إحصائيات اليوم' : "Today's Stats"}
+                {/* Quick Actions */}
+                {(stats.listings?.pending_review > 0 || stats.reports?.pending > 0) && (
+                  <div className="flex flex-wrap gap-3 p-4 bg-amber-50 rounded-2xl border border-amber-100">
+                    <p className="w-full text-xs font-bold text-amber-700 flex items-center gap-1.5">
+                      <AlertCircle size={13} />
+                      {isRTL ? 'يحتاج انتباهك الآن' : 'Needs your attention'}
                     </p>
-                    <div className="space-y-2">
-                      <div className="flex justify-between text-sm">
-                        <span className="text-gray-600">{isRTL ? 'مستخدمون جدد' : 'New users'}</span>
-                        <span className="font-bold text-navy">{stats.users?.new_today}</span>
+                    {stats.listings?.pending_review > 0 && (
+                      <button
+                        onClick={() => { setActiveTab('listings'); setListingStatus('pending_review'); }}
+                        className="flex items-center gap-1.5 px-4 py-2 bg-navy text-white text-xs font-bold rounded-xl hover:bg-navy/90 transition"
+                      >
+                        <Clock size={13} />
+                        {stats.listings.pending_review} {isRTL ? 'إعلان قيد المراجعة' : 'pending listings'}
+                      </button>
+                    )}
+                    {stats.reports?.pending > 0 && (
+                      <button
+                        onClick={() => setActiveTab('reports')}
+                        className="flex items-center gap-1.5 px-4 py-2 bg-red-500 text-white text-xs font-bold rounded-xl hover:bg-red-600 transition"
+                      >
+                        <Flag size={13} />
+                        {stats.reports.pending} {isRTL ? 'بلاغ معلق' : 'pending reports'}
+                      </button>
+                    )}
+                  </div>
+                )}
+
+                {/* Section Distribution Chart + Today Stats */}
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                  {/* Bar Chart — listings by section */}
+                  <div className="card p-5">
+                    <p className="text-sm font-bold text-navy mb-4 flex items-center gap-2">
+                      <BarChart2 size={16} />
+                      {isRTL ? 'الإعلانات النشطة بالقسم' : 'Active Listings by Section'}
+                    </p>
+                    <ResponsiveContainer width="100%" height={200}>
+                      <BarChart data={sectionChartData} barSize={32}>
+                        <XAxis dataKey="name" tick={{ fontSize: 11, fill: '#6b7280' }} axisLine={false} tickLine={false} />
+                        <YAxis tick={{ fontSize: 11, fill: '#6b7280' }} axisLine={false} tickLine={false} />
+                        <Tooltip
+                          contentStyle={{ borderRadius: '10px', border: 'none', boxShadow: '0 4px 20px rgba(0,0,0,0.1)' }}
+                          cursor={{ fill: '#f3f4f6' }}
+                        />
+                        <Bar dataKey="value" fill="#0a2342" radius={[6, 6, 0, 0]}
+                          label={{ position: 'top', fontSize: 11, fill: '#6b7280' }} />
+                      </BarChart>
+                    </ResponsiveContainer>
+                  </div>
+
+                  {/* Today + Revenue + Business Users */}
+                  <div className="space-y-4">
+                    <div className="card p-5">
+                      <p className="text-xs font-bold text-gray-500 mb-3 flex items-center gap-1.5">
+                        <TrendingUp size={13} /> {isRTL ? 'إحصائيات اليوم' : "Today's Stats"}
+                      </p>
+                      <div className="space-y-2.5">
+                        {[
+                          { label: isRTL ? 'مستخدمون جدد' : 'New users',    value: stats.users?.new_today },
+                          { label: isRTL ? 'إعلانات جديدة' : 'New listings', value: stats.listings?.new_today },
+                          { label: isRTL ? 'حسابات تجارية' : 'Business accounts', value: stats.users?.business },
+                        ].map(item => (
+                          <div key={item.label} className="flex justify-between items-center text-sm">
+                            <span className="text-gray-500">{item.label}</span>
+                            <span className="font-black text-navy">{item.value ?? 0}</span>
+                          </div>
+                        ))}
                       </div>
-                      <div className="flex justify-between text-sm">
-                        <span className="text-gray-600">{isRTL ? 'إعلانات جديدة' : 'New listings'}</span>
-                        <span className="font-bold text-navy">{stats.listings?.new_today}</span>
+                    </div>
+                    <div className="card p-5">
+                      <p className="text-xs font-bold text-gray-500 mb-3 flex items-center gap-1.5">
+                        <DollarSign size={13} className="text-emerald-500" />
+                        {isRTL ? 'الإيرادات' : 'Revenue'}
+                      </p>
+                      <div className="space-y-2.5">
+                        <div className="flex justify-between text-sm">
+                          <span className="text-gray-500">{isRTL ? 'هذا الشهر' : 'This month'}</span>
+                          <span className="font-black text-emerald-500">
+                            {(stats.revenue?.this_month ?? 0).toLocaleString()} {isRTL ? 'ر.س' : 'SAR'}
+                          </span>
+                        </div>
+                        <div className="flex justify-between text-sm">
+                          <span className="text-gray-500">{isRTL ? 'الإجمالي الكلي' : 'Total'}</span>
+                          <span className="font-black text-navy">
+                            {(stats.revenue?.total_sar ?? 0).toLocaleString()} {isRTL ? 'ر.س' : 'SAR'}
+                          </span>
+                        </div>
                       </div>
                     </div>
                   </div>
-                  <div className="card p-5">
-                    <p className="text-xs font-semibold text-gray-500 mb-3 flex items-center gap-1.5">
-                      <AlertTriangle size={14} className="text-red-500" />
-                      {isRTL ? 'تحتاج تدخل' : 'Needs Action'}
+                </div>
+
+                {/* Activity Feed */}
+                <div className="card p-5">
+                  <p className="text-sm font-bold text-navy mb-4 flex items-center gap-2">
+                    <Activity size={16} />
+                    {isRTL ? 'آخر الأحداث' : 'Recent Activity'}
+                  </p>
+                  {(stats.recent_activity ?? []).length === 0 ? (
+                    <p className="text-gray-400 text-sm text-center py-4">
+                      {isRTL ? 'لا توجد أحداث بعد' : 'No recent activity'}
                     </p>
-                    <div className="space-y-2">
-                      <div className="flex justify-between text-sm">
-                        <span className="text-gray-600">{isRTL ? 'إعلانات معلقة' : 'Pending listings'}</span>
-                        <span className="font-bold text-amber-500">{stats.listings?.pending_review}</span>
-                      </div>
-                      <div className="flex justify-between text-sm">
-                        <span className="text-gray-600">{isRTL ? 'بلاغات معلقة' : 'Pending reports'}</span>
-                        <span className="font-bold text-red-500">{stats.reports?.pending}</span>
-                      </div>
+                  ) : (
+                    <div className="space-y-2 max-h-64 overflow-y-auto">
+                      {(stats.recent_activity ?? []).map((event: any, idx: number) => (
+                        <div key={idx} className="flex items-start gap-3 p-3 bg-gray-50 rounded-xl hover:bg-gray-100 transition">
+                          <span className="text-lg shrink-0">{event.icon}</span>
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm text-navy font-medium truncate">
+                              {isRTL ? event.text_ar : event.text_en}
+                            </p>
+                            <p className="text-xs text-gray-400">
+                              {new Date(event.time).toLocaleString(locale === 'ar' ? 'ar-SA' : 'en-US')}
+                            </p>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </>
+            )}
+          </div>
+        )}
+
+        {/* ══════════════════════════════════════════════════════════════════
+            TAB 2: ANALYTICS
+        ══════════════════════════════════════════════════════════════════ */}
+        {activeTab === 'analytics' && (
+          <div className="space-y-6">
+            {analyticsLoading ? (
+              <div className="flex justify-center py-20">
+                <Loader2 className="animate-spin text-navy" size={32} />
+              </div>
+            ) : !analytics ? (
+              <div className="flex justify-center py-20">
+                <Loader2 className="animate-spin text-navy" size={32} />
+              </div>
+            ) : (
+              <>
+                {/* Line Charts Row */}
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                  {/* Users daily */}
+                  <div className="card p-5">
+                    <p className="text-sm font-bold text-navy mb-4 flex items-center gap-2">
+                      <Users size={15} />
+                      {isRTL ? 'تسجيلات المستخدمين — آخر 30 يوم' : 'User Registrations — Last 30 Days'}
+                    </p>
+                    <ResponsiveContainer width="100%" height={200}>
+                      <LineChart data={analytics.users_daily ?? []}>
+                        <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+                        <XAxis
+                          dataKey="date"
+                          tickFormatter={(d: string) => d.slice(5)}
+                          tick={{ fontSize: 10, fill: '#9ca3af' }}
+                          axisLine={false} tickLine={false}
+                        />
+                        <YAxis tick={{ fontSize: 10, fill: '#9ca3af' }} axisLine={false} tickLine={false} />
+                        <Tooltip
+                          contentStyle={{ borderRadius: '10px', border: 'none', boxShadow: '0 4px 20px rgba(0,0,0,0.1)' }}
+                        />
+                        <Line type="monotone" dataKey="count" stroke="#0a2342" strokeWidth={2.5} dot={false} activeDot={{ r: 5 }} />
+                      </LineChart>
+                    </ResponsiveContainer>
+                  </div>
+
+                  {/* Listings daily */}
+                  <div className="card p-5">
+                    <p className="text-sm font-bold text-navy mb-4 flex items-center gap-2">
+                      <FileText size={15} />
+                      {isRTL ? 'الإعلانات المنشورة — آخر 30 يوم' : 'Listings Published — Last 30 Days'}
+                    </p>
+                    <ResponsiveContainer width="100%" height={200}>
+                      <BarChart data={analytics.listings_daily ?? []} barSize={8}>
+                        <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+                        <XAxis
+                          dataKey="date"
+                          tickFormatter={(d: string) => d.slice(5)}
+                          tick={{ fontSize: 10, fill: '#9ca3af' }}
+                          axisLine={false} tickLine={false}
+                        />
+                        <YAxis tick={{ fontSize: 10, fill: '#9ca3af' }} axisLine={false} tickLine={false} />
+                        <Tooltip
+                          contentStyle={{ borderRadius: '10px', border: 'none', boxShadow: '0 4px 20px rgba(0,0,0,0.1)' }}
+                        />
+                        <Bar dataKey="count" fill="#10b981" radius={[4, 4, 0, 0]} />
+                      </BarChart>
+                    </ResponsiveContainer>
+                  </div>
+                </div>
+
+                {/* Revenue Monthly + Section Stats */}
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                  {/* Revenue chart */}
+                  <div className="card p-5">
+                    <p className="text-sm font-bold text-navy mb-4 flex items-center gap-2">
+                      <DollarSign size={15} />
+                      {isRTL ? 'الإيرادات الشهرية (ر.س)' : 'Monthly Revenue (SAR)'}
+                    </p>
+                    {(analytics.revenue_monthly ?? []).length === 0 ? (
+                      <p className="text-gray-400 text-sm text-center py-10">
+                        {isRTL ? 'لا توجد بيانات إيرادات بعد' : 'No revenue data yet'}
+                      </p>
+                    ) : (
+                      <ResponsiveContainer width="100%" height={200}>
+                        <BarChart data={analytics.revenue_monthly} barSize={24}>
+                          <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+                          <XAxis dataKey="month" tick={{ fontSize: 10, fill: '#9ca3af' }} axisLine={false} tickLine={false} />
+                          <YAxis tick={{ fontSize: 10, fill: '#9ca3af' }} axisLine={false} tickLine={false} />
+                          <Tooltip
+                            formatter={(v: any) => [`${Number(v).toLocaleString()} ${isRTL ? 'ر.س' : 'SAR'}`, '']}
+                            contentStyle={{ borderRadius: '10px', border: 'none', boxShadow: '0 4px 20px rgba(0,0,0,0.1)' }}
+                          />
+                          <Bar dataKey="total" fill="#a855f7" radius={[6, 6, 0, 0]} />
+                        </BarChart>
+                      </ResponsiveContainer>
+                    )}
+                  </div>
+
+                  {/* Section performance */}
+                  <div className="card p-5">
+                    <p className="text-sm font-bold text-navy mb-4 flex items-center gap-2">
+                      <BarChart2 size={15} />
+                      {isRTL ? 'أداء الأقسام' : 'Section Performance'}
+                    </p>
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-xs">
+                        <thead>
+                          <tr className="border-b border-gray-100">
+                            <th className="pb-2 text-start text-gray-400 font-medium">{isRTL ? 'القسم' : 'Section'}</th>
+                            <th className="pb-2 text-center text-emerald-500 font-medium">{isRTL ? 'نشط' : 'Active'}</th>
+                            <th className="pb-2 text-center text-amber-500 font-medium">{isRTL ? 'مراجعة' : 'Pending'}</th>
+                            <th className="pb-2 text-center text-gray-400 font-medium">{isRTL ? 'مشاهدات' : 'Views'}</th>
+                            <th className="pb-2 text-center text-gray-400 font-medium">{isRTL ? 'عروض' : 'Bids'}</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {Object.entries(analytics.section_stats ?? {}).map(([sec, data]: any) => (
+                            <tr key={sec} className="border-b border-gray-50 hover:bg-gray-50">
+                              <td className="py-2 font-bold text-navy">
+                                {isRTL ? SECTION_LABEL[sec] : SECTION_LABEL_EN[sec]}
+                              </td>
+                              <td className="py-2 text-center font-bold text-emerald-500">{data.active}</td>
+                              <td className="py-2 text-center font-bold text-amber-500">{data.pending}</td>
+                              <td className="py-2 text-center text-gray-600">{(data.total_views ?? 0).toLocaleString()}</td>
+                              <td className="py-2 text-center text-gray-600">{data.total_bids ?? 0}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
                     </div>
                   </div>
-                  <div className="card p-5">
-                    <p className="text-xs font-semibold text-gray-500 mb-3 flex items-center gap-1.5">
-                      <DollarSign size={14} className="text-emerald" />
-                      {isRTL ? 'الإيرادات' : 'Revenue'}
-                    </p>
-                    <div className="space-y-2">
-                      <div className="flex justify-between text-sm">
-                        <span className="text-gray-600">{isRTL ? 'هذا الشهر' : 'This month'}</span>
-                        <span className="font-bold text-emerald">
-                          {stats.revenue?.this_month?.toLocaleString()} {isRTL ? 'ر.س' : 'SAR'}
-                        </span>
-                      </div>
-                      <div className="flex justify-between text-sm">
-                        <span className="text-gray-600">{isRTL ? 'الإجمالي' : 'Total'}</span>
-                        <span className="font-bold text-navy">
-                          {stats.revenue?.total_sar?.toLocaleString()} {isRTL ? 'ر.س' : 'SAR'}
-                        </span>
-                      </div>
-                    </div>
+                </div>
+
+                {/* Top Listings by Views */}
+                <div className="card p-5">
+                  <p className="text-sm font-bold text-navy mb-4 flex items-center gap-2">
+                    <Eye size={15} />
+                    {isRTL ? 'أعلى الإعلانات مشاهدةً' : 'Top Listings by Views'}
+                  </p>
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-sm">
+                      <thead>
+                        <tr className="border-b border-gray-100">
+                          <th className="pb-2 text-start text-gray-400 font-medium">{isRTL ? 'الإعلان' : 'Listing'}</th>
+                          <th className="pb-2 text-center text-gray-400 font-medium">{isRTL ? 'القسم' : 'Section'}</th>
+                          <th className="pb-2 text-center text-gray-400 font-medium">{isRTL ? 'المدينة' : 'City'}</th>
+                          <th className="pb-2 text-center text-gray-400 font-medium">{isRTL ? 'مشاهدات' : 'Views'}</th>
+                          <th className="pb-2 text-center text-gray-400 font-medium">{isRTL ? 'السعر' : 'Price'}</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {(analytics.top_listings ?? []).map((l: any) => (
+                          <tr key={l.id} className="border-b border-gray-50 hover:bg-gray-50">
+                            <td className="py-2.5">
+                              <Link href={`/${locale}/listings/${l.id}`}
+                                className="font-medium text-navy hover:underline truncate max-w-[200px] block">
+                                {isRTL ? l.title_ar : (l.title_en || l.title_ar)}
+                              </Link>
+                            </td>
+                            <td className="py-2.5 text-center">
+                              <span className="text-xs bg-navy/10 text-navy px-2 py-0.5 rounded-full">
+                                {isRTL ? SECTION_LABEL[l.section] : SECTION_LABEL_EN[l.section]}
+                              </span>
+                            </td>
+                            <td className="py-2.5 text-center text-gray-500 text-xs">{l.city || '—'}</td>
+                            <td className="py-2.5 text-center font-black text-navy">
+                              {(l.views_count ?? 0).toLocaleString()}
+                            </td>
+                            <td className="py-2.5 text-center text-gray-500 text-xs">
+                              {l.price ? `${Number(l.price).toLocaleString()} ${isRTL ? 'ر.س' : 'SAR'}` : '—'}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+
+                {/* Cities Breakdown */}
+                <div className="card p-5">
+                  <p className="text-sm font-bold text-navy mb-5 flex items-center gap-2">
+                    <Activity size={15} />
+                    {isRTL ? 'أكثر المدن نشاطاً' : 'Most Active Cities'}
+                  </p>
+                  <div className="space-y-3">
+                    {(analytics.cities_breakdown ?? []).map((c: any, i: number) => {
+                      const max = analytics.cities_breakdown[0]?.count ?? 1;
+                      const pct = Math.round((c.count / max) * 100);
+                      return (
+                        <div key={c.city} className="flex items-center gap-3">
+                          <span className="text-xs text-gray-400 w-4 text-end">{i + 1}</span>
+                          <div className="w-20 text-sm font-medium text-navy shrink-0">{c.city}</div>
+                          <div className="flex-1 bg-gray-100 rounded-full h-5 overflow-hidden">
+                            <div
+                              className="h-full bg-gradient-to-r from-navy to-navy/60 rounded-full transition-all"
+                              style={{ width: `${pct}%` }}
+                            />
+                          </div>
+                          <div className="text-sm font-bold w-8 text-end text-navy">{c.count}</div>
+                        </div>
+                      );
+                    })}
+                    {(analytics.cities_breakdown ?? []).length === 0 && (
+                      <p className="text-gray-400 text-sm text-center py-4">
+                        {isRTL ? 'لا توجد بيانات بعد' : 'No data yet'}
+                      </p>
+                    )}
                   </div>
                 </div>
               </>
@@ -266,199 +737,359 @@ export default function AdminPage() {
           </div>
         )}
 
-        {/* ── Listings Moderation ── */}
+        {/* ══════════════════════════════════════════════════════════════════
+            TAB 3: LISTINGS MODERATION
+        ══════════════════════════════════════════════════════════════════ */}
         {activeTab === 'listings' && (
-          <div className="space-y-3">
+          <div className="space-y-4">
+            {/* Filters Bar */}
+            <div className="card p-4 flex flex-wrap gap-3">
+              <div className="relative flex-1 min-w-[200px]">
+                <Search size={14} className="absolute top-1/2 -translate-y-1/2 start-3 text-gray-400" />
+                <input
+                  value={listingSearch}
+                  onChange={e => setListingSearch(e.target.value)}
+                  placeholder={isRTL ? 'بحث في العنوان...' : 'Search title...'}
+                  className="input text-sm ps-9 py-2"
+                />
+              </div>
+              <select
+                value={listingSection}
+                onChange={e => setListingSection(e.target.value)}
+                className="input text-sm py-2 flex-shrink-0"
+              >
+                <option value="">{isRTL ? 'كل الأقسام' : 'All sections'}</option>
+                <option value="fleet">{isRTL ? 'أسطول' : 'Fleet'}</option>
+                <option value="contracts">{isRTL ? 'عقود' : 'Contracts'}</option>
+                <option value="ma">M&A</option>
+                <option value="jobs">{isRTL ? 'وظائف' : 'Jobs'}</option>
+                <option value="forum">{isRTL ? 'منتدى' : 'Forum'}</option>
+              </select>
+              <select
+                value={listingStatus}
+                onChange={e => setListingStatus(e.target.value)}
+                className="input text-sm py-2 flex-shrink-0"
+              >
+                <option value="pending_review">{isRTL ? 'قيد المراجعة' : 'Pending Review'}</option>
+                <option value="active">{isRTL ? 'نشط' : 'Active'}</option>
+                <option value="rejected">{isRTL ? 'مرفوض' : 'Rejected'}</option>
+                <option value="">{isRTL ? 'الكل' : 'All'}</option>
+              </select>
+            </div>
+
             {isLoading ? (
               <div className="flex justify-center py-16"><Loader2 className="animate-spin text-navy" size={28} /></div>
             ) : listings.length === 0 ? (
               <div className="card p-10 text-center text-gray-400">
-                {isRTL ? 'لا توجد إعلانات' : 'No listings'}
+                <Filter size={32} className="mx-auto mb-2 opacity-30" />
+                {isRTL ? 'لا توجد إعلانات بهذه الفلاتر' : 'No listings match these filters'}
               </div>
-            ) : listings.map((listing) => (
-              <div key={listing.id} className="card p-4 flex items-start gap-4">
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <Link href={`/${locale}/listings/${listing.id}`}
-                      className="font-bold text-navy hover:underline text-sm">
-                      {isRTL ? listing.title_ar : listing.title_en || listing.title_ar}
-                    </Link>
-                    <span className={`text-xs px-2 py-0.5 rounded-full font-medium
-                      ${listing.status === 'active'         ? 'bg-emerald/10 text-emerald' :
-                        listing.status === 'pending_review' ? 'bg-amber-100 text-amber-600' :
-                        listing.status === 'rejected'       ? 'bg-red-100 text-red-600' :
-                                                             'bg-gray-100 text-gray-500'}`}>
-                      {listing.status}
+            ) : (
+              <>
+                <div className="space-y-2">
+                  {listings.map((listing: any) => (
+                    <div key={listing.id} className="card p-4 flex items-start gap-4">
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <button
+                            onClick={() => openListingPreview(listing.id)}
+                            className="font-bold text-navy hover:underline text-sm text-start"
+                          >
+                            {isRTL ? listing.title_ar : (listing.title_en || listing.title_ar)}
+                          </button>
+                          <span className={`text-xs px-2 py-0.5 rounded-full font-medium
+                            ${listing.status === 'active'         ? 'bg-emerald-100 text-emerald-600' :
+                              listing.status === 'pending_review' ? 'bg-amber-100 text-amber-600' :
+                              listing.status === 'rejected'       ? 'bg-red-100 text-red-600' :
+                                                                   'bg-gray-100 text-gray-500'}`}>
+                            {listing.status === 'active' ? (isRTL ? 'نشط' : 'Active') :
+                             listing.status === 'pending_review' ? (isRTL ? 'قيد المراجعة' : 'Pending') :
+                             listing.status === 'rejected' ? (isRTL ? 'مرفوض' : 'Rejected') : listing.status}
+                          </span>
+                          {listing.is_featured && (
+                            <span className="text-xs bg-yellow-100 text-yellow-700 px-2 py-0.5 rounded-full">
+                              ⭐ {isRTL ? 'مميز' : 'Featured'}
+                            </span>
+                          )}
+                        </div>
+                        <p className="text-xs text-gray-400 mt-0.5">
+                          {isRTL ? SECTION_LABEL[listing.section] : SECTION_LABEL_EN[listing.section]}
+                          {listing.city ? ` · ${listing.city}` : ''}
+                          {listing.user ? ` · ${isRTL ? listing.user.name_ar : listing.user.name_en}` : ''}
+                          {listing.views_count ? ` · ${listing.views_count} ${isRTL ? 'مشاهدة' : 'views'}` : ''}
+                        </p>
+                        {listing.rejection_reason && (
+                          <p className="text-xs text-red-400 mt-0.5">
+                            {isRTL ? 'سبب الرفض: ' : 'Rejection reason: '}{listing.rejection_reason}
+                          </p>
+                        )}
+                      </div>
+                      <div className="flex items-center gap-1.5 flex-shrink-0">
+                        <Link href={`/${locale}/listings/${listing.id}`}
+                          className="p-2 hover:bg-gray-100 rounded-lg transition" title={isRTL ? 'عرض' : 'View'}>
+                          <Eye size={15} className="text-gray-500" />
+                        </Link>
+                        <button
+                          onClick={() => toggleFeatured(listing.id, listing.is_featured)}
+                          className={`p-2 rounded-lg transition ${listing.is_featured ? 'bg-yellow-50 text-yellow-600' : 'hover:bg-gray-100 text-gray-300 hover:text-gray-500'}`}
+                          title={isRTL ? 'تمييز' : 'Feature'}
+                        >
+                          <Star size={15} />
+                        </button>
+                        {listing.status !== 'active' && (
+                          <button onClick={() => approveListing(listing.id)}
+                            className="p-2 hover:bg-emerald-50 rounded-lg text-emerald-500 transition"
+                            title={isRTL ? 'قبول' : 'Approve'}>
+                            <CheckCircle size={15} />
+                          </button>
+                        )}
+                        {listing.status !== 'rejected' && (
+                          <button onClick={() => { setRejectReason(''); setRejectModal({ type: 'listing', id: listing.id }); }}
+                            className="p-2 hover:bg-red-50 rounded-lg text-red-400 transition"
+                            title={isRTL ? 'رفض' : 'Reject'}>
+                            <XCircle size={15} />
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Pagination */}
+                {listingLastPage > 1 && (
+                  <div className="flex items-center justify-center gap-3 py-4">
+                    <button
+                      onClick={() => { const p = listingPage - 1; setListingPage(p); loadListings(p); }}
+                      disabled={listingPage === 1}
+                      className="px-4 py-2 text-sm border border-gray-200 rounded-xl disabled:opacity-40 hover:bg-gray-50 transition font-medium"
+                    >
+                      {isRTL ? 'السابق →' : '← Prev'}
+                    </button>
+                    <span className="text-sm text-gray-500 font-medium">
+                      {listingPage} / {listingLastPage}
                     </span>
-                    {listing.is_featured && (
-                      <span className="text-xs bg-yellow-100 text-yellow-700 px-2 py-0.5 rounded-full">
-                        ⭐ {isRTL ? 'مميز' : 'Featured'}
-                      </span>
-                    )}
+                    <button
+                      onClick={() => { const p = listingPage + 1; setListingPage(p); loadListings(p); }}
+                      disabled={listingPage === listingLastPage}
+                      className="px-4 py-2 text-sm border border-gray-200 rounded-xl disabled:opacity-40 hover:bg-gray-50 transition font-medium"
+                    >
+                      {isRTL ? '← التالي' : 'Next →'}
+                    </button>
                   </div>
-                  <p className="text-xs text-gray-400 mt-0.5">
-                    {listing.section} · {listing.city} · {isRTL ? listing.user?.name_ar : listing.user?.name_en}
-                  </p>
-                </div>
-                <div className="flex items-center gap-2 flex-shrink-0">
-                  <Link href={`/${locale}/listings/${listing.id}`}
-                    className="p-2 hover:bg-gray-100 rounded-lg transition" title="View">
-                    <Eye size={15} className="text-gray-500" />
-                  </Link>
-                  <button onClick={() => toggleFeatured(listing.id, listing.is_featured)}
-                    className={`p-2 rounded-lg transition ${listing.is_featured ? 'bg-yellow-50 text-yellow-600' : 'hover:bg-gray-100 text-gray-400'}`}>
-                    <Star size={15} />
-                  </button>
-                  {listing.status !== 'active' && (
-                    <button onClick={() => approve(listing.id)}
-                      className="p-2 hover:bg-emerald/10 rounded-lg text-emerald transition">
-                      <CheckCircle size={15} />
-                    </button>
-                  )}
-                  {listing.status !== 'rejected' && (
-                    <button onClick={() => reject(listing.id)}
-                      className="p-2 hover:bg-red-50 rounded-lg text-red-500 transition">
-                      <XCircle size={15} />
-                    </button>
-                  )}
-                </div>
-              </div>
-            ))}
+                )}
+              </>
+            )}
           </div>
         )}
 
-        {/* ── Verifications ── */}
+        {/* ══════════════════════════════════════════════════════════════════
+            TAB 4: VERIFICATIONS
+        ══════════════════════════════════════════════════════════════════ */}
         {activeTab === 'verifications' && (
           <div className="space-y-3">
             {isLoading ? (
               <div className="flex justify-center py-16"><Loader2 className="animate-spin text-navy" size={28} /></div>
             ) : verifications.length === 0 ? (
               <div className="card p-10 text-center text-gray-400">
-                {isRTL ? 'لا توجد طلبات توثيق' : 'No pending verifications'}
+                <CheckCircle size={32} className="mx-auto mb-2 text-emerald-300" />
+                {isRTL ? 'لا توجد طلبات توثيق معلقة' : 'No pending verifications'}
               </div>
             ) : verifications.map((v: any) => (
-              <div key={v.id} className="card p-4 flex items-center gap-4">
-                <Shield className="text-navy flex-shrink-0" size={24} />
-                <div className="flex-1 min-w-0">
-                  <p className="font-bold text-navy text-sm">
-                    {isRTL ? v.user?.name_ar : v.user?.name_en}
-                  </p>
-                  <p className="text-xs text-gray-400">{v.user?.email} · CR: {v.cr_number}</p>
-                </div>
-                {v.cr_image_path && (
-                  <a href={`${process.env.NEXT_PUBLIC_API_URL}/storage/${v.cr_image_path}`}
-                    target="_blank" rel="noopener noreferrer"
-                    className="text-xs text-emerald hover:underline flex-shrink-0">
-                    {isRTL ? 'عرض الوثيقة' : 'View Doc'}
-                  </a>
-                )}
-                <div className="flex gap-2 flex-shrink-0">
-                  <button onClick={() => approveVerification(v.id)}
-                    className="flex items-center gap-1.5 px-3 py-1.5 bg-emerald/10 text-emerald
-                               rounded-lg text-xs font-semibold hover:bg-emerald/20 transition">
-                    <CheckCircle size={13} /> {isRTL ? 'قبول' : 'Approve'}
-                  </button>
-                  <button onClick={() => rejectVerification(v.id)}
-                    className="flex items-center gap-1.5 px-3 py-1.5 bg-red-50 text-red-500
-                               rounded-lg text-xs font-semibold hover:bg-red-100 transition">
-                    <XCircle size={13} /> {isRTL ? 'رفض' : 'Reject'}
-                  </button>
+              <div key={v.id} className="card p-4">
+                <div className="flex items-center gap-4">
+                  <div className="w-10 h-10 bg-navy/10 rounded-full flex items-center justify-center shrink-0">
+                    <Shield size={18} className="text-navy" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="font-bold text-navy text-sm">
+                      {isRTL ? v.name_ar : v.name_en}
+                    </p>
+                    <p className="text-xs text-gray-400">{v.email}</p>
+                    {v.business_verification?.cr_number && (
+                      <p className="text-xs text-gray-500 mt-0.5">
+                        CR: {v.business_verification.cr_number}
+                      </p>
+                    )}
+                  </div>
+                  {(v.business_verification?.document || v.business_verification?.cr_image_path) && (
+                    <button
+                      onClick={() => openCrPreview(v)}
+                      className="flex items-center gap-1 px-3 py-1.5 bg-emerald/10 text-emerald
+                                 rounded-lg text-xs font-bold hover:bg-emerald/20 transition flex-shrink-0"
+                    >
+                      <FileText size={12} />
+                      {isRTL ? 'عرض الوثيقة' : 'View Doc'}
+                    </button>
+                  )}
+                  <div className="flex gap-2 flex-shrink-0">
+                    <button onClick={() => approveVerification(v.id)}
+                      className="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-50 text-emerald-600
+                                 rounded-xl text-xs font-bold hover:bg-emerald-100 transition">
+                      <CheckCircle size={13} /> {isRTL ? 'قبول' : 'Approve'}
+                    </button>
+                    <button onClick={() => { setRejectReason(''); setRejectModal({ type: 'verification', id: v.id }); }}
+                      className="flex items-center gap-1.5 px-3 py-1.5 bg-red-50 text-red-500
+                                 rounded-xl text-xs font-bold hover:bg-red-100 transition">
+                      <XCircle size={13} /> {isRTL ? 'رفض' : 'Reject'}
+                    </button>
+                  </div>
                 </div>
               </div>
             ))}
           </div>
         )}
 
-        {/* ── Reports ── */}
+        {/* ══════════════════════════════════════════════════════════════════
+            TAB 5: REPORTS
+        ══════════════════════════════════════════════════════════════════ */}
         {activeTab === 'reports' && (
           <div className="space-y-3">
             {isLoading ? (
               <div className="flex justify-center py-16"><Loader2 className="animate-spin text-navy" size={28} /></div>
             ) : reports.length === 0 ? (
               <div className="card p-10 text-center text-gray-400">
-                {isRTL ? 'لا توجد بلاغات' : 'No reports'}
+                <CheckCircle size={32} className="mx-auto mb-2 text-emerald-300" />
+                {isRTL ? 'لا توجد بلاغات معلقة' : 'No pending reports'}
               </div>
-            ) : reports.map((r: any) => (
-              <div key={r.id} className="card p-4 flex items-start gap-4">
-                <AlertTriangle className="text-red-400 flex-shrink-0 mt-0.5" size={20} />
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2">
-                    <p className="font-bold text-navy text-sm">{r.data?.reason ?? '—'}</p>
-                    <Link href={`/${locale}/listings/${r.listing_id}`}
-                      className="text-xs text-emerald hover:underline">
-                      #{r.listing_id}
-                    </Link>
+            ) : reports.map((r: any) => {
+              const resolved = r.data?.resolved;
+              return (
+                <div key={r.id} className={`card p-4 flex items-start gap-4 ${resolved ? 'opacity-60' : ''}`}>
+                  <AlertTriangle className="text-red-400 flex-shrink-0 mt-0.5" size={20} />
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <p className="font-bold text-navy text-sm">{r.data?.reason ?? '—'}</p>
+                      {r.listing_id && (
+                        <Link href={`/${locale}/listings/${r.listing_id}`}
+                          className="text-xs text-emerald hover:underline">
+                          #{r.listing_id}
+                        </Link>
+                      )}
+                      {resolved && (
+                        <span className="text-xs bg-emerald-100 text-emerald-600 px-2 py-0.5 rounded-full">
+                          {isRTL ? 'تم الحل' : 'Resolved'}
+                        </span>
+                      )}
+                    </div>
+                    {r.data?.details && (
+                      <p className="text-xs text-gray-500 mt-0.5">{r.data.details}</p>
+                    )}
+                    <p className="text-xs text-gray-400 mt-0.5">
+                      {isRTL ? 'بواسطة:' : 'By:'}{' '}
+                      {isRTL ? r.user?.name_ar : r.user?.name_en} · {r.user?.email}
+                    </p>
+                    {r.listing && (
+                      <p className="text-xs text-gray-400 mt-0.5">
+                        {isRTL ? 'الإعلان:' : 'Listing:'}{' '}
+                        {isRTL ? r.listing.title_ar : r.listing.title_en}
+                      </p>
+                    )}
                   </div>
-                  {r.data?.details && (
-                    <p className="text-xs text-gray-500 mt-0.5">{r.data.details}</p>
+                  {!resolved && (
+                    <button onClick={() => resolveReport(r.id)}
+                      className="px-3 py-1.5 bg-emerald-50 text-emerald-600 rounded-xl text-xs font-bold
+                                 hover:bg-emerald-100 transition flex-shrink-0 whitespace-nowrap">
+                      {isRTL ? '✓ تم الحل' : '✓ Resolve'}
+                    </button>
                   )}
-                  <p className="text-xs text-gray-400 mt-0.5">
-                    {isRTL ? 'بواسطة:' : 'By:'} {isRTL ? r.user?.name_ar : r.user?.name_en}
-                  </p>
                 </div>
-                <button onClick={() => resolveReport(r.id)}
-                  className="px-3 py-1.5 bg-emerald/10 text-emerald rounded-lg text-xs font-semibold
-                             hover:bg-emerald/20 transition flex-shrink-0">
-                  {isRTL ? 'تم الحل' : 'Resolve'}
-                </button>
-              </div>
-            ))}
+              );
+            })}
           </div>
         )}
 
-        {/* ── Users ── */}
+        {/* ══════════════════════════════════════════════════════════════════
+            TAB 6: USERS
+        ══════════════════════════════════════════════════════════════════ */}
         {activeTab === 'users' && (
-          <div className="space-y-3">
-            <input
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              onKeyDown={(e) => { if (e.key === 'Enter') {
-                setIsLoading(true);
-                api.get('/admin/users', { params: { search } }).then((res: any) => {
-                  setUsers(res.data ?? []);
-                }).finally(() => setIsLoading(false));
-              }}}
-              className="input text-sm py-2"
-              placeholder={isRTL ? 'بحث بالاسم أو البريد...' : 'Search by name or email...'}
-            />
+          <div className="space-y-4">
+            {/* Filters */}
+            <div className="card p-4 flex flex-wrap gap-3">
+              <div className="relative flex-1 min-w-[200px]">
+                <Search size={14} className="absolute top-1/2 -translate-y-1/2 start-3 text-gray-400" />
+                <input
+                  value={userSearch}
+                  onChange={e => setUserSearch(e.target.value)}
+                  onKeyDown={e => { if (e.key === 'Enter') loadUsers(); }}
+                  placeholder={isRTL ? 'بحث بالاسم أو البريد...' : 'Search by name or email...'}
+                  className="input text-sm ps-9 py-2"
+                />
+              </div>
+              <select
+                value={userRole}
+                onChange={e => { setUserRole(e.target.value); }}
+                className="input text-sm py-2 flex-shrink-0"
+              >
+                <option value="">{isRTL ? 'كل الأدوار' : 'All roles'}</option>
+                <option value="individual">{isRTL ? 'أفراد' : 'Individuals'}</option>
+                <option value="business">{isRTL ? 'شركات' : 'Businesses'}</option>
+              </select>
+              <button onClick={loadUsers}
+                className="btn-primary text-sm py-2 px-4 flex items-center gap-1.5">
+                <Search size={13} /> {isRTL ? 'بحث' : 'Search'}
+              </button>
+            </div>
+
             {isLoading ? (
               <div className="flex justify-center py-16"><Loader2 className="animate-spin text-navy" size={28} /></div>
             ) : users.length === 0 ? (
               <div className="card p-10 text-center text-gray-400">
-                {isRTL ? 'لا توجد نتائج' : 'No results'}
+                {isRTL ? 'لا توجد نتائج' : 'No results found'}
               </div>
-            ) : users.map((u: any) => (
-              <div key={u.id} className="card p-4 flex items-center gap-4">
-                <div className="w-9 h-9 bg-navy/10 rounded-full flex items-center justify-center
-                                text-navy font-bold text-sm flex-shrink-0">
-                  {(isRTL ? u.name_ar : u.name_en)?.[0]?.toUpperCase()}
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="font-bold text-navy text-sm">
-                    {isRTL ? u.name_ar : u.name_en}
-                  </p>
-                  <p className="text-xs text-gray-400" dir="ltr">{u.email} · {u.role}</p>
-                </div>
-                <div className="flex items-center gap-2 flex-shrink-0">
-                  {u.is_trusted_payer && (
-                    <span className="text-xs bg-emerald/10 text-emerald px-2 py-0.5 rounded-full font-medium">
-                      {isRTL ? 'موثوق' : 'Trusted'}
-                    </span>
-                  )}
-                  <button
-                    onClick={() => toggleTrustedPayer(u.id)}
-                    className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition
-                      ${u.is_trusted_payer
-                        ? 'bg-red-50 text-red-500 hover:bg-red-100'
-                        : 'bg-emerald/10 text-emerald hover:bg-emerald/20'}`}
-                  >
-                    {u.is_trusted_payer
-                      ? (isRTL ? 'سحب الموثوقية' : 'Remove Trust')
-                      : (isRTL ? 'منح الموثوقية' : 'Make Trusted')}
-                  </button>
-                </div>
+            ) : (
+              <div className="space-y-2">
+                {users.map((u: any) => (
+                  <div key={u.id} className="card p-4 flex items-center gap-4">
+                    <div className="w-10 h-10 bg-navy/10 rounded-full flex items-center justify-center
+                                    text-navy font-black text-sm flex-shrink-0">
+                      {(isRTL ? u.name_ar : u.name_en)?.[0]?.toUpperCase() ?? '?'}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="font-bold text-navy text-sm">
+                        {isRTL ? u.name_ar : u.name_en}
+                      </p>
+                      <p className="text-xs text-gray-400" dir="ltr">{u.email}</p>
+                      <div className="flex items-center gap-2 mt-0.5 flex-wrap">
+                        <span className={`text-xs px-2 py-0.5 rounded-full font-medium
+                          ${u.role === 'business' ? 'bg-blue-100 text-blue-600' :
+                            u.role === 'admin'    ? 'bg-red-100 text-red-600' :
+                                                   'bg-gray-100 text-gray-500'}`}>
+                          {u.role === 'business' ? (isRTL ? 'شركة' : 'Business') :
+                           u.role === 'admin'    ? (isRTL ? 'مشرف' : 'Admin') :
+                                                  (isRTL ? 'فرد' : 'Individual')}
+                        </span>
+                        {u.listings_count > 0 && (
+                          <span className="text-xs text-gray-400">
+                            {u.listings_count} {isRTL ? 'إعلان' : 'listings'}
+                          </span>
+                        )}
+                        {u.is_trusted_payer && (
+                          <span className="text-xs bg-emerald-100 text-emerald-600 px-2 py-0.5 rounded-full font-medium">
+                            ✓ {isRTL ? 'موثوق' : 'Trusted'}
+                          </span>
+                        )}
+                        {u.email_verified_at && (
+                          <span className="text-xs bg-gray-100 text-gray-400 px-2 py-0.5 rounded-full">
+                            {isRTL ? 'بريد موثق' : 'Email verified'}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                    <button
+                      onClick={() => toggleTrustedPayer(u.id)}
+                      className={`px-3 py-1.5 rounded-xl text-xs font-bold transition flex-shrink-0
+                        ${u.is_trusted_payer
+                          ? 'bg-red-50 text-red-500 hover:bg-red-100'
+                          : 'bg-emerald-50 text-emerald-600 hover:bg-emerald-100'}`}
+                    >
+                      {u.is_trusted_payer
+                        ? (isRTL ? 'سحب الموثوقية' : 'Remove Trust')
+                        : (isRTL ? 'منح الموثوقية' : 'Make Trusted')}
+                    </button>
+                  </div>
+                ))}
               </div>
-            ))}
+            )}
           </div>
         )}
 
@@ -466,39 +1097,309 @@ export default function AdminPage() {
 
       <Footer />
 
-      {/* Reject Modal */}
+      {/* ── Reject Modal ─────────────────────────────────────────────────────── */}
       {rejectModal && (
         <div className="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-4"
              onClick={() => setRejectModal(null)}>
-          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md p-6"
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg p-6 max-h-[90vh] overflow-y-auto"
                onClick={e => e.stopPropagation()}>
-            <h3 className="font-bold text-navy text-lg mb-1">
+            <h3 className="font-black text-navy text-lg mb-1">
               {isRTL ? 'سبب الرفض' : 'Rejection Reason'}
             </h3>
             <p className="text-gray-500 text-sm mb-4">
               {rejectModal.type === 'listing'
                 ? (isRTL ? 'سيُرسل هذا السبب لصاحب الإعلان.' : 'This reason will be sent to the listing owner.')
-                : (isRTL ? 'سيُرسل هذا السبب لصاحب طلب التوثيق.' : 'This will be sent to the verification requester.')}
+                : (isRTL ? 'سيُرسل هذا السبب لصاحب طلب التوثيق.' : 'This will be sent to the requester.')}
             </p>
+
+            {/* Quick-pick templates */}
+            <p className="text-[11px] font-bold text-gray-400 uppercase tracking-wider mb-2">
+              {isRTL ? 'أسباب جاهزة' : 'Quick reasons'}
+            </p>
+            <div className="flex flex-wrap gap-1.5 mb-4">
+              {(rejectModal.type === 'listing' ? LISTING_REJECT_TEMPLATES : VERIFICATION_REJECT_TEMPLATES)
+                .map((t, i) => {
+                  const text = isRTL ? t.ar : t.en;
+                  const selected = rejectReason === text;
+                  return (
+                    <button
+                      key={i}
+                      type="button"
+                      onClick={() => setRejectReason(text)}
+                      className={`text-xs px-3 py-1.5 rounded-full border transition
+                        ${selected
+                          ? 'bg-red-50 border-red-400 text-red-700 font-bold'
+                          : 'bg-gray-50 border-gray-200 text-gray-700 hover:border-red-300 hover:bg-red-50'}`}
+                    >
+                      {text}
+                    </button>
+                  );
+                })}
+            </div>
+
             <textarea
               value={rejectReason}
               onChange={e => setRejectReason(e.target.value)}
               className="input text-sm min-h-[100px] resize-none mb-4"
               dir={isRTL ? 'rtl' : 'ltr'}
-              placeholder={isRTL ? 'اكتب سبب الرفض...' : 'Enter rejection reason...'}
+              placeholder={isRTL ? 'اكتب سبب الرفض أو اختر من الأعلى...' : 'Enter reason or pick from above...'}
               autoFocus
             />
             <div className="flex gap-3">
               <button onClick={() => setRejectModal(null)}
-                className="flex-1 py-2.5 rounded-xl border text-sm text-gray-600 hover:bg-gray-50 transition">
+                className="flex-1 py-2.5 rounded-xl border text-sm text-gray-600 hover:bg-gray-50 transition font-medium">
                 {isRTL ? 'إلغاء' : 'Cancel'}
               </button>
               <button
                 onClick={confirmReject}
                 disabled={!rejectReason.trim()}
-                className="flex-1 py-2.5 rounded-xl bg-red-500 hover:bg-red-600 text-white text-sm font-semibold transition disabled:opacity-40">
+                className="flex-1 py-2.5 rounded-xl bg-red-500 hover:bg-red-600 text-white text-sm font-bold transition disabled:opacity-40">
                 {isRTL ? 'تأكيد الرفض' : 'Confirm Reject'}
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── CR Document Preview Modal ─────────────────────────────────────────── */}
+      {crPreview && (
+        <div className="fixed inset-0 z-50 bg-black/80 flex items-center justify-center p-4"
+             onClick={() => setCrPreview(null)}>
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-3xl max-h-[90vh] flex flex-col"
+               onClick={e => e.stopPropagation()}>
+            {/* Header */}
+            <div className="flex items-center justify-between p-4 border-b">
+              <div className="flex items-center gap-3 min-w-0">
+                <div className="w-10 h-10 rounded-xl bg-emerald/10 flex items-center justify-center shrink-0">
+                  <FileText className="text-emerald" size={18} />
+                </div>
+                <div className="min-w-0">
+                  <p className="font-bold text-navy text-sm truncate">{crPreview.name}</p>
+                  <p className="text-xs text-gray-400 truncate" dir="ltr">CR: {crPreview.cr}</p>
+                </div>
+              </div>
+              <div className="flex items-center gap-2 shrink-0">
+                <a
+                  href={crPreview.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center gap-1.5 px-3 py-1.5 bg-navy/10 text-navy
+                             rounded-lg text-xs font-bold hover:bg-navy/20 transition"
+                >
+                  <ExternalLink size={12} />
+                  {isRTL ? 'فتح خارجي' : 'Open'}
+                </a>
+                <a
+                  href={crPreview.url}
+                  download
+                  className="flex items-center gap-1.5 px-3 py-1.5 bg-emerald/10 text-emerald
+                             rounded-lg text-xs font-bold hover:bg-emerald/20 transition"
+                >
+                  <Download size={12} />
+                  {isRTL ? 'تنزيل' : 'Download'}
+                </a>
+                <button
+                  onClick={() => setCrPreview(null)}
+                  className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-500 transition"
+                >
+                  <X size={16} />
+                </button>
+              </div>
+            </div>
+            {/* Body */}
+            <div className="flex-1 overflow-auto bg-gray-100 p-4">
+              {crPreview.url.toLowerCase().endsWith('.pdf') ? (
+                <iframe
+                  src={crPreview.url}
+                  className="w-full h-[70vh] bg-white rounded-lg shadow"
+                  title={crPreview.name}
+                />
+              ) : (
+                <img
+                  src={crPreview.url}
+                  alt={crPreview.name}
+                  className="max-w-full max-h-[70vh] mx-auto rounded-lg shadow"
+                />
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Listing Quick Preview Modal ───────────────────────────────────────── */}
+      {listingPreview && (
+        <div className="fixed inset-0 z-50 bg-black/70 flex items-center justify-center p-4"
+             onClick={() => setListingPreview(null)}>
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] flex flex-col"
+               onClick={e => e.stopPropagation()}>
+            {/* Header */}
+            <div className="flex items-center justify-between p-4 border-b">
+              <div className="flex items-center gap-2">
+                <Eye className="text-navy" size={16} />
+                <span className="font-bold text-navy text-sm">
+                  {isRTL ? 'معاينة الإعلان' : 'Listing Preview'}
+                </span>
+              </div>
+              <div className="flex items-center gap-2">
+                {listingPreview?.id && !listingPreview?.loading && (
+                  <Link
+                    href={`/${locale}/listings/${listingPreview.id}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center gap-1.5 px-3 py-1.5 bg-emerald/10 text-emerald
+                               rounded-lg text-xs font-bold hover:bg-emerald/20 transition"
+                  >
+                    <ExternalLink size={12} />
+                    {isRTL ? 'الصفحة الكاملة' : 'Full page'}
+                  </Link>
+                )}
+                <button
+                  onClick={() => setListingPreview(null)}
+                  className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-500 transition"
+                >
+                  <X size={16} />
+                </button>
+              </div>
+            </div>
+            {/* Body */}
+            <div className="flex-1 overflow-y-auto p-5">
+              {listingPreviewLoading || listingPreview?.loading ? (
+                <div className="flex justify-center py-16">
+                  <Loader2 className="animate-spin text-navy" size={28} />
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  {/* Images */}
+                  {(() => {
+                    const imgs = (listingPreview.media ?? [])
+                      .filter((m: any) => m.type === 'image')
+                      .map((m: any) => `${process.env.NEXT_PUBLIC_API_URL}/uploads/${m.path}`);
+                    if (imgs.length === 0) return null;
+                    return (
+                      <div className="flex gap-2 overflow-x-auto pb-1">
+                        {imgs.map((url: string, i: number) => (
+                          <img key={i} src={url} alt=""
+                            className="h-32 rounded-lg object-cover flex-shrink-0" />
+                        ))}
+                      </div>
+                    );
+                  })()}
+
+                  {/* Title + badges */}
+                  <div>
+                    <div className="flex items-center gap-2 mb-2 flex-wrap">
+                      <span className="text-xs bg-navy/10 text-navy px-2 py-0.5 rounded-full font-medium">
+                        {isRTL ? SECTION_LABEL[listingPreview.section] : SECTION_LABEL_EN[listingPreview.section]}
+                      </span>
+                      {listingPreview.is_featured && (
+                        <span className="text-xs bg-yellow-100 text-yellow-700 px-2 py-0.5 rounded-full font-medium">
+                          ⭐ {isRTL ? 'مميز' : 'Featured'}
+                        </span>
+                      )}
+                      {listingPreview.is_financing_eligible && (
+                        <span className="text-xs bg-blue-50 text-blue-700 px-2 py-0.5 rounded-full font-medium">
+                          💰 {isRTL ? 'مؤهل للتمويل' : 'Financing'}
+                        </span>
+                      )}
+                      {listingPreview.is_ready_to_operate && (
+                        <span className="text-xs bg-emerald-50 text-emerald-700 px-2 py-0.5 rounded-full font-medium">
+                          🟢 {isRTL ? 'جاهز للتشغيل' : 'Ready'}
+                        </span>
+                      )}
+                    </div>
+                    <h3 className="font-black text-navy text-lg leading-snug">
+                      {isRTL ? listingPreview.title_ar : (listingPreview.title_en || listingPreview.title_ar)}
+                    </h3>
+                  </div>
+
+                  {/* Meta */}
+                  <div className="flex flex-wrap gap-4 text-sm text-gray-500 border-y border-gray-100 py-3">
+                    {listingPreview.city && (
+                      <span className="flex items-center gap-1.5">
+                        <MapPin size={13} /> {listingPreview.city}
+                      </span>
+                    )}
+                    {listingPreview.price && (
+                      <span className="flex items-center gap-1.5">
+                        <DollarSign size={13} />
+                        {Number(listingPreview.price).toLocaleString(isRTL ? 'ar-SA' : 'en-US')} {isRTL ? 'ر.س' : 'SAR'}
+                      </span>
+                    )}
+                    <span className="flex items-center gap-1.5">
+                      <Eye size={13} /> {listingPreview.views_count ?? 0}
+                    </span>
+                    {listingPreview.created_at && (
+                      <span className="flex items-center gap-1.5">
+                        <Calendar size={13} />
+                        {new Date(listingPreview.created_at).toLocaleDateString(isRTL ? 'ar-SA' : 'en-US')}
+                      </span>
+                    )}
+                  </div>
+
+                  {/* Description */}
+                  {listingPreview.description_ar && (
+                    <div>
+                      <p className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-1">
+                        {isRTL ? 'الوصف' : 'Description'}
+                      </p>
+                      <p className="text-sm text-gray-700 whitespace-pre-line leading-relaxed"
+                         dir={isRTL ? 'rtl' : 'ltr'}>
+                        {isRTL ? listingPreview.description_ar : (listingPreview.description_en || listingPreview.description_ar)}
+                      </p>
+                    </div>
+                  )}
+
+                  {/* Dynamic data */}
+                  {listingPreview.dynamic_data && Object.keys(listingPreview.dynamic_data).length > 0 && (
+                    <div>
+                      <p className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">
+                        {isRTL ? 'بيانات إضافية' : 'Additional Data'}
+                      </p>
+                      <div className="grid grid-cols-2 gap-2">
+                        {Object.entries(listingPreview.dynamic_data)
+                          .filter(([, v]) => v !== null && v !== '' && v !== undefined)
+                          .map(([k, v]) => (
+                            <div key={k} className="bg-gray-50 rounded-lg px-3 py-2">
+                              <p className="text-[10px] text-gray-400 uppercase">{k}</p>
+                              <p className="text-sm font-semibold text-gray-800 truncate">{String(v)}</p>
+                            </div>
+                          ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Owner */}
+                  {listingPreview.user && (
+                    <div className="bg-gray-50 rounded-xl p-3 flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-full bg-navy/10 flex items-center justify-center
+                                      text-navy font-bold text-sm">
+                        {(isRTL ? listingPreview.user.name_ar : listingPreview.user.name_en)?.[0] ?? '?'}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-bold text-navy truncate">
+                          {isRTL ? listingPreview.user.name_ar : listingPreview.user.name_en}
+                        </p>
+                        <p className="text-xs text-gray-400 capitalize">{listingPreview.user.role}</p>
+                      </div>
+                      {listingPreview.user.is_trusted_payer && (
+                        <span className="text-xs bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full font-medium">
+                          🎖️ {isRTL ? 'موثوق' : 'Trusted'}
+                        </span>
+                      )}
+                    </div>
+                  )}
+
+                  {/* Rejection reason if any */}
+                  {listingPreview.rejection_reason && (
+                    <div className="bg-red-50 border border-red-200 rounded-xl p-3">
+                      <p className="text-xs font-bold text-red-600 mb-1">
+                        {isRTL ? 'سبب الرفض' : 'Rejection reason'}
+                      </p>
+                      <p className="text-sm text-red-700">{listingPreview.rejection_reason}</p>
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
           </div>
         </div>
