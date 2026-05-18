@@ -13,12 +13,29 @@ import CTABanner          from '@/components/home/CTABanner'
 
 type Props = { params: Promise<{ locale: string }> }
 
+const BASE = process.env.NEXT_PUBLIC_APP_URL ?? 'https://www.nwafizlogi.com'
+
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { locale } = await params
   const t = await getTranslations({ locale, namespace: 'hero' })
+  const isAr = locale === 'ar'
+  const title = isAr ? 'نوافذ — منصة اللوجستيك B2B' : 'Nawafez — B2B Logistics Marketplace'
   return {
-    title: locale === 'ar' ? 'نوافذ — منصة اللوجستيك B2B' : 'Nawafez — B2B Logistics Marketplace',
+    title,
     description: t('desc'),
+    alternates: {
+      canonical: `${BASE}/${locale}`,
+      languages: { ar: `${BASE}/ar`, en: `${BASE}/en` },
+    },
+    openGraph: {
+      type: 'website',
+      siteName: 'نوافذ',
+      locale: isAr ? 'ar_SA' : 'en_US',
+      url: `${BASE}/${locale}`,
+      title,
+      description: t('desc'),
+      images: [{ url: '/logo.png', width: 800, height: 626, alt: 'نوافذ' }],
+    },
   }
 }
 
