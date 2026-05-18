@@ -1,4 +1,5 @@
 import type { Metadata } from 'next'
+import { faqs } from '@/data/faq'
 
 const BASE = process.env.NEXT_PUBLIC_APP_URL ?? 'https://www.nwafizlogi.com'
 
@@ -19,6 +20,31 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   }
 }
 
-export default function FaqLayout({ children }: Props) {
-  return <>{children}</>
+export default async function FaqLayout({ children, params }: Props) {
+  const { locale } = await params
+  const items = (locale === 'ar' ? faqs.ar : faqs.en)
+
+  // FAQPage Schema.org — qualifies for Google's expandable FAQ rich results
+  const faqSchema = {
+    '@context': 'https://schema.org',
+    '@type':    'FAQPage',
+    mainEntity: items.map(item => ({
+      '@type':    'Question',
+      name:        item.q,
+      acceptedAnswer: {
+        '@type': 'Answer',
+        text:    item.a,
+      },
+    })),
+  }
+
+  return (
+    <>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(faqSchema) }}
+      />
+      {children}
+    </>
+  )
 }
