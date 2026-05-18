@@ -19,16 +19,28 @@ interface BackendListing {
 }
 
 async function fetchListings(): Promise<BackendListing[]> {
+  // Each individual fetch is capped at 3 seconds so a slow backend
+  // never blocks Google from getting at least the static portion of
+  // the sitemap. Empty array is a safe fallback — Google still gets
+  // the static URLs.
   try {
-    // Page through up to a few hundred listings. /api/listings already
-    // filters by ->active() so only public ones come back.
     const all: BackendListing[] = []
     for (let page = 1; page <= 10; page++) {
-      const res = await fetch(`${API}/api/listings?page=${page}`, {
-        next: { revalidate: 3600 },
-      })
-      if (!res.ok) break
-      const json = await res.json()
+      const controller = new AbortController()
+      const t = setTimeout(() => controller.abort(), 3000)
+      let json: any
+      try {
+        const res = await fetch(`${API}/api/listings?page=${page}`, {
+          signal: controller.signal,
+          next: { revalidate: 3600 },
+        })
+        if (!res.ok) { clearTimeout(t); break }
+        json = await res.json()
+      } catch {
+        clearTimeout(t)
+        break  // network/timeout — stop pagination but return what we have
+      }
+      clearTimeout(t)
       const items: BackendListing[] = json.data ?? []
       if (items.length === 0) break
       all.push(...items)
