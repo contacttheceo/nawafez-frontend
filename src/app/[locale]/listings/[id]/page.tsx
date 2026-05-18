@@ -10,9 +10,10 @@ import {
   ArrowRight, MessageCircle, ChevronLeft, ChevronRight,
   Share2, Check, AlertTriangle, Clock, BadgeCheck,
   Send, Trash2, ChevronDown, Zap, Sparkles, X as XIcon,
+  ThumbsUp, Reply, Star, CheckCircle2,
 } from 'lucide-react';
 import { listingsApi, interactionsApi, commentsApi } from '@/lib/api';
-import type { ListingComment } from '@/lib/api';
+import type { ListingComment, CommentSort } from '@/lib/api';
 import { useAuthStore } from '@/store/auth';
 import { formatPrice, formatDistanceToNow, storageUrl } from '@/lib/utils';
 import type { Listing } from '@/types';
@@ -100,6 +101,10 @@ export default function ListingDetailPage() {
   const [loadingMoreCom,    setLoadingMoreCom]    = useState(false);
   const [commentSummary,    setCommentSummary]    = useState<string[]>([]);
   const [summaryDismissed,  setSummaryDismissed]  = useState(false);
+  const [commentSort,       setCommentSort]       = useState<CommentSort>('official');
+  const [replyingTo,        setReplyingTo]        = useState<number | null>(null);
+  const [replyText,         setReplyText]         = useState('');
+  const [submittingReply,   setSubmittingReply]   = useState(false);
   const summaryFetchedRef = useRef(false); // prevent duplicate fetches
 
 
@@ -144,14 +149,14 @@ export default function ListingDetailPage() {
   const fetchComments = useCallback(async (page: number, append = false) => {
     if (page === 1) setCommentLoading(true); else setLoadingMoreCom(true);
     try {
-      const res = await commentsApi.getAll(Number(id), page);
+      const sort = listing?.section === 'forum' ? commentSort : 'newest';
+      const res = await commentsApi.getAll(Number(id), page, sort);
       const incoming: ListingComment[] = res.data;
       setComments(prev => append ? [...prev, ...incoming] : incoming);
       setCommentMeta(res.meta);
-      // Trigger summary for ≥5 comments — done via useEffect below
     } catch {}
     finally { setCommentLoading(false); setLoadingMoreCom(false); }
-  }, [id]);
+  }, [id, commentSort, listing?.section]);
 
   useEffect(() => { fetchComments(1); }, [fetchComments]);
 
@@ -185,7 +190,16 @@ export default function ListingDetailPage() {
     setSubmittingComment(true);
     try {
       const res = await commentsApi.add(Number(id), commentText.trim());
-      setComments(prev => [res.data, ...prev]);
+      // Ensure new comment has the Q&A fields the UI expects
+      const enriched: ListingComment = {
+        ...res.data,
+        replies: res.data.replies ?? [],
+        upvotes_count: res.data.upvotes_count ?? 0,
+        is_official_answer: res.data.is_official_answer ?? false,
+        is_marked_helpful: res.data.is_marked_helpful ?? false,
+        viewer_voted: false,
+      };
+      setComments(prev => [enriched, ...prev]);
       setCommentMeta(prev => prev ? { ...prev, total: prev.total + 1 } : prev);
       setCommentText('');
       toast.success(isRTL ? 'تم إضافة التعليق ✓' : 'Comment added ✓');
@@ -206,13 +220,106 @@ export default function ListingDetailPage() {
     }
   };
 
-  /* ── Delete comment ── */
+  /* ── Q&A interactions ── */
+  const updateCommentInTree = (commentId: number, updater: (c: ListingComment) => ListingComment) => {
+    setComments(prev => prev.map(c => {
+      if (c.id === commentId) return updater(c);
+      if (c.replies?.some(r => r.id === commentId)) {
+        return { ...c, replies: c.replies.map(r => r.id === commentId ? updater(r) : r) };
+      }
+      return c;
+    }));
+  };
+
+  const handleVote = async (commentId: number) => {
+    if (!isAuthenticated) { router.push(`/${locale}/auth/login`); return; }
+    try {
+      const res = await commentsApi.toggleVote(commentId);
+      updateCommentInTree(commentId, c => ({ ...c, upvotes_count: res.upvotes_count, viewer_voted: res.voted }));
+    } catch {
+      toast.error(isRTL ? 'فشل التصويت' : 'Vote failed');
+    }
+  };
+
+  const handleMarkHelpful = async (commentId: number, currentlyMarked: boolean) => {
+    try {
+      if (currentlyMarked) {
+        await commentsApi.unmarkHelpful(commentId);
+        updateCommentInTree(commentId, c => ({ ...c, is_marked_helpful: false }));
+      } else {
+        await commentsApi.markHelpful(commentId);
+        // Server unmarks others — refetch list to reflect
+        setComments(prev => prev.map(c => ({
+          ...c, is_marked_helpful: c.id === commentId,
+          replies: c.replies?.map(r => ({ ...r, is_marked_helpful: r.id === commentId })),
+        })));
+      }
+      toast.success(isRTL ? '✓' : '✓');
+    } catch (err: any) {
+      toast.error(err?.response?.data?.message ?? (isRTL ? 'فشل' : 'Failed'));
+    }
+  };
+
+  const handleMarkOfficial = async (commentId: number, currentlyOfficial: boolean) => {
+    try {
+      if (currentlyOfficial) {
+        await (await import('@/lib/api')).adminApi.unmarkCommentOfficial(commentId);
+        updateCommentInTree(commentId, c => ({ ...c, is_official_answer: false }));
+      } else {
+        await (await import('@/lib/api')).adminApi.markCommentOfficial(commentId);
+        updateCommentInTree(commentId, c => ({ ...c, is_official_answer: true }));
+      }
+      toast.success(isRTL ? '✓' : '✓');
+    } catch {
+      toast.error(isRTL ? 'فشل' : 'Failed');
+    }
+  };
+
+  const handleReportComment = async (commentId: number) => {
+    if (!isAuthenticated) { router.push(`/${locale}/auth/login`); return; }
+    const reason = window.prompt(isRTL
+      ? 'سبب الإبلاغ: spam | abuse | off_topic | misleading | other'
+      : 'Report reason: spam | abuse | off_topic | misleading | other');
+    if (!reason) return;
+    try {
+      await commentsApi.report(commentId, reason);
+      toast.success(isRTL ? 'تم الإبلاغ' : 'Reported');
+    } catch {
+      toast.error(isRTL ? 'فشل الإبلاغ' : 'Report failed');
+    }
+  };
+
+  const handleSubmitReply = async (parentId: number) => {
+    if (!replyText.trim() || submittingReply) return;
+    setSubmittingReply(true);
+    try {
+      const res = await commentsApi.add(Number(id), replyText.trim(), parentId);
+      setComments(prev => prev.map(c =>
+        c.id === parentId
+          ? { ...c, replies: [...(c.replies ?? []), res.data] }
+          : c
+      ));
+      setReplyText(''); setReplyingTo(null);
+    } catch (err: any) {
+      toast.error(err?.response?.data?.message ?? (isRTL ? 'فشل' : 'Failed'));
+    } finally {
+      setSubmittingReply(false);
+    }
+  };
+
+  /* ── Delete comment (handles both top-level and reply) ── */
   const handleDeleteComment = async (commentId: number) => {
     try {
       await commentsApi.delete(Number(id), commentId);
-      setComments(prev => prev.filter(c => c.id !== commentId));
+      setComments(prev => prev
+        .filter(c => c.id !== commentId)
+        .map(c => c.replies && c.replies.some(r => r.id === commentId)
+          ? { ...c, replies: c.replies.filter(r => r.id !== commentId) }
+          : c
+        )
+      );
       setCommentMeta(prev => prev ? { ...prev, total: prev.total - 1 } : prev);
-      toast.success(isRTL ? 'تم حذف التعليق' : 'Comment deleted');
+      toast.success(isRTL ? 'تم الحذف' : 'Deleted');
     } catch {
       toast.error(isRTL ? 'فشل الحذف' : 'Delete failed');
     }
@@ -619,17 +726,34 @@ export default function ListingDetailPage() {
                 </Link>
               )}
 
-              {/* ── Comments ─────────────────────────────────────── */}
+              {/* ── Comments / Q&A Answers ───────────────────────── */}
               <div>
-                <h2 className="font-bold text-navy text-lg mb-4 flex items-center gap-2">
-                  <span className="w-1 h-5 bg-emerald rounded-full inline-block" />
-                  {isRTL ? 'التعليقات' : 'Comments'}
-                  {commentMeta && commentMeta.total > 0 && (
-                    <span className="text-sm font-normal text-gray-400 ms-1">
-                      ({commentMeta.total})
-                    </span>
+                <div className="flex items-center justify-between mb-4 flex-wrap gap-2">
+                  <h2 className="font-bold text-navy text-lg flex items-center gap-2">
+                    <span className="w-1 h-5 bg-emerald rounded-full inline-block" />
+                    {listing.section === 'forum'
+                      ? (isRTL ? 'الإجابات' : 'Answers')
+                      : (isRTL ? 'التعليقات' : 'Comments')}
+                    {commentMeta && commentMeta.total > 0 && (
+                      <span className="text-sm font-normal text-gray-400 ms-1">
+                        ({commentMeta.total})
+                      </span>
+                    )}
+                  </h2>
+
+                  {/* Sort dropdown — forum only */}
+                  {listing.section === 'forum' && comments.length > 1 && (
+                    <select
+                      value={commentSort}
+                      onChange={e => setCommentSort(e.target.value as CommentSort)}
+                      className="text-xs border border-gray-200 rounded-lg px-2 py-1 bg-white text-gray-600 cursor-pointer"
+                    >
+                      <option value="official">{isRTL ? 'الرسمية أولاً' : 'Official first'}</option>
+                      <option value="votes">{isRTL ? 'الأعلى تصويتاً' : 'Most upvoted'}</option>
+                      <option value="newest">{isRTL ? 'الأحدث' : 'Newest'}</option>
+                    </select>
                   )}
-                </h2>
+                </div>
 
                 {/* AI Comment Summary Card */}
                 {commentSummary.length > 0 && !summaryDismissed && (
@@ -728,48 +852,166 @@ export default function ListingDetailPage() {
                     {isRTL ? 'لا توجد تعليقات بعد — كن أول من يعلّق' : 'No comments yet — be the first!'}
                   </div>
                 ) : (
-                  <div className="space-y-4">
+                  <div className="space-y-5">
                     {comments.map(c => {
-                      const name = isRTL ? (c.user?.name_ar ?? c.user?.name_en) : (c.user?.name_en ?? c.user?.name_ar);
-                      const canDelete = user?.id === c.user_id || user?.id === listing?.user_id || user?.role === 'admin';
-                      return (
-                        <div key={c.id} className="flex gap-3 group">
-                          {/* Avatar */}
-                          <div className="w-9 h-9 rounded-full bg-navy/10 border border-navy/10
-                                          flex items-center justify-center text-navy font-bold text-sm shrink-0 overflow-hidden">
-                            {c.user?.avatar_url && storageUrl(c.user.avatar_url)
-                              ? <img src={storageUrl(c.user.avatar_url)!}
-                                     alt="" className="w-full h-full object-cover"
-                                     onError={(e) => { (e.target as HTMLImageElement).style.display = 'none' }} />
-                              : (name?.[0]?.toUpperCase() ?? '؟')
-                            }
-                          </div>
-                          <div className="flex-1 min-w-0">
-                            <div className="flex items-center gap-2 mb-1 flex-wrap">
-                              <span className="font-semibold text-sm text-navy">{name ?? '—'}</span>
-                              {c.user?.is_trusted_payer && (
-                                <span className="text-[10px] bg-emerald/10 text-emerald font-bold px-1.5 py-0.5 rounded-full flex items-center gap-0.5">
-                                  <BadgeCheck size={10} /> {isRTL ? 'موثّق' : 'Verified'}
+                      const renderComment = (cm: ListingComment, isReply = false) => {
+                        const name = isRTL ? (cm.user?.name_ar ?? cm.user?.name_en) : (cm.user?.name_en ?? cm.user?.name_ar);
+                        const canDelete = user?.id === cm.user_id || user?.id === listing?.user_id || user?.role === 'admin';
+                        const isOwner   = user?.id === listing?.user_id;
+                        const isAdmin   = user?.role === 'admin';
+                        const avatarPath = cm.user?.avatar_url ?? (cm.user as any)?.avatar;
+
+                        return (
+                          <div key={cm.id} className={`flex gap-3 group ${isReply ? (isRTL ? 'mr-10' : 'ml-10') : ''}`}>
+                            <div className="w-9 h-9 rounded-full bg-navy/10 border border-navy/10
+                                            flex items-center justify-center text-navy font-bold text-sm shrink-0 overflow-hidden">
+                              {avatarPath && storageUrl(avatarPath)
+                                ? <img src={storageUrl(avatarPath)!} alt=""
+                                       className="w-full h-full object-cover"
+                                       onError={(e) => { (e.target as HTMLImageElement).style.display = 'none' }} />
+                                : (name?.[0]?.toUpperCase() ?? '؟')
+                              }
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center gap-2 mb-1 flex-wrap">
+                                <span className="font-semibold text-sm text-navy">{name ?? '—'}</span>
+                                {cm.user?.is_trusted_payer && (
+                                  <span className="text-[10px] bg-emerald/10 text-emerald font-bold px-1.5 py-0.5 rounded-full flex items-center gap-0.5">
+                                    <BadgeCheck size={10} /> {isRTL ? 'موثّق' : 'Verified'}
+                                  </span>
+                                )}
+                                {cm.is_official_answer && (
+                                  <span className="text-[10px] bg-violet-100 text-violet-700 font-bold px-1.5 py-0.5 rounded-full flex items-center gap-0.5">
+                                    ⭐ {isRTL ? 'إجابة رسمية' : 'Official'}
+                                  </span>
+                                )}
+                                {cm.is_marked_helpful && (
+                                  <span className="text-[10px] bg-emerald/10 text-emerald font-bold px-1.5 py-0.5 rounded-full flex items-center gap-0.5">
+                                    <CheckCircle2 size={10} /> {isRTL ? 'أجاب على السؤال' : 'Helpful'}
+                                  </span>
+                                )}
+                                <span className="text-xs text-gray-400 ms-auto">
+                                  {formatDistanceToNow(cm.created_at, locale)}
                                 </span>
-                              )}
-                              <span className="text-xs text-gray-400 ms-auto">
-                                {formatDistanceToNow(c.created_at, locale)}
-                              </span>
-                              {canDelete && (
+                                {canDelete && (
+                                  <button
+                                    onClick={() => handleDeleteComment(cm.id)}
+                                    className="opacity-0 group-hover:opacity-100 text-gray-300 hover:text-red-400 transition p-1 rounded"
+                                    title={isRTL ? 'حذف' : 'Delete'}
+                                  >
+                                    <Trash2 size={13} />
+                                  </button>
+                                )}
+                              </div>
+                              <p className="text-sm text-gray-700 leading-relaxed whitespace-pre-wrap break-words mb-2">
+                                {cm.body}
+                              </p>
+
+                              {/* Action bar */}
+                              <div className="flex items-center gap-1 flex-wrap">
                                 <button
-                                  onClick={() => handleDeleteComment(c.id)}
-                                  className="opacity-0 group-hover:opacity-100 text-gray-300
-                                             hover:text-red-400 transition p-1 rounded"
-                                  title={isRTL ? 'حذف' : 'Delete'}
+                                  onClick={() => handleVote(cm.id)}
+                                  className={`flex items-center gap-1 px-2 py-1 rounded-md text-xs font-bold transition
+                                              ${cm.viewer_voted
+                                                ? 'bg-emerald/10 text-emerald'
+                                                : 'text-gray-500 hover:bg-gray-100'}`}
                                 >
-                                  <Trash2 size={13} />
+                                  <ThumbsUp size={12} fill={cm.viewer_voted ? 'currentColor' : 'none'} />
+                                  {cm.upvotes_count > 0 && <span>{cm.upvotes_count}</span>}
                                 </button>
+
+                                {!isReply && isAuthenticated && (
+                                  <button
+                                    onClick={() => { setReplyingTo(replyingTo === cm.id ? null : cm.id); setReplyText(''); }}
+                                    className="flex items-center gap-1 px-2 py-1 rounded-md text-xs font-medium
+                                               text-gray-500 hover:bg-gray-100 transition"
+                                  >
+                                    <Reply size={12} />
+                                    {isRTL ? 'رد' : 'Reply'}
+                                  </button>
+                                )}
+
+                                {isOwner && !isReply && (
+                                  <button
+                                    onClick={() => handleMarkHelpful(cm.id, cm.is_marked_helpful)}
+                                    className={`flex items-center gap-1 px-2 py-1 rounded-md text-xs font-medium transition
+                                                ${cm.is_marked_helpful
+                                                  ? 'bg-emerald/10 text-emerald'
+                                                  : 'text-gray-500 hover:bg-gray-100'}`}
+                                    title={isRTL ? 'أجاب على سؤالي' : 'Marked helpful'}
+                                  >
+                                    <CheckCircle2 size={12} />
+                                    {isRTL ? (cm.is_marked_helpful ? 'مفيد' : 'حدّد كمفيد') : (cm.is_marked_helpful ? 'Helpful' : 'Mark helpful')}
+                                  </button>
+                                )}
+
+                                {isAdmin && (
+                                  <button
+                                    onClick={() => handleMarkOfficial(cm.id, cm.is_official_answer)}
+                                    className={`flex items-center gap-1 px-2 py-1 rounded-md text-xs font-medium transition
+                                                ${cm.is_official_answer
+                                                  ? 'bg-violet-100 text-violet-700'
+                                                  : 'text-gray-500 hover:bg-gray-100'}`}
+                                  >
+                                    <Star size={12} fill={cm.is_official_answer ? 'currentColor' : 'none'} />
+                                    {isRTL ? (cm.is_official_answer ? 'إلغاء الرسمية' : 'اعتبر رسمي') : (cm.is_official_answer ? 'Unmark official' : 'Mark official')}
+                                  </button>
+                                )}
+
+                                {isAuthenticated && cm.user_id !== user?.id && (
+                                  <button
+                                    onClick={() => handleReportComment(cm.id)}
+                                    className="flex items-center gap-1 px-2 py-1 rounded-md text-xs font-medium text-gray-400 hover:text-red-500 transition"
+                                    title={isRTL ? 'إبلاغ' : 'Report'}
+                                  >
+                                    <Flag size={12} />
+                                  </button>
+                                )}
+                              </div>
+
+                              {/* Reply form */}
+                              {!isReply && replyingTo === cm.id && (
+                                <div className="mt-3 ms-2 ps-3 border-s-2 border-emerald/30">
+                                  <textarea
+                                    value={replyText}
+                                    onChange={e => setReplyText(e.target.value)}
+                                    rows={2}
+                                    maxLength={1000}
+                                    autoFocus
+                                    className="input w-full text-sm resize-none"
+                                    placeholder={isRTL ? 'اكتب ردّك…' : 'Write your reply…'}
+                                  />
+                                  <div className="flex gap-2 mt-1.5">
+                                    <button
+                                      onClick={() => handleSubmitReply(cm.id)}
+                                      disabled={submittingReply || !replyText.trim()}
+                                      className="px-3 py-1 bg-emerald text-white text-xs font-bold rounded-lg disabled:opacity-40"
+                                    >
+                                      {submittingReply ? '…' : (isRTL ? 'إرسال' : 'Send')}
+                                    </button>
+                                    <button
+                                      onClick={() => { setReplyingTo(null); setReplyText(''); }}
+                                      className="px-3 py-1 text-xs text-gray-500 hover:bg-gray-100 rounded-lg"
+                                    >
+                                      {isRTL ? 'إلغاء' : 'Cancel'}
+                                    </button>
+                                  </div>
+                                </div>
                               )}
                             </div>
-                            <p className="text-sm text-gray-700 leading-relaxed whitespace-pre-wrap break-words">
-                              {c.body}
-                            </p>
                           </div>
+                        );
+                      };
+
+                      return (
+                        <div key={c.id}>
+                          {renderComment(c, false)}
+                          {/* Replies */}
+                          {c.replies && c.replies.length > 0 && (
+                            <div className="mt-3 space-y-3">
+                              {c.replies.map(r => renderComment(r, true))}
+                            </div>
+                          )}
                         </div>
                       );
                     })}

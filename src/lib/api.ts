@@ -242,30 +242,56 @@ export interface ListingComment {
   id: number;
   listing_id: number;
   user_id: number;
+  parent_id: number | null;
   body: string;
+  is_official_answer: boolean;
+  is_marked_helpful: boolean;
+  upvotes_count: number;
+  viewer_voted?: boolean;
   created_at: string;
   updated_at: string;
   user: {
     id: number;
     name_ar: string | null;
     name_en: string | null;
-    avatar_url: string | null;
+    avatar_url?: string | null;
+    avatar?: string | null;
     role: string;
     is_trusted_payer: boolean;
   };
+  replies?: ListingComment[];
 }
 
+export type CommentSort = 'newest' | 'votes' | 'official';
+
 export const commentsApi = {
-  getAll: (listingId: number, page = 1): Promise<{
+  getAll: (listingId: number, page = 1, sort?: CommentSort): Promise<{
     data: ListingComment[];
     meta: { current_page: number; last_page: number; total: number };
-  }> => api.get(`/listings/${listingId}/comments?page=${page}`),
+  }> => {
+    const params: any = { page };
+    if (sort) params.sort = sort;
+    return api.get(`/listings/${listingId}/comments`, { params });
+  },
 
-  add: (listingId: number, body: string): Promise<{ message: string; data: ListingComment }> =>
-    api.post(`/listings/${listingId}/comments`, { body }),
+  add: (listingId: number, body: string, parentId?: number): Promise<{ message: string; data: ListingComment }> =>
+    api.post(`/listings/${listingId}/comments`, { body, parent_id: parentId ?? null }),
 
   delete: (listingId: number, commentId: number): Promise<{ message: string }> =>
     api.delete(`/listings/${listingId}/comments/${commentId}`),
+
+  /* ── Q&A interactions ── */
+  toggleVote: (commentId: number): Promise<{ upvotes_count: number; voted: boolean }> =>
+    api.post(`/comments/${commentId}/vote`),
+
+  markHelpful: (commentId: number): Promise<{ message: string; is_marked_helpful: boolean }> =>
+    api.post(`/comments/${commentId}/mark-helpful`),
+
+  unmarkHelpful: (commentId: number): Promise<{ message: string; is_marked_helpful: boolean }> =>
+    api.post(`/comments/${commentId}/unmark-helpful`),
+
+  report: (commentId: number, reason: string, details?: string): Promise<{ message: string }> =>
+    api.post(`/comments/${commentId}/report`, { reason, details }),
 };
 
 // ─── Admin ────────────────────────────────────────────────────────────────────
@@ -346,6 +372,19 @@ export const adminApi = {
     page?: number;
   }): Promise<any> =>
     api.get('/admin/audit-logs', { params }),
+
+  /* ── Forum: comments moderation ── */
+  getComments: (params?: { reported?: boolean | number; listing_id?: number; search?: string; page?: number }): Promise<any> =>
+    api.get('/admin/comments', { params }),
+
+  deleteComment: (id: number): Promise<{ message: string }> =>
+    api.delete(`/admin/comments/${id}`),
+
+  markCommentOfficial: (id: number): Promise<{ message: string; is_official_answer: boolean }> =>
+    api.post(`/admin/comments/${id}/mark-official`),
+
+  unmarkCommentOfficial: (id: number): Promise<{ message: string; is_official_answer: boolean }> =>
+    api.post(`/admin/comments/${id}/unmark-official`),
 };
 
 export const aiApi = {

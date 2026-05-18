@@ -250,6 +250,20 @@ function ForumFields({ isRTL, reg, errors }: Props) {
           ? '💬 المنتدى مخصص للنقاشات المهنية في مجال اللوجستيات. لا يلزم ذكر سعر أو موقع.'
           : '💬 Forum is for professional logistics discussions. Price & location are optional.'}
       </p>
+
+      {/* Category — required for forum */}
+      <div>
+        <label className={labelCls}>{isRTL ? 'تصنيف السؤال *' : 'Question Category *'}</label>
+        <select {...(reg('forum_category', { required: true }) as object)} className={inputCls}>
+          <option value="">{isRTL ? 'اختر التصنيف' : 'Select category'}</option>
+          <option value="legal">{isRTL ? '⚖️ قانوني' : '⚖️ Legal'}</option>
+          <option value="financial">{isRTL ? '💰 مالي' : '💰 Financial'}</option>
+          <option value="operational">{isRTL ? '⚙️ تشغيلي' : '⚙️ Operational'}</option>
+          <option value="logistics">{isRTL ? '🚚 لوجستي' : '🚚 Logistics'}</option>
+        </select>
+        {errors.forum_category && <p className={errorCls}>{isRTL ? 'مطلوب' : 'Required'}</p>}
+      </div>
+
       <TitleDescription isRTL={isRTL} reg={reg} errors={errors}
         descPlaceholderAr="اكتب سؤالك أو موضوع النقاش بالتفصيل…"
         descPlaceholderEn="Describe your question or discussion topic…" />

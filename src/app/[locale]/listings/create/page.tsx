@@ -21,6 +21,7 @@ import type { ListingSection } from '@/types';
 type FormData = {
   section:          ListingSection;
   listing_type:     string;
+  forum_category:   string;
   title_ar:         string;
   title_en:         string;
   description_ar:   string;

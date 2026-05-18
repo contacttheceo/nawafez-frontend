@@ -100,6 +100,9 @@ function ListingsContent() {
   const [debouncedSearch, setDebouncedSearch] = useState(search);
   const debounceTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
+  /* ── Forum category filter (only meaningful when section=forum) ── */
+  const [forumCategory, setForumCategory] = useState(() => searchParams.get('forum_category') ?? '');
+
   useEffect(() => {
     if (debounceTimer.current) clearTimeout(debounceTimer.current);
     debounceTimer.current = setTimeout(() => {
@@ -140,12 +143,13 @@ function ListingsContent() {
     if (pageNum === 1) setIsLoading(true); else setLoadingMore(true);
     try {
       const params: Record<string, any> = { page: pageNum, sort };
-      if (debouncedSearch)          params.search       = debouncedSearch;
-      if (section)                  params.section      = section;
-      if (city)                     params.city         = city;
-      if (priceMin)                 params.price_min    = priceMin;
-      if (priceMax)                 params.price_max    = priceMax;
-      if (listingTypes.length > 0)  params.listing_type = listingTypes.join(',');
+      if (debouncedSearch)          params.search         = debouncedSearch;
+      if (section)                  params.section        = section;
+      if (city)                     params.city           = city;
+      if (priceMin)                 params.price_min      = priceMin;
+      if (priceMax)                 params.price_max      = priceMax;
+      if (listingTypes.length > 0)  params.listing_type   = listingTypes.join(',');
+      if (section === 'forum' && forumCategory) params.forum_category = forumCategory;
       const res  = await listingsApi.getAll(params);
       const data = res.data ?? res;
       setListings(prev => append ? [...prev, ...data] : data);
@@ -155,7 +159,7 @@ function ListingsContent() {
     } finally {
       setIsLoading(false); setLoadingMore(false);
     }
-  }, [debouncedSearch, section, city, priceMin, priceMax, sort, listingTypes]);
+  }, [debouncedSearch, section, city, priceMin, priceMax, sort, listingTypes, forumCategory]);
 
   useEffect(() => { setPage(1); fetchListings(1, false); }, [fetchListings]);
 
@@ -581,6 +585,38 @@ function ListingsContent() {
                     </button>
                   );
                 })}
+            </div>
+          )}
+
+          {/* Forum category chips — shown only on forum section */}
+          {section === 'forum' && (
+            <div className="flex gap-2 mt-2 overflow-x-auto pb-1 scrollbar-hide">
+              <button onClick={() => setForumCategory('')}
+                className={`flex items-center gap-1 px-3 py-1 rounded-full text-xs font-semibold
+                            whitespace-nowrap shrink-0 transition border
+                            ${forumCategory === ''
+                              ? 'bg-white text-navy border-white shadow'
+                              : 'text-white/60 border-white/20 hover:border-white/50 hover:text-white'}`}>
+                {isRTL ? 'كل التصنيفات' : 'All categories'}
+              </button>
+              {[
+                { v: 'legal',       ar: '⚖️ قانوني',     en: '⚖️ Legal'       },
+                { v: 'financial',   ar: '💰 مالي',       en: '💰 Financial'   },
+                { v: 'operational', ar: '⚙️ تشغيلي',    en: '⚙️ Operational' },
+                { v: 'logistics',   ar: '🚚 لوجستي',    en: '🚚 Logistics'   },
+              ].map(c => {
+                const active = forumCategory === c.v;
+                return (
+                  <button key={c.v} onClick={() => setForumCategory(active ? '' : c.v)}
+                    className={`flex items-center gap-1 px-3 py-1 rounded-full text-xs font-semibold
+                                whitespace-nowrap shrink-0 transition border
+                                ${active
+                                  ? 'bg-white text-navy border-white shadow'
+                                  : 'text-white/60 border-white/20 hover:border-white/50 hover:text-white'}`}>
+                    {isRTL ? c.ar : c.en}
+                  </button>
+                );
+              })}
             </div>
           )}
         </div>

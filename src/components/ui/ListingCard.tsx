@@ -185,6 +185,21 @@ export function ListingCard({ listing, mode = 'grid' }: Props) {
             {listing.is_ready_to_operate && (
               <span className="badge-green text-[10px]">🟢 {tb('ready')}</span>
             )}
+            {listing.section === 'forum' && listing.forum_category && (() => {
+              const labels: Record<string, { ar: string; en: string; emoji: string }> = {
+                legal:       { ar: 'قانوني',    en: 'Legal',       emoji: '⚖️' },
+                financial:   { ar: 'مالي',      en: 'Financial',   emoji: '💰' },
+                operational: { ar: 'تشغيلي',   en: 'Operational', emoji: '⚙️' },
+                logistics:   { ar: 'لوجستي',   en: 'Logistics',   emoji: '🚚' },
+              };
+              const cat = labels[listing.forum_category];
+              if (!cat) return null;
+              return (
+                <span className="badge-navy text-[10px]">
+                  {cat.emoji} {isRTL ? cat.ar : cat.en}
+                </span>
+              );
+            })()}
           </div>
 
           {/* Title */}

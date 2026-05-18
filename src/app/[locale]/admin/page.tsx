@@ -9,7 +9,7 @@ import {
   CheckCircle, XCircle, Clock, DollarSign, TrendingUp, TrendingDown,
   Shield, Eye, Star, Loader2, BarChart2, AlertCircle, Flag,
   Activity, Search, Filter, X, Download, MapPin, Calendar,
-  Tag, Mail, Phone, ExternalLink,
+  Tag, Mail, Phone, ExternalLink, MessageSquare, Trash2,
 } from 'lucide-react';
 import {
   BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer,
@@ -41,7 +41,7 @@ const VERIFICATION_REJECT_TEMPLATES = [
   { ar: 'الوثيقة غير قانونية أو مزوّرة',         en: 'Document appears invalid or forged' },
 ];
 
-type AdminTab = 'dashboard' | 'analytics' | 'listings' | 'verifications' | 'reports' | 'users' | 'audit';
+type AdminTab = 'dashboard' | 'analytics' | 'listings' | 'verifications' | 'reports' | 'users' | 'audit' | 'comments';
 
 const SECTION_LABEL: Record<string, string> = {
   fleet: 'أسطول', contracts: 'عقود', ma: 'M&A', jobs: 'وظائف', forum: 'منتدى',
@@ -135,6 +135,13 @@ export default function AdminPage() {
   const [auditLastPage, setAuditLastPage] = useState(1);
   const [auditActionFilter, setAuditActionFilter] = useState('');
 
+  /* ── Forum: Comments moderation tab ── */
+  const [comments, setComments] = useState<any[]>([]);
+  const [commentsPage, setCommentsPage] = useState(1);
+  const [commentsLastPage, setCommentsLastPage] = useState(1);
+  const [commentsReportedOnly, setCommentsReportedOnly] = useState(false);
+  const [commentsSearch, setCommentsSearch] = useState('');
+
   // Guard: only admin
   useEffect(() => {
     if (!isAuthenticated) { router.push(`/${locale}/auth/login`); return; }
@@ -193,6 +200,23 @@ export default function AdminPage() {
     }
   }, [userSearch, userRole, isRTL]);
 
+  // Load comments (paginated)
+  const loadComments = useCallback(async (page: number = 1) => {
+    setIsLoading(true);
+    try {
+      const params: any = { page };
+      if (commentsReportedOnly) params.reported = 1;
+      if (commentsSearch)       params.search   = commentsSearch;
+      const res: any = await adminApi.getComments(params);
+      setComments(res.data ?? []);
+      setCommentsLastPage(res.last_page ?? 1);
+    } catch {
+      toast.error(isRTL ? 'فشل تحميل التعليقات' : 'Failed to load');
+    } finally {
+      setIsLoading(false);
+    }
+  }, [commentsReportedOnly, commentsSearch, isRTL]);
+
   // Load audit logs (paginated)
   const loadAuditLogs = useCallback(async (page: number = 1) => {
     setIsLoading(true);
@@ -237,6 +261,7 @@ export default function AdminPage() {
     }
     if (activeTab === 'reports')       { setReportPage(1); loadReports(1); }
     if (activeTab === 'audit')         { setAuditPage(1); loadAuditLogs(1); }
+    if (activeTab === 'comments')      { setCommentsPage(1); loadComments(1); }
     if (activeTab === 'analytics') loadAnalytics();
   }, [activeTab, user]);
 
@@ -294,6 +319,33 @@ export default function AdminPage() {
       await adminApi.toggleTrustedPayer(id);
       setUsers(prev => prev.map(u => u.id === id ? { ...u, is_trusted_payer: !u.is_trusted_payer } : u));
     } catch { toast.error(isRTL ? 'حدث خطأ' : 'Error'); }
+  };
+
+  /* ── Forum: Comment moderation handlers ────────────────────────────────── */
+  const handleMarkCommentOfficial = async (commentId: number, currentlyOfficial: boolean) => {
+    try {
+      if (currentlyOfficial) {
+        await adminApi.unmarkCommentOfficial(commentId);
+        setComments(prev => prev.map(c => c.id === commentId ? { ...c, is_official_answer: false } : c));
+      } else {
+        await adminApi.markCommentOfficial(commentId);
+        setComments(prev => prev.map(c => c.id === commentId ? { ...c, is_official_answer: true } : c));
+      }
+      toast.success(isRTL ? '✓' : '✓');
+    } catch {
+      toast.error(isRTL ? 'فشل' : 'Failed');
+    }
+  };
+
+  const handleAdminDeleteComment = async (commentId: number) => {
+    if (!confirm(isRTL ? 'حذف هذا التعليق نهائياً؟' : 'Delete this comment permanently?')) return;
+    try {
+      await adminApi.deleteComment(commentId);
+      setComments(prev => prev.filter(c => c.id !== commentId));
+      toast.success(isRTL ? 'تم الحذف' : 'Deleted');
+    } catch {
+      toast.error(isRTL ? 'فشل الحذف' : 'Delete failed');
+    }
   };
 
   /* ── Phase 2: Bulk action handlers ─────────────────────────────────────── */
@@ -455,6 +507,7 @@ export default function AdminPage() {
     { id: 'reports',       labelAr: 'البلاغات',      labelEn: 'Reports',       Icon: AlertTriangle   },
     { id: 'users',         labelAr: 'المستخدمون',    labelEn: 'Users',         Icon: Users           },
     { id: 'audit',         labelAr: 'سجل التدقيق',   labelEn: 'Audit Log',     Icon: Activity        },
+    { id: 'comments',      labelAr: 'التعليقات',     labelEn: 'Comments',      Icon: MessageSquare   },
   ] as const;
 
   // Chart data builders
@@ -1518,6 +1571,146 @@ export default function AdminPage() {
                     <button
                       onClick={() => { const p = auditPage + 1; setAuditPage(p); loadAuditLogs(p); }}
                       disabled={auditPage === auditLastPage}
+                      className="px-4 py-2 text-sm border border-gray-200 rounded-xl disabled:opacity-40 hover:bg-gray-50 transition font-medium"
+                    >
+                      {isRTL ? '← التالي' : 'Next →'}
+                    </button>
+                  </div>
+                )}
+              </>
+            )}
+          </div>
+        )}
+
+        {/* ══════════════════════════════════════════════════════════════════
+            TAB 8: COMMENTS MODERATION
+        ══════════════════════════════════════════════════════════════════ */}
+        {activeTab === 'comments' && (
+          <div className="space-y-4">
+            {/* Filters */}
+            <div className="card p-4 flex flex-wrap gap-3 items-center">
+              <div className="relative flex-1 min-w-[200px]">
+                <Search size={14} className="absolute top-1/2 -translate-y-1/2 start-3 text-gray-400" />
+                <input
+                  value={commentsSearch}
+                  onChange={e => setCommentsSearch(e.target.value)}
+                  onKeyDown={e => { if (e.key === 'Enter') { setCommentsPage(1); loadComments(1); } }}
+                  placeholder={isRTL ? 'بحث في نص التعليق...' : 'Search comment body...'}
+                  className="input text-sm ps-9 py-2"
+                />
+              </div>
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={commentsReportedOnly}
+                  onChange={e => { setCommentsReportedOnly(e.target.checked); setCommentsPage(1); }}
+                  className="w-4 h-4 accent-red-500"
+                />
+                <span className="text-sm text-red-600 font-semibold">
+                  🚩 {isRTL ? 'المُبلَّغ عنها فقط' : 'Reported only'}
+                </span>
+              </label>
+              <button onClick={() => { setCommentsPage(1); loadComments(1); }}
+                className="btn-primary text-sm py-2 px-4 flex items-center gap-1.5">
+                <Search size={13} /> {isRTL ? 'بحث' : 'Search'}
+              </button>
+            </div>
+
+            {isLoading ? (
+              <div className="flex justify-center py-16"><Loader2 className="animate-spin text-navy" size={28} /></div>
+            ) : comments.length === 0 ? (
+              <div className="card p-10 text-center text-gray-400">
+                <MessageSquare size={32} className="mx-auto mb-2 text-gray-300" />
+                {isRTL ? 'لا توجد تعليقات' : 'No comments'}
+              </div>
+            ) : (
+              <>
+                <div className="space-y-2">
+                  {comments.map((c: any) => {
+                    const authorName = isRTL ? (c.user?.name_ar ?? c.user?.name_en) : (c.user?.name_en ?? c.user?.name_ar);
+                    const listingTitle = isRTL
+                      ? (c.listing?.title_ar ?? c.listing?.title_en)
+                      : (c.listing?.title_en ?? c.listing?.title_ar);
+                    return (
+                      <div key={c.id} className="card p-4">
+                        {/* Header */}
+                        <div className="flex items-center gap-2 mb-2 flex-wrap text-xs">
+                          <span className="font-bold text-navy text-sm">{authorName ?? '—'}</span>
+                          <span className="text-gray-400" dir="ltr">{c.user?.email}</span>
+                          {c.is_official_answer && (
+                            <span className="bg-violet-100 text-violet-700 px-2 py-0.5 rounded-full font-bold">⭐ {isRTL ? 'رسمية' : 'Official'}</span>
+                          )}
+                          {c.is_marked_helpful && (
+                            <span className="bg-emerald/10 text-emerald px-2 py-0.5 rounded-full font-bold">✓ {isRTL ? 'مفيد' : 'Helpful'}</span>
+                          )}
+                          {c.upvotes_count > 0 && (
+                            <span className="bg-gray-100 text-gray-600 px-2 py-0.5 rounded-full font-semibold">
+                              👍 {c.upvotes_count}
+                            </span>
+                          )}
+                          {c.parent_id && (
+                            <span className="bg-blue-50 text-blue-600 px-2 py-0.5 rounded-full">↳ {isRTL ? 'رد' : 'Reply'}</span>
+                          )}
+                          <span className="text-gray-400 ms-auto">
+                            {new Date(c.created_at).toLocaleString(isRTL ? 'ar-SA' : 'en-US', { dateStyle: 'short', timeStyle: 'short' })}
+                          </span>
+                        </div>
+
+                        {/* Body */}
+                        <p className="text-sm text-gray-800 whitespace-pre-wrap break-words mb-3">{c.body}</p>
+
+                        {/* Footer */}
+                        <div className="flex items-center justify-between gap-3 pt-2 border-t border-gray-100">
+                          {c.listing_id && (
+                            <Link href={`/${locale}/listings/${c.listing_id}`}
+                              target="_blank"
+                              className="text-xs text-emerald hover:underline truncate flex-1">
+                              📋 {listingTitle ?? `Listing #${c.listing_id}`}
+                              {c.listing?.section && (
+                                <span className="text-gray-400 ms-2">({c.listing.section})</span>
+                              )}
+                            </Link>
+                          )}
+                          <div className="flex gap-1.5 flex-shrink-0">
+                            <button
+                              onClick={() => handleMarkCommentOfficial(c.id, c.is_official_answer)}
+                              className={`flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-bold transition
+                                ${c.is_official_answer
+                                  ? 'bg-violet-100 text-violet-700 hover:bg-violet-200'
+                                  : 'bg-gray-100 text-gray-600 hover:bg-violet-50 hover:text-violet-600'}`}
+                            >
+                              <Star size={11} fill={c.is_official_answer ? 'currentColor' : 'none'} />
+                              {isRTL ? (c.is_official_answer ? 'إلغاء الرسمية' : 'اعتبر رسمي') : (c.is_official_answer ? 'Unmark' : 'Mark official')}
+                            </button>
+                            <button
+                              onClick={() => handleAdminDeleteComment(c.id)}
+                              className="flex items-center gap-1 px-3 py-1.5 bg-red-50 text-red-500 rounded-lg
+                                         text-xs font-bold hover:bg-red-100 transition">
+                              <Trash2 size={11} /> {isRTL ? 'حذف' : 'Delete'}
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+
+                {/* Pagination */}
+                {commentsLastPage > 1 && (
+                  <div className="flex items-center justify-center gap-3 py-4">
+                    <button
+                      onClick={() => { const p = commentsPage - 1; setCommentsPage(p); loadComments(p); }}
+                      disabled={commentsPage === 1}
+                      className="px-4 py-2 text-sm border border-gray-200 rounded-xl disabled:opacity-40 hover:bg-gray-50 transition font-medium"
+                    >
+                      {isRTL ? 'السابق →' : '← Prev'}
+                    </button>
+                    <span className="text-sm text-gray-500 font-medium">
+                      {commentsPage} / {commentsLastPage}
+                    </span>
+                    <button
+                      onClick={() => { const p = commentsPage + 1; setCommentsPage(p); loadComments(p); }}
+                      disabled={commentsPage === commentsLastPage}
                       className="px-4 py-2 text-sm border border-gray-200 rounded-xl disabled:opacity-40 hover:bg-gray-50 transition font-medium"
                     >
                       {isRTL ? '← التالي' : 'Next →'}

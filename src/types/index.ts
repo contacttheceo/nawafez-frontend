@@ -39,11 +39,15 @@ export type ListingSection = 'ma' | 'fleet' | 'contracts' | 'jobs' | 'forum'
 export type ListingStatus = 'draft' | 'pending_review' | 'active' | 'expired' | 'sold' | 'rejected'
 export type TransactionType = 'cash' | 'transfer' | 'monthly_rent' | 'agency_offer' | 'bid'
 
+export type ForumCategory = 'legal' | 'financial' | 'operational' | 'logistics'
+
 export interface Listing {
   id: number
   user_id: number
   section: ListingSection
   listing_type: string
+  forum_category?: ForumCategory | null
+  comments_count?: number
   title_ar: string
   title_en: string
   description_ar: string
