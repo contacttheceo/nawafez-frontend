@@ -38,7 +38,7 @@ export const faqs: { ar: FaqItem[]; en: FaqItem[] } = {
     },
     {
       q: 'ما هي سياسة الإلغاء واسترداد المبالغ؟',
-      a: 'رسوم الإعلانات المميزة غير قابلة للاسترداد بعد النشر. للاستفسار عن حالات استثنائية تواصل معنا عبر support@nawafez.sa',
+      a: 'رسوم الإعلانات المميزة غير قابلة للاسترداد بعد النشر. للاستفسار عن حالات استثنائية تواصل معنا عبر support@nwafizlogi.com',
     },
   ],
   en: [
@@ -68,7 +68,7 @@ export const faqs: { ar: FaqItem[]; en: FaqItem[] } = {
     },
     {
       q: 'What is the refund policy?',
-      a: 'Featured listing fees are non-refundable after publication. For exceptional cases, contact us at support@nawafez.sa',
+      a: 'Featured listing fees are non-refundable after publication. For exceptional cases, contact us at support@nwafizlogi.com',
     },
   ],
 }

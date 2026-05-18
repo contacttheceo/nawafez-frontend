@@ -84,8 +84,8 @@ export default function TermsPage() {
             </h2>
             <p>
               {isRTL ? 'لأي استفسار: ' : 'For enquiries: '}
-              <a href="mailto:support@nawafez.sa" className="text-emerald hover:underline">
-                support@nawafez.sa
+              <a href="mailto:support@nwafizlogi.com" className="text-emerald hover:underline">
+                support@nwafizlogi.com
               </a>
             </p>
           </section>

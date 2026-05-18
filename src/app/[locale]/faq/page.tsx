@@ -57,10 +57,10 @@ export default function FaqPage() {
             {isRTL ? 'لم تجد إجابة؟ تواصل معنا مباشرةً' : "Didn't find an answer? Contact us directly"}
           </p>
           <a
-            href="mailto:support@nawafez.sa"
+            href="mailto:support@nwafizlogi.com"
             className="btn-primary text-sm px-6 py-2"
           >
-            support@nawafez.sa
+            support@nwafizlogi.com
           </a>
         </div>
 

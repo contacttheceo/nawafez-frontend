@@ -86,8 +86,8 @@ export default function PrivacyPage() {
               {isRTL
                 ? 'يحق لك الوصول إلى بياناتك وتصحيحها أو حذفها. للتواصل: '
                 : 'You have the right to access, correct, or delete your data. Contact us: '}
-              <a href="mailto:support@nawafez.sa" className="text-emerald hover:underline">
-                support@nawafez.sa
+              <a href="mailto:support@nwafizlogi.com" className="text-emerald hover:underline">
+                support@nwafizlogi.com
               </a>
             </p>
           </section>
