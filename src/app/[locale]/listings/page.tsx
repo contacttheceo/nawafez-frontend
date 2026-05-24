@@ -153,7 +153,14 @@ function ListingsContent() {
       const res  = await listingsApi.getAll(params);
       const data = res.data ?? res;
       setListings(prev => append ? [...prev, ...data] : data);
-      setMeta(res.meta ?? null);
+      // Laravel paginate() returns flat fields (total, last_page, current_page)
+      // not nested under `meta`. Support both shapes.
+      setMeta(res.meta ?? (res.last_page !== undefined ? {
+        total:        res.total,
+        last_page:    res.last_page,
+        current_page: res.current_page,
+        per_page:     res.per_page,
+      } : null));
     } catch {
       if (!append) setListings([]);
     } finally {
