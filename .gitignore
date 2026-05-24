@@ -21,6 +21,11 @@
 .DS_Store
 *.pem
 
+# bulk import — generated images + user's actual CSV (private)
+/scripts/bulk-import/output/
+/scripts/bulk-import/my-*.csv
+/scripts/bulk-import/private-*.csv
+
 # debug
 npm-debug.log*
 yarn-debug.log*
