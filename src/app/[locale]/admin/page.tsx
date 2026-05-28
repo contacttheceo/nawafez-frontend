@@ -10,6 +10,7 @@ import {
   Shield, Eye, Star, Loader2, BarChart2, AlertCircle, Flag,
   Activity, Search, Filter, X, Download, MapPin, Calendar,
   Tag, Mail, Phone, ExternalLink, MessageSquare, Trash2,
+  Package, CreditCard,
 } from 'lucide-react';
 import {
   BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer,
@@ -19,6 +20,8 @@ import { useAuthStore } from '@/store/auth';
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
 import { adminApi } from '@/lib/api';
+import AdminPlansTab from '@/components/admin/AdminPlansTab';
+import AdminSubscriptionsTab from '@/components/admin/AdminSubscriptionsTab';
 import { storageUrl } from '@/lib/utils';
 import toast from 'react-hot-toast';
 
@@ -41,7 +44,7 @@ const VERIFICATION_REJECT_TEMPLATES = [
   { ar: 'الوثيقة غير قانونية أو مزوّرة',         en: 'Document appears invalid or forged' },
 ];
 
-type AdminTab = 'dashboard' | 'analytics' | 'listings' | 'verifications' | 'reports' | 'users' | 'audit' | 'comments';
+type AdminTab = 'dashboard' | 'analytics' | 'listings' | 'verifications' | 'reports' | 'users' | 'audit' | 'comments' | 'plans' | 'subscriptions';
 
 const SECTION_LABEL: Record<string, string> = {
   fleet: 'أسطول', contracts: 'عقود', ma: 'M&A', jobs: 'وظائف', forum: 'منتدى',
@@ -88,6 +91,7 @@ export default function AdminPage() {
 
   const [activeTab, setActiveTab]   = useState<AdminTab>('dashboard');
   const [stats, setStats]           = useState<any>(null);
+  const [pendingSubsCount, setPendingSubsCount] = useState<number>(0);
   const [listings, setListings]     = useState<any[]>([]);
   const [listingPage, setListingPage] = useState(1);
   const [listingLastPage, setListingLastPage] = useState(1);
@@ -152,6 +156,12 @@ export default function AdminPage() {
   useEffect(() => {
     if (user?.role !== 'admin') return;
     adminApi.getDashboard().then(setStats).catch(() => {});
+    // Fetch pending subscription requests count for the tab badge
+    import('@/lib/api').then(({ adminSubscriptionApi }) =>
+      adminSubscriptionApi.pending()
+        .then((r: any) => setPendingSubsCount((r.data ?? []).length))
+        .catch(() => setPendingSubsCount(0))
+    );
   }, [user]);
 
   // Load analytics (lazy — first time tab is opened)
@@ -508,6 +518,8 @@ export default function AdminPage() {
     { id: 'users',         labelAr: 'المستخدمون',    labelEn: 'Users',         Icon: Users           },
     { id: 'audit',         labelAr: 'سجل التدقيق',   labelEn: 'Audit Log',     Icon: Activity        },
     { id: 'comments',      labelAr: 'التعليقات',     labelEn: 'Comments',      Icon: MessageSquare   },
+    { id: 'subscriptions', labelAr: 'الاشتراكات',    labelEn: 'Subscriptions', Icon: CreditCard      },
+    { id: 'plans',         labelAr: 'الباقات',       labelEn: 'Plans',         Icon: Package         },
   ] as const;
 
   // Chart data builders
@@ -544,7 +556,8 @@ export default function AdminPage() {
             const badge =
               id === 'listings'      ? (stats?.listings?.pending_review || null) :
               id === 'reports'       ? (stats?.reports?.pending || null) :
-              id === 'verifications' ? (verifications.length || null) : null;
+              id === 'verifications' ? (verifications.length || null) :
+              id === 'subscriptions' ? (pendingSubsCount || null) : null;
             return (
               <button
                 key={id}
@@ -1721,6 +1734,16 @@ export default function AdminPage() {
             )}
           </div>
         )}
+
+        {/* ══════════════════════════════════════════════════════════════════
+            TAB 9: SUBSCRIPTIONS — grant / extend / cancel + pending requests
+        ══════════════════════════════════════════════════════════════════ */}
+        {activeTab === 'subscriptions' && <AdminSubscriptionsTab />}
+
+        {/* ══════════════════════════════════════════════════════════════════
+            TAB 10: PLANS — edit price / features without deploy
+        ══════════════════════════════════════════════════════════════════ */}
+        {activeTab === 'plans' && <AdminPlansTab />}
 
       </div>
 
