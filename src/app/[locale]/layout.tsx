@@ -1,4 +1,4 @@
-import type { Metadata } from 'next'
+import type { Metadata, Viewport } from 'next'
 import { NextIntlClientProvider } from 'next-intl'
 import { getMessages } from 'next-intl/server'
 import { notFound } from 'next/navigation'
@@ -6,6 +6,8 @@ import { routing } from '@/i18n/routing'
 import { Toaster } from 'react-hot-toast'
 import AuthSync from '@/components/AuthSync'
 import InactivityGuard from '@/components/InactivityGuard'
+import InstallPrompt from '@/components/InstallPrompt'
+import ServiceWorkerRegistrar from '@/components/ServiceWorkerRegistrar'
 import './globals.css'
 
 const BASE = process.env.NEXT_PUBLIC_APP_URL ?? 'https://www.nwafizlogi.com'
@@ -21,9 +23,27 @@ export const metadata: Metadata = {
   authors: [{ name: 'نوافذ', url: BASE }],
   creator: 'Creative Alpha Commercial',
   publisher: 'Creative Alpha Commercial',
+  manifest: '/manifest.json',
+  applicationName: 'نوافذ',
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: 'black-translucent',
+    title: 'نوافذ',
+  },
+  formatDetection: { telephone: false },
   icons: {
-    icon:  '/favicon.png',
-    apple: '/favicon.png',
+    icon: [
+      { url: '/icons/favicon-16.png', sizes: '16x16',   type: 'image/png' },
+      { url: '/icons/favicon-32.png', sizes: '32x32',   type: 'image/png' },
+      { url: '/icons/icon-192.png',   sizes: '192x192', type: 'image/png' },
+      { url: '/icons/icon-512.png',   sizes: '512x512', type: 'image/png' },
+    ],
+    apple: [
+      { url: '/icons/apple-touch-icon.png', sizes: '180x180', type: 'image/png' },
+    ],
+    other: [
+      { rel: 'mask-icon', url: '/icons/icon-512.png', color: '#1e3a5f' },
+    ],
   },
   openGraph: {
     type: 'website',
@@ -44,6 +64,19 @@ export const metadata: Metadata = {
     follow: true,
     googleBot: { index: true, follow: true, 'max-snippet': -1, 'max-image-preview': 'large' },
   },
+}
+
+// PWA viewport + theme color — must be a separate `viewport` export in Next 14+
+export const viewport: Viewport = {
+  themeColor: [
+    { media: '(prefers-color-scheme: light)', color: '#1e3a5f' },
+    { media: '(prefers-color-scheme: dark)',  color: '#0f1e30' },
+  ],
+  width: 'device-width',
+  initialScale: 1,
+  maximumScale: 5,        // allow pinch-zoom for accessibility
+  viewportFit: 'cover',   // edge-to-edge under iOS notch / Android punch-hole
+  userScalable: true,
 }
 
 // Organization schema — applies site-wide
@@ -114,9 +147,11 @@ export default async function LocaleLayout({ children, params }: Props) {
       </head>
       <body className={isRTL ? 'font-arabic' : 'font-sans'}>
         <NextIntlClientProvider messages={messages}>
+          <ServiceWorkerRegistrar />
           <AuthSync />
           <InactivityGuard />
           {children}
+          <InstallPrompt />
           <Toaster
             position={isRTL ? 'bottom-left' : 'bottom-right'}
             toastOptions={{

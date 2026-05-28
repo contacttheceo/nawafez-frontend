@@ -164,3 +164,12 @@
 [dir="rtl"] .animate-slide-in {
   animation: slide-in-left 0.22s cubic-bezier(0.16, 1, 0.3, 1);
 }
+
+/* PWA install-prompt banner slide-up */
+@keyframes nwafiz-slide-up {
+  from { transform: translateY(120%); opacity: 0; }
+  to   { transform: translateY(0);    opacity: 1; }
+}
+.nwafiz-slide-up {
+  animation: nwafiz-slide-up 0.32s cubic-bezier(0.16, 1, 0.3, 1) both;
+}

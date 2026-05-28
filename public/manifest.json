@@ -1,0 +1,77 @@
+{
+  "name": "نوافذ — منصة اللوجستيك B2B",
+  "short_name": "نوافذ",
+  "description": "منصة السوق اللوجستي B2B الأولى في السعودية — تداول الأصول والعقود والتراخيص اللوجستية في بيئة موثوقة",
+  "start_url": "/ar?utm_source=pwa",
+  "scope": "/",
+  "display": "standalone",
+  "display_override": ["standalone", "minimal-ui"],
+  "orientation": "portrait",
+  "background_color": "#1e3a5f",
+  "theme_color": "#1e3a5f",
+  "lang": "ar",
+  "dir": "rtl",
+  "categories": ["business", "productivity"],
+  "icons": [
+    {
+      "src": "/icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icons/icon-256.png",
+      "sizes": "256x256",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icons/icon-384.png",
+      "sizes": "384x384",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icons/maskable-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "maskable"
+    },
+    {
+      "src": "/icons/maskable-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "تصفّح الإعلانات",
+      "short_name": "الإعلانات",
+      "description": "تصفّح أحدث إعلانات اللوجستيك",
+      "url": "/ar/listings?utm_source=pwa_shortcut",
+      "icons": [{ "src": "/icons/icon-192.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "نشر إعلان جديد",
+      "short_name": "نشر إعلان",
+      "description": "أنشر إعلانك خلال دقيقة",
+      "url": "/ar/listings/create?utm_source=pwa_shortcut",
+      "icons": [{ "src": "/icons/icon-192.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "الرسائل",
+      "short_name": "الرسائل",
+      "description": "محادثاتك مع البائعين والمشترين",
+      "url": "/ar/messages?utm_source=pwa_shortcut",
+      "icons": [{ "src": "/icons/icon-192.png", "sizes": "192x192" }]
+    }
+  ],
+  "prefer_related_applications": false
+}
