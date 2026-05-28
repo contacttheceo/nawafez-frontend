@@ -56,7 +56,7 @@ export default function RegisterPage() {
     <div className="min-h-screen bg-gradient-to-br from-navy-dark via-navy to-[#1E3A8A] flex flex-col">
 
       {/* Top Bar */}
-      <div className="px-5 py-4 flex items-center justify-between">
+      <div className="px-5 py-4 pt-safe flex items-center justify-between">
         <button
           onClick={() => router.back()}
           className="flex items-center gap-1.5 text-white/60 hover:text-white transition-colors text-sm"

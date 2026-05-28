@@ -173,3 +173,13 @@
 .nwafiz-slide-up {
   animation: nwafiz-slide-up 0.32s cubic-bezier(0.16, 1, 0.3, 1) both;
 }
+
+/* iOS / Android safe-area padding utilities.
+   Used by sticky top bars in PWA standalone mode (otherwise content sits
+   under the status bar / notch). No-ops on devices without notch. */
+.pt-safe   { padding-top:    env(safe-area-inset-top,    0); }
+.pb-safe   { padding-bottom: env(safe-area-inset-bottom, 0); }
+.pl-safe   { padding-left:   env(safe-area-inset-left,   0); }
+.pr-safe   { padding-right:  env(safe-area-inset-right,  0); }
+.h-safe-top    { height: env(safe-area-inset-top,    0); }
+.h-safe-bottom { height: env(safe-area-inset-bottom, 0); }

@@ -101,9 +101,10 @@ export default function InstallPrompt() {
 
   return (
     <>
-      {/* Banner */}
+      {/* Banner — sits above iOS home indicator via env(safe-area-inset-bottom) */}
       <div
-        className="fixed bottom-4 inset-x-4 z-[60] mx-auto max-w-md bg-white rounded-2xl shadow-card-lg border border-gray-200 p-4 flex items-center gap-3 nwafiz-slide-up"
+        className="fixed inset-x-4 z-[60] mx-auto max-w-md bg-white rounded-2xl shadow-card-lg border border-gray-200 p-4 flex items-center gap-3 nwafiz-slide-up"
+        style={{ bottom: 'max(1rem, env(safe-area-inset-bottom))' }}
         role="dialog"
         aria-labelledby="install-prompt-title"
       >
