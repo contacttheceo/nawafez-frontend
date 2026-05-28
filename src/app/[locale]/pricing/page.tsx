@@ -38,15 +38,22 @@ export default function PricingPage() {
   const t = (ar: string, en: string) => (isRTL ? ar : en)
   const Arrow = isRTL ? ArrowLeft : ArrowRight
 
-  const [plans,    setPlans]    = useState<Plan[]>([])
-  const [current,  setCurrent]  = useState<SubscriptionSnapshot | null>(null)
-  const [cycle,    setCycle]    = useState<BillingCycle>('monthly')
-  const [loading,  setLoading]  = useState(true)
-  const [upgrading, setUpgrading] = useState<PlanCode | null>(null)
+  const [plans,        setPlans]        = useState<Plan[]>([])
+  const [current,      setCurrent]      = useState<SubscriptionSnapshot | null>(null)
+  const [gracePeriod,  setGracePeriod]  = useState(true)        // default true → safe
+  const [cycle,        setCycle]        = useState<BillingCycle>('monthly')
+  const [loading,      setLoading]      = useState(true)
+  const [upgrading,    setUpgrading]    = useState<PlanCode | null>(null)
 
   useEffect(() => {
     Promise.all([
-      plansApi.list().then((r: any) => r.data ?? []),
+      plansApi.list().then((r: any) => {
+        // backend returns { data: Plan[], enforcement: { grace_period } }
+        if (typeof r.enforcement?.grace_period === 'boolean') {
+          setGracePeriod(r.enforcement.grace_period)
+        }
+        return r.data ?? []
+      }),
       isAuthenticated ? subscriptionApi.current().then((r: any) => r.data ?? null).catch(() => null) : null,
     ])
       .then(([plansRes, curRes]) => {
@@ -92,6 +99,32 @@ export default function PricingPage() {
       <Navbar />
 
       <div className="flex-1 max-w-6xl mx-auto w-full px-4 py-8 sm:py-12">
+
+        {/* Grace-period banner — all features free during launch */}
+        {gracePeriod && (
+          <div className="mb-8 rounded-2xl bg-gradient-to-r from-emerald to-emerald-dark p-5 sm:p-6 text-white shadow-lg">
+            <div className="flex items-start sm:items-center gap-4 flex-col sm:flex-row">
+              <div className="shrink-0 w-12 h-12 rounded-xl bg-white/15 backdrop-blur flex items-center justify-center">
+                <Sparkles size={24} className="text-white" />
+              </div>
+              <div className="flex-1">
+                <h2 className="font-black text-lg sm:text-xl mb-1">
+                  {t(
+                    '🎉 جميع الميزات مجانية حالياً!',
+                    '🎉 All features are free right now!'
+                  )}
+                </h2>
+                <p className="text-white/90 text-sm leading-relaxed">
+                  {t(
+                    'نحن في مرحلة الإطلاق — استمتع بكل ميزات Enterprise مجاناً دون أي حدود. الأسعار المعروضة أدناه ستُفعَّل لاحقاً مع إشعار مسبق لكل المستخدمين.',
+                    "We're in launch mode — enjoy every Enterprise feature for free with no limits. The pricing below will activate later with advance notice to all users."
+                  )}
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Hero */}
         <div className="text-center mb-10">
           <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-bg border border-emerald/20 text-emerald-dark text-xs font-semibold mb-4">

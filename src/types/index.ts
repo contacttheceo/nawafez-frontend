@@ -100,6 +100,15 @@ export interface SubscriptionSnapshot {
     remaining: number | null
     days_until_expiry: number | null
   }
+  enforcement: SubscriptionEnforcement
+}
+
+export interface SubscriptionEnforcement {
+  mode: 'on' | 'off'
+  // True when limits are not currently enforced. UI uses this to:
+  //  - hide the "you're approaching your limit" banner
+  //  - show a "all features free during launch" notice on /pricing
+  grace_period: boolean
 }
 
 // ─── Listings ────────────────────────────────────────────────────────────────

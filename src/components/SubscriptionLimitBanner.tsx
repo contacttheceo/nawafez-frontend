@@ -35,6 +35,10 @@ export default function SubscriptionLimitBanner() {
   }, [isAuthenticated])
 
   if (!snap) return null
+  // During launch grace period, enforcement is off — no point in warning users
+  // about limits we don't actually enforce yet.
+  if (snap.enforcement?.grace_period) return null
+
   const max  = snap.limits.max_listings
   const used = snap.usage.listings_posted
 
