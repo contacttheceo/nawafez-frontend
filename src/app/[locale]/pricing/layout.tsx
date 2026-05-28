@@ -1,0 +1,33 @@
+import type { Metadata } from 'next'
+
+type Props = { params: Promise<{ locale: string }> }
+
+export async function generateMetadata({ params }: Props): Promise<Metadata> {
+  const { locale } = await params
+  const isAr = locale === 'ar'
+  const BASE = process.env.NEXT_PUBLIC_APP_URL ?? 'https://www.nwafizlogi.com'
+
+  return {
+    title:       isAr ? 'باقات الاشتراك' : 'Pricing',
+    description: isAr
+      ? 'اختر باقتك في منصة نوافذ — ابدأ مجاناً ثم ارتقِ لباقات Basic أو Professional أو Enterprise. أسعار شفافة، إعلانات أكثر، ميزات أوسع.'
+      : 'Choose your plan on Nawafez — start free, then upgrade to Basic, Professional, or Enterprise. Transparent pricing, more listings, more features.',
+    alternates: {
+      canonical: `${BASE}/${locale}/pricing`,
+      languages: {
+        ar:           `${BASE}/ar/pricing`,
+        en:           `${BASE}/en/pricing`,
+        'x-default':  `${BASE}/ar/pricing`,
+      },
+    },
+    openGraph: {
+      title:       isAr ? 'باقات نوافذ' : 'Nawafez Plans',
+      description: isAr ? 'أسعار شفافة، 4 باقات لكل احتياج' : 'Transparent pricing, 4 plans for every need',
+      url:         `${BASE}/${locale}/pricing`,
+    },
+  }
+}
+
+export default function PricingLayout({ children }: { children: React.ReactNode }) {
+  return children
+}

@@ -33,6 +33,75 @@ export interface SubscriptionData {
   listings_used: number
 }
 
+// ─── Plans & Subscriptions (new, full schema) ──────────────────────────────
+export type PlanCode = 'free' | 'basic' | 'professional' | 'enterprise'
+export type BillingCycle = 'monthly' | 'yearly'
+export type SubscriptionStatus = 'pending' | 'active' | 'cancelled' | 'expired' | 'suspended'
+
+export interface PlanFeatures {
+  max_listings: number              // -1 = unlimited
+  max_featured_per_month: number    // -1 = unlimited
+  has_ma: boolean
+  has_pin: boolean
+  auto_renew_listings: boolean
+  has_trusted_badge: boolean
+  has_blind_bidding: boolean
+  ai_tools_level: 'limited' | 'full' | 'priority'
+  analytics_level: 'basic' | 'intermediate' | 'advanced' | 'advanced_export'
+  support_level: 'email_72h' | 'email_48h' | 'email_24h' | 'dedicated_whatsapp'
+  api_access: boolean
+  max_sub_users: number
+}
+
+export interface Plan {
+  id: number
+  code: PlanCode
+  name_ar: string
+  name_en: string
+  tagline_ar: string | null
+  tagline_en: string | null
+  price_monthly: number   // SAR (whole riyals)
+  price_yearly: number
+  features: PlanFeatures
+  display_order: number
+  is_active: boolean
+  is_default: boolean
+  badge_color: 'gray' | 'navy' | 'emerald' | 'gold' | null
+  subscriptions_count?: number      // admin endpoint only
+}
+
+export interface Subscription {
+  id: number
+  user_id: number
+  plan_id: number
+  status: SubscriptionStatus
+  billing_cycle: BillingCycle
+  started_at: string | null
+  expires_at: string | null
+  cancelled_at: string | null
+  auto_renew: boolean
+  source: string | null
+  plan?: Plan
+}
+
+export interface SubscriptionUsage {
+  period_yyyymm: string
+  listings_posted: number
+  featured_used: number
+  pins_used: number
+}
+
+export interface SubscriptionSnapshot {
+  subscription: Subscription
+  plan: Plan
+  usage: SubscriptionUsage
+  limits: {
+    max_listings: number | null
+    remaining: number | null
+    days_until_expiry: number | null
+  }
+}
+
 // ─── Listings ────────────────────────────────────────────────────────────────
 
 export type ListingSection = 'ma' | 'fleet' | 'contracts' | 'jobs' | 'forum'

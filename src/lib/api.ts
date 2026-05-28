@@ -229,6 +229,41 @@ export const userApi = {
     api.delete('/user/account', { data: { password } }),
 };
 
+// ─── Plans & Subscriptions ───────────────────────────────────────────────────
+import type { Plan, SubscriptionSnapshot, BillingCycle, PlanCode } from '@/types'
+
+export const plansApi = {
+  list: () => api.get<{ data: Plan[] }>('/plans'),
+}
+
+export const subscriptionApi = {
+  current: () => api.get<{ data: SubscriptionSnapshot }>('/user/subscription'),
+
+  requestUpgrade: (planCode: PlanCode, cycle: BillingCycle, notes?: string) =>
+    api.post('/user/subscription/upgrade-request', {
+      plan_code: planCode,
+      billing_cycle: cycle,
+      notes,
+    }),
+
+  cancel: () => api.post('/user/subscription/cancel'),
+}
+
+export const adminSubscriptionApi = {
+  list:    (params?: { status?: string; plan?: string; page?: number }) =>
+    api.get('/admin/subscriptions', { params }),
+  pending: () => api.get('/admin/subscriptions/pending'),
+  update:  (id: number, action: 'extend'|'cancel'|'activate', extendDays?: number) =>
+    api.patch(`/admin/subscriptions/${id}`, { action, extend_days: extendDays }),
+  grantPlan: (userId: number, planCode: PlanCode, cycle: BillingCycle, note?: string) =>
+    api.post(`/admin/users/${userId}/grant-plan`, {
+      plan_code: planCode, billing_cycle: cycle, note,
+    }),
+  plans:        () => api.get('/admin/plans'),
+  updatePlan:   (id: number, fields: Partial<Plan>) =>
+    api.patch(`/admin/plans/${id}`, fields),
+}
+
 // ─── Push subscriptions (Web Push) ───────────────────────────────────────────
 export const pushApi = {
   subscribe: (sub: {

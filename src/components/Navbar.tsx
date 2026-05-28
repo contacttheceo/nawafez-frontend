@@ -71,6 +71,7 @@ export default function Navbar() {
     { href: `/${locale}/listings?section=contracts`, label: t('contracts') },
     { href: `/${locale}/listings?section=jobs`,      label: t('jobs') },
     { href: `/${locale}/listings?section=forum`,     label: t('forum') },
+    { href: `/${locale}/pricing`,                     label: locale === 'ar' ? 'الباقات' : 'Pricing' },
   ]
 
   return (

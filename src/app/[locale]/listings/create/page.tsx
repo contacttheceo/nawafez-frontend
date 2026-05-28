@@ -9,6 +9,7 @@ import Link                     from 'next/link';
 import toast                    from 'react-hot-toast';
 
 import Navbar          from '@/components/Navbar';
+import SubscriptionLimitBanner from '@/components/SubscriptionLimitBanner';
 import StepIndicator   from '@/components/listings/StepIndicator';
 import SectionFields   from '@/components/listings/SectionFields';
 import ImageUploader   from '@/components/listings/ImageUploader';
@@ -356,6 +357,9 @@ export default function CreateListingPage() {
       </div>
 
       <main className="flex-1 max-w-2xl mx-auto w-full px-4 py-8">
+
+        {/* Subscription quota warning — only shows when ≥60% used */}
+        <SubscriptionLimitBanner />
 
         {/* ══════════ STEP 0 — AI Smart Fill (optional) ══════════ */}
         {showAiIntro ? (
