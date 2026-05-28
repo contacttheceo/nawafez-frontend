@@ -325,7 +325,11 @@ function MessagesInner() {
           {isRTL ? 'الرسائل' : 'Messages'}
         </h1>
 
-        <div className="flex gap-4" style={{ height: 'calc(100vh - 200px)', minHeight: 460 }}>
+        <div className="flex gap-4" style={{
+          // 100dvh follows iOS toolbar resize; subtract navbar+heading+page-padding+safe-areas
+          height:    'calc(100dvh - 200px - env(safe-area-inset-top) - env(safe-area-inset-bottom))',
+          minHeight: 460,
+        }}>
 
           {/* ── Thread List ── */}
           <div className={`w-full md:w-72 lg:w-80 flex-shrink-0 flex flex-col gap-2 overflow-y-auto
@@ -517,8 +521,9 @@ function MessagesInner() {
                   </div>
                 )}
 
-                {/* Input area */}
-                <div className="p-3 border-t border-gray-100 bg-white flex gap-2 items-end">
+                {/* Input area — pb-safe so input clears iOS home indicator */}
+                <div className="p-3 border-t border-gray-100 bg-white flex gap-2 items-end"
+                     style={{ paddingBottom: 'max(0.75rem, env(safe-area-inset-bottom))' }}>
                   <input
                     ref={inputRef}
                     value={newMessage}

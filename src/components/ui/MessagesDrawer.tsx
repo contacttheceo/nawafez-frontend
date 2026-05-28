@@ -206,8 +206,9 @@ export default function MessagesDrawer({ open, onClose }: MessagesDrawerProps) {
                         flex flex-col animate-slide-in
                         ${isRTL ? 'left-0 border-r border-gray-100' : 'right-0 border-l border-gray-100'}`}>
 
-        {/* ── Header ── */}
-        <div className="flex items-center justify-between px-4 py-3 bg-navy text-white shrink-0">
+        {/* ── Header ── (pt-safe → sits below iOS status bar in PWA) */}
+        <div className="flex items-center justify-between px-4 py-3 pt-safe bg-navy text-white shrink-0"
+             style={{ paddingTop: 'max(0.75rem, env(safe-area-inset-top))' }}>
           {activeThread ? (
             <button
               onClick={() => { setActiveThread(null); setSuggestions([]); }}
@@ -411,8 +412,9 @@ export default function MessagesDrawer({ open, onClose }: MessagesDrawerProps) {
               </div>
             )}
 
-            {/* Input */}
-            <div className="p-3 border-t border-gray-100 bg-white flex gap-2 items-center shrink-0">
+            {/* Input — pb-safe so it floats above iOS home indicator */}
+            <div className="p-3 border-t border-gray-100 bg-white flex gap-2 items-center shrink-0"
+                 style={{ paddingBottom: 'max(0.75rem, env(safe-area-inset-bottom))' }}>
               <input
                 ref={inputRef}
                 value={newMessage}
