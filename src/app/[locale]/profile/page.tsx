@@ -16,6 +16,7 @@ import { useAuthGuard } from '@/hooks/useAuthGuard';
 import { storageUrl } from '@/lib/utils';
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
+import PushNotificationToggle from '@/components/PushNotificationToggle';
 import toast from 'react-hot-toast';
 
 type ProfileForm = {
@@ -245,6 +246,11 @@ export default function ProfilePage() {
             {/* Profile Tab */}
             {activeTab === 'profile' && (
               <div className="card p-6">
+
+                {/* ── Push notifications toggle ── */}
+                <div className="mb-6 pb-6 border-b border-gray-100">
+                  <PushNotificationToggle />
+                </div>
 
                 {/* ── Avatar section ── */}
                 <div className="flex items-center gap-5 mb-6 pb-6 border-b border-gray-100">

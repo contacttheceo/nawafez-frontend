@@ -229,6 +229,23 @@ export const userApi = {
     api.delete('/user/account', { data: { password } }),
 };
 
+// ─── Push subscriptions (Web Push) ───────────────────────────────────────────
+export const pushApi = {
+  subscribe: (sub: {
+    endpoint:    string
+    p256dh?:     string
+    auth?:       string
+    user_agent?: string
+  }) => api.post('/user/push-subscriptions', sub),
+
+  unsubscribe: (endpoint: string) =>
+    api.delete('/user/push-subscriptions', { data: { endpoint } }),
+
+  list: () => api.get<{ data: Array<{ id: number; endpoint: string; created_at: string }> }>(
+    '/user/push-subscriptions'
+  ),
+}
+
 // ─── Stats ────────────────────────────────────────────────────────────────────
 export const statsApi = {
   get: (): Promise<{
