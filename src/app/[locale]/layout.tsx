@@ -8,6 +8,7 @@ import AuthSync from '@/components/AuthSync'
 import InactivityGuard from '@/components/InactivityGuard'
 import InstallPrompt from '@/components/InstallPrompt'
 import ServiceWorkerRegistrar from '@/components/ServiceWorkerRegistrar'
+import UnverifiedEmailBanner from '@/components/UnverifiedEmailBanner'
 import './globals.css'
 
 const BASE = process.env.NEXT_PUBLIC_APP_URL ?? 'https://www.nwafizlogi.com'
@@ -150,6 +151,7 @@ export default async function LocaleLayout({ children, params }: Props) {
           <ServiceWorkerRegistrar />
           <AuthSync />
           <InactivityGuard />
+          <UnverifiedEmailBanner />
           {children}
           <InstallPrompt />
           <Toaster

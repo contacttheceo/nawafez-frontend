@@ -21,7 +21,7 @@ api.interceptors.request.use((config) => {
   return config;
 });
 
-// ─── Response interceptor — unwrap data & handle 401 ─────────────────────────
+// ─── Response interceptor — unwrap data & handle 401 / 403 verified ──────────
 api.interceptors.response.use(
   (response) => response.data,      // always return the JSON body directly
   (error) => {
@@ -31,6 +31,13 @@ api.interceptors.response.use(
       localStorage.removeItem('nawafez-auth');
       const locale = document.documentElement.lang ?? 'ar';
       window.location.href = `/${locale}/auth/login`;
+    }
+    // 403 with reason=email_not_verified → bubble up a clear flag so UI can
+    // render the "verify your email" prompt instead of a generic error toast.
+    if (error.response?.status === 403 && error.response?.data?.reason === 'email_not_verified') {
+      // Attach a friendly flag — components can check err.isEmailNotVerified
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      ;(error as any).isEmailNotVerified = true
     }
     return Promise.reject(error);
   }
