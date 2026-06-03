@@ -39,9 +39,79 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   }
 }
 
-export default function HomePage() {
+async function fetchStats() {
+  try {
+    const API = process.env.NEXT_PUBLIC_API_URL ?? 'https://nwafiz.creativealphat.com'
+    const ctrl = new AbortController()
+    const timer = setTimeout(() => ctrl.abort(), 3000)
+    const res = await fetch(`${API}/api/stats`, {
+      signal: ctrl.signal,
+      next: { revalidate: 3600 }, // re-fetch once an hour at most
+    })
+    clearTimeout(timer)
+    if (!res.ok) return null
+    return await res.json() as { total_listings: number; total_users: number; sections?: Record<string, number> }
+  } catch { return null }
+}
+
+export default async function HomePage({ params }: Props) {
+  const { locale } = await params
+  const stats = await fetchStats()
+  const isAr  = locale === 'ar'
+
+  // ItemList of the five main sections — anchors organic discovery via SERP
+  const sectionsList = {
+    '@context': 'https://schema.org',
+    '@type':    'ItemList',
+    name:        isAr ? 'أقسام نوافذ' : 'Nwafiz Sections',
+    itemListElement: [
+      { '@type': 'ListItem', position: 1, name: isAr ? 'الأساطيل اللوجستية' : 'Logistics Fleet',          url: `${BASE}/${locale}/listings?section=fleet` },
+      { '@type': 'ListItem', position: 2, name: isAr ? 'العقود التشغيلية'   : 'Operational Contracts',    url: `${BASE}/${locale}/listings?section=contracts` },
+      { '@type': 'ListItem', position: 3, name: isAr ? 'بيع الكيانات (M&A)' : 'Business Acquisitions',    url: `${BASE}/${locale}/listings?section=ma` },
+      { '@type': 'ListItem', position: 4, name: isAr ? 'الوظائف اللوجستية'  : 'Logistics Jobs',           url: `${BASE}/${locale}/listings?section=jobs` },
+      { '@type': 'ListItem', position: 5, name: isAr ? 'منتدى الاستشارات'   : 'Consultation Forum',       url: `${BASE}/${locale}/listings?section=forum` },
+    ],
+  }
+
+  // LocalBusiness — anchors "Nwafiz" as a recognized entity with Saudi Arabia focus
+  const localBusiness = {
+    '@context': 'https://schema.org',
+    '@type':    'LocalBusiness',
+    '@id':       `${BASE}/#org`,
+    name:        isAr ? 'نوافذ' : 'Nwafiz',
+    alternateName: 'Nwafiz Logistics',
+    url:         BASE,
+    logo:        `${BASE}/logo.png`,
+    image:       `${BASE}/logo.png`,
+    description: isAr
+      ? 'منصة B2B لقطاع اللوجستيك في السعودية. تجمع أساطيل، عقود، توظيف، وبيع كيانات في مكان واحد.'
+      : 'B2B marketplace for the Saudi logistics sector — fleets, operational contracts, jobs, and business acquisitions all in one place.',
+    address: {
+      '@type':         'PostalAddress',
+      addressCountry:  'SA',
+      addressRegion:   'الرياض',
+    },
+    areaServed: { '@type': 'Country', name: 'Saudi Arabia' },
+    contactPoint: {
+      '@type':       'ContactPoint',
+      email:         'info@nwafizlogi.com',
+      telephone:     '+966556716705',
+      contactType:   'customer service',
+      availableLanguage: ['Arabic', 'English'],
+    },
+    ...(stats?.total_listings && stats.total_listings > 0 ? {
+      // Surface the live listings count as a stat Google may show in rich results
+      additionalProperty: [
+        { '@type': 'PropertyValue', name: isAr ? 'عدد الإعلانات' : 'Total Listings', value: stats.total_listings },
+        ...(stats.total_users ? [{ '@type': 'PropertyValue', name: isAr ? 'عدد المستخدمين' : 'Total Users', value: stats.total_users }] : []),
+      ],
+    } : {}),
+  }
+
   return (
     <div className="min-h-screen flex flex-col">
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(sectionsList) }} />
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(localBusiness) }} />
       <Navbar />
       <main className="flex-1">
         <HeroSection />

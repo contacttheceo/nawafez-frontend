@@ -93,6 +93,9 @@ export const listingsApi = {
   getOne: (id: number): Promise<{ data: any }> =>
     api.get(`/listings/${id}`),
 
+  getSimilar: (id: number): Promise<{ data: any[] }> =>
+    api.get(`/listings/${id}/similar`),
+
   create: (data: FormData): Promise<{ data: any; message: string }> =>
     api.post('/listings', data, {
       headers: { 'Content-Type': 'multipart/form-data' },

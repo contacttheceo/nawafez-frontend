@@ -20,6 +20,8 @@ import type { Listing } from '@/types';
 import toast from 'react-hot-toast';
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
+import SimilarListings from '@/components/listings/SimilarListings';
+import ShareButtons from '@/components/listings/ShareButtons';
 import Lightbox from '@/components/ui/Lightbox';
 import ReportModal from '@/components/ui/ReportModal';
 import { ListingCard } from '@/components/ui/ListingCard';
@@ -1287,6 +1289,29 @@ export default function ListingDetailPage() {
               </div>
             </div>
           </div>
+
+          {/* ── Share buttons (viral spread) ────────────────────────────── */}
+          <div className="mt-8 bg-white rounded-2xl p-5 border border-gray-100">
+            <div className="flex items-center justify-between gap-4 flex-wrap">
+              <div>
+                <h3 className="font-bold text-navy text-sm mb-1">
+                  {isRTL ? '📢 شارك هذا الإعلان' : '📢 Share this listing'}
+                </h3>
+                <p className="text-xs text-gray-500">
+                  {isRTL
+                    ? 'ساعد الإعلان يصل لأكبر عدد من المهتمين'
+                    : 'Help this listing reach more interested buyers'}
+                </p>
+              </div>
+              <ShareButtons
+                url={`/${locale}/listings/${listing.id}`}
+                title={isRTL ? (listing.title_ar ?? '') : (listing.title_en ?? listing.title_ar ?? '')}
+              />
+            </div>
+          </div>
+
+          {/* ── Similar listings (internal linking + engagement) ────────── */}
+          <SimilarListings currentId={listing.id} />
         </div>
       </main>
 

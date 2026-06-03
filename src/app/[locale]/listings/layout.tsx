@@ -60,6 +60,28 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   }
 }
 
-export default function ListingsLayout({ children }: Props) {
-  return <>{children}</>
+export default async function ListingsLayout({ children, params }: Props) {
+  const { locale } = await params
+  const isAr = locale === 'ar'
+  const BASE = process.env.NEXT_PUBLIC_APP_URL ?? 'https://www.nwafizlogi.com'
+
+  // BreadcrumbList — helps Google show breadcrumbs in search results
+  const breadcrumb = {
+    '@context': 'https://schema.org',
+    '@type':    'BreadcrumbList',
+    itemListElement: [
+      { '@type': 'ListItem', position: 1, name: isAr ? 'الرئيسية' : 'Home',         item: `${BASE}/${locale}` },
+      { '@type': 'ListItem', position: 2, name: isAr ? 'الإعلانات' : 'Listings',    item: `${BASE}/${locale}/listings` },
+    ],
+  }
+
+  return (
+    <>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumb) }}
+      />
+      {children}
+    </>
+  )
 }

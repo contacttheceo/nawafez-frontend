@@ -1,6 +1,9 @@
 import type { Metadata } from 'next'
 
-type Props = { params: Promise<{ locale: string }> }
+type Props = {
+  params: Promise<{ locale: string }>
+  children: React.ReactNode
+}
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { locale } = await params
@@ -28,6 +31,27 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   }
 }
 
-export default function PricingLayout({ children }: { children: React.ReactNode }) {
-  return children
+export default async function PricingLayout({ children, params }: Props) {
+  const { locale } = await params
+  const isAr = locale === 'ar'
+  const BASE = process.env.NEXT_PUBLIC_APP_URL ?? 'https://www.nwafizlogi.com'
+
+  const breadcrumb = {
+    '@context': 'https://schema.org',
+    '@type':    'BreadcrumbList',
+    itemListElement: [
+      { '@type': 'ListItem', position: 1, name: isAr ? 'الرئيسية' : 'Home',  item: `${BASE}/${locale}` },
+      { '@type': 'ListItem', position: 2, name: isAr ? 'الباقات' : 'Pricing', item: `${BASE}/${locale}/pricing` },
+    ],
+  }
+
+  return (
+    <>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumb) }}
+      />
+      {children}
+    </>
+  )
 }

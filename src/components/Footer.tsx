@@ -66,16 +66,29 @@ export default function Footer() {
             </div>
           </div>
 
-          {/* Sections */}
+          {/* Sections — deep-linked sub-categories so Googlebot finds
+              every filter view, not just the top-level section page */}
           <div>
             <h4 className="text-white font-bold text-sm mb-4">{t('sections')}</h4>
             <div className="flex flex-col gap-2 text-sm">
-              {['ma', 'fleet', 'contracts', 'jobs', 'forum'].map((sec) => (
-                <Link key={sec} href={`/${locale}/listings?section=${sec}`}
-                  className="hover:text-white transition-colors">
-                  {ts(`${sec}_title` as Parameters<typeof ts>[0])}
-                </Link>
-              ))}
+              <Link href={`/${locale}/listings?section=fleet&type=sale`} className="hover:text-white transition-colors">
+                {isRTL ? 'أساطيل للبيع' : 'Fleet for sale'}
+              </Link>
+              <Link href={`/${locale}/listings?section=fleet&type=rent`} className="hover:text-white transition-colors">
+                {isRTL ? 'أساطيل للتأجير' : 'Fleet for rent'}
+              </Link>
+              <Link href={`/${locale}/listings?section=contracts&type=offer`} className="hover:text-white transition-colors">
+                {isRTL ? 'عقود تشغيلية' : 'Operational contracts'}
+              </Link>
+              <Link href={`/${locale}/listings?section=ma`} className="hover:text-white transition-colors">
+                {isRTL ? 'بيع شركات (M&A)' : 'Business acquisitions'}
+              </Link>
+              <Link href={`/${locale}/listings?section=jobs`} className="hover:text-white transition-colors">
+                {isRTL ? 'وظائف لوجستية' : 'Logistics jobs'}
+              </Link>
+              <Link href={`/${locale}/listings?section=forum`} className="hover:text-white transition-colors">
+                {isRTL ? 'منتدى الاستشارات' : 'Forum'}
+              </Link>
             </div>
           </div>
 
@@ -102,6 +115,25 @@ export default function Footer() {
               </a>
               <Link href={`/${locale}/faq`} className="hover:text-white transition-colors">{t('faq')}</Link>
             </div>
+          </div>
+        </div>
+
+        {/* Popular searches by city — deep links Googlebot can follow.
+            Each link is a real query that returns results, never a 404. */}
+        <div className="border-t border-white/10 pt-6 mb-6">
+          <h5 className="text-white/60 text-[11px] uppercase tracking-wider font-bold mb-3">
+            {isRTL ? 'بحث شائع حسب المدينة' : 'Popular searches by city'}
+          </h5>
+          <div className="flex flex-wrap gap-x-3 gap-y-1.5 text-xs">
+            {['الرياض', 'جدة', 'الدمام', 'مكة المكرمة', 'المدينة المنورة', 'الخبر', 'الطائف', 'تبوك', 'بريدة', 'الأحساء'].map((city) => (
+              <Link
+                key={city}
+                href={`/${locale}/listings?city=${encodeURIComponent(city)}`}
+                className="hover:text-white transition-colors"
+              >
+                {isRTL ? `لوجستيات ${city}` : `Logistics ${city}`}
+              </Link>
+            ))}
           </div>
         </div>
 
