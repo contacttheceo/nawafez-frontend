@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { useLocale } from 'next-intl';
 import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
+import Image from 'next/image';
 import { CheckCircle, XCircle, Loader2, Mail } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { authApi } from '@/lib/api';
@@ -53,9 +54,15 @@ export default function VerifyEmailPage() {
 
         {/* Logo */}
         <div className="text-center mb-8">
-          <Link href={`/${locale}`} className="inline-flex items-center gap-2">
-            <div className="w-10 h-10 bg-navy rounded-xl flex items-center justify-center text-white font-black text-lg">ن</div>
-            <span className="font-black text-navy text-2xl">نوافذ</span>
+          <Link href={`/${locale}`} className="inline-flex items-center" aria-label="نوافذ">
+            <Image
+              src="/logo-transparent.png"
+              alt="نوافذ"
+              width={140}
+              height={110}
+              priority
+              className="h-14 w-auto"
+            />
           </Link>
         </div>
 

@@ -3,6 +3,7 @@
 import { useTranslations, useLocale } from 'next-intl'
 import { useRouter, usePathname } from 'next/navigation'
 import Link from 'next/link'
+import Image from 'next/image'
 import { useState, useRef, useEffect } from 'react'
 import { Menu, X, Globe, Plus, LogIn, ChevronDown, LayoutDashboard, User, MessageSquare, LogOut, Shield, Zap } from 'lucide-react'
 import { useAuthStore } from '@/store/auth'
@@ -81,14 +82,17 @@ export default function Navbar() {
         <div className="flex items-center justify-between h-16">
 
           {/* Logo */}
-          <Link href={`/${locale}`} className="flex items-center gap-2.5 flex-shrink-0">
-            <div className="w-9 h-9 bg-emerald rounded-xl flex items-center justify-center
-                            text-white font-black text-lg">
-              ن
-            </div>
-            <div>
-              <div className="text-white font-black text-xl leading-none">نوافذ</div>
-              <div className="text-white/60 text-[10px] leading-none mt-0.5">
+          <Link href={`/${locale}`} className="flex items-center gap-2.5 flex-shrink-0" aria-label="نوافذ — Nawafez">
+            <Image
+              src="/logo-white.png"
+              alt="نوافذ"
+              width={100}
+              height={78}
+              priority
+              className="h-10 w-auto"
+            />
+            <div className="hidden sm:block">
+              <div className="text-white/50 text-[10px] leading-none">
                 منصة اللوجستيك B2B
               </div>
             </div>

@@ -51,12 +51,15 @@ export default function LoginPage() {
           {isRTL ? 'رجوع' : 'Back'}
         </button>
 
-        <Link href={`/${locale}`} className="flex items-center gap-2">
-          <div className="w-8 h-8 bg-white/10 border border-white/20 rounded-lg
-                          flex items-center justify-center text-white font-black text-base">
-            ن
-          </div>
-          <span className="font-black text-white text-lg">نوافذ</span>
+        <Link href={`/${locale}`} className="flex items-center" aria-label="نوافذ">
+          <Image
+            src="/logo-white.png"
+            alt="نوافذ"
+            width={100}
+            height={78}
+            priority
+            className="h-9 w-auto"
+          />
         </Link>
 
         <Link

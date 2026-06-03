@@ -2,6 +2,7 @@
 
 import { useTranslations, useLocale } from 'next-intl'
 import Link from 'next/link'
+import Image from 'next/image'
 import { Phone, Mail, Globe } from 'lucide-react'
 
 export default function Footer() {
@@ -17,10 +18,15 @@ export default function Footer() {
 
           {/* Brand */}
           <div className="col-span-2 md:col-span-1">
-            <div className="flex items-center gap-2.5 mb-4">
-              <div className="w-9 h-9 bg-emerald rounded-xl flex items-center justify-center
-                              text-white font-black text-lg">ن</div>
-              <span className="text-white font-black text-xl">نوافذ</span>
+            <div className="mb-4">
+              <Image
+                src="/logo-white.png"
+                alt="نوافذ — Nawafez"
+                width={140}
+                height={110}
+                priority
+                className="h-12 w-auto"
+              />
             </div>
             <p className="text-sm leading-relaxed mb-5">{t('desc')}</p>
 

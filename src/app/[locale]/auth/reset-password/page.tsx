@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { useLocale } from 'next-intl';
 import { useSearchParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
+import Image from 'next/image';
 import { useForm } from 'react-hook-form';
 import { ArrowRight, ArrowLeft, Eye, EyeOff, KeyRound } from 'lucide-react';
 import toast from 'react-hot-toast';
@@ -58,9 +59,15 @@ export default function ResetPasswordPage() {
           <BackArrow size={16} />
           {isRTL ? 'تسجيل الدخول' : 'Sign In'}
         </Link>
-        <Link href={`/${locale}`} className="flex items-center gap-2">
-          <div className="w-8 h-8 bg-navy rounded-lg flex items-center justify-center text-white font-black text-base">ن</div>
-          <span className="font-black text-navy text-lg">نوافذ</span>
+        <Link href={`/${locale}`} className="flex items-center" aria-label="نوافذ">
+          <Image
+            src="/logo-transparent.png"
+            alt="نوافذ"
+            width={100}
+            height={78}
+            priority
+            className="h-9 w-auto"
+          />
         </Link>
         <div className="w-20" />
       </div>
