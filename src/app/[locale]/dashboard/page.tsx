@@ -247,7 +247,7 @@ export default function DashboardPage() {
               {isRTL ? `مرحباً، ${displayName} 👋` : `Welcome back, ${displayName} 👋`}
             </h1>
             <p className="text-white/50 text-sm mt-1">
-              {isRTL ? 'هذه نظرة عامة على نشاطك في نوافذ' : "Here's an overview of your activity on Nawafez"}
+              {isRTL ? 'هذه نظرة عامة على نشاطك في نوافذ' : "Here's an overview of your activity on Nwafiz"}
             </p>
           </div>
           <div className="flex items-center gap-2">

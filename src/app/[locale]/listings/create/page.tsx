@@ -351,7 +351,7 @@ export default function CreateListingPage() {
             {isRTL ? '✍️ نشر إعلان جديد' : '✍️ Post a New Listing'}
           </h1>
           <p className="text-white/60 text-sm mt-1">
-            {isRTL ? 'اتبع الخطوات لنشر إعلانك على منصة نوافذ' : 'Follow the steps to publish on Nawafez'}
+            {isRTL ? 'اتبع الخطوات لنشر إعلانك على منصة نوافذ' : 'Follow the steps to publish on Nwafiz'}
           </p>
         </div>
       </div>
@@ -715,7 +715,7 @@ export default function CreateListingPage() {
                 <div className="bg-amber-50 border border-amber-200 rounded-xl px-4 py-3 text-sm text-amber-700">
                   ⚠️ {isRTL
                     ? 'سيخضع هذا الإعلان للمراجعة من فريق نوافذ قبل ظهوره للعموم.'
-                    : 'This listing will be reviewed by the Nawafez team before going public.'}
+                    : 'This listing will be reviewed by the Nwafiz team before going public.'}
                 </div>
               )}
 

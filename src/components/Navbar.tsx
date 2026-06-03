@@ -82,7 +82,7 @@ export default function Navbar() {
         <div className="flex items-center justify-between h-16">
 
           {/* Logo */}
-          <Link href={`/${locale}`} className="flex items-center gap-2.5 flex-shrink-0" aria-label="نوافذ — Nawafez">
+          <Link href={`/${locale}`} className="flex items-center gap-2.5 flex-shrink-0" aria-label="نوافذ — Nwafiz">
             <Image
               src="/logo-white.png"
               alt="نوافذ"

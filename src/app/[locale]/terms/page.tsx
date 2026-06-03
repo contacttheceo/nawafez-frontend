@@ -30,7 +30,7 @@ export default function TermsPage() {
             <p>
               {isRTL
                 ? 'باستخدامك منصة نوافذ فإنك توافق على الالتزام بهذه الشروط والأحكام. إذا كنت لا توافق على أي بند، يُرجى التوقف عن استخدام المنصة.'
-                : 'By using the Nawafez platform you agree to be bound by these terms. If you do not agree, please stop using the platform.'}
+                : 'By using the Nwafiz platform you agree to be bound by these terms. If you do not agree, please stop using the platform.'}
             </p>
           </section>
 
@@ -41,7 +41,7 @@ export default function TermsPage() {
             <p>
               {isRTL
                 ? 'نوافذ منصة B2B متخصصة في السوق اللوجستي السعودي، تتيح تداول الأصول والعقود والوظائف اللوجستية بين الشركات.'
-                : 'Nawafez is a B2B marketplace specializing in the Saudi logistics sector, enabling the trading of assets, contracts, and logistics jobs between companies.'}
+                : 'Nwafiz is a B2B marketplace specializing in the Saudi logistics sector, enabling the trading of assets, contracts, and logistics jobs between companies.'}
             </p>
           </section>
 
@@ -63,7 +63,7 @@ export default function TermsPage() {
             <p>
               {isRTL
                 ? 'أنت مسؤول عن دقة وقانونية المحتوى الذي تنشره. تحتفظ نوافذ بالحق في إزالة أي محتوى يخالف هذه الشروط أو الأنظمة المعمول بها.'
-                : 'You are responsible for the accuracy and legality of content you publish. Nawafez reserves the right to remove any content that violates these terms or applicable regulations.'}
+                : 'You are responsible for the accuracy and legality of content you publish. Nwafiz reserves the right to remove any content that violates these terms or applicable regulations.'}
             </p>
           </section>
 

@@ -98,7 +98,7 @@ export function ListingCard({ listing, mode = 'grid' }: Props) {
     const text = encodeURIComponent(
       isRTL
         ? `مرحباً، رأيت إعلانك "${title}" على نوافذ وأود الاستفسار.`
-        : `Hi, I saw your listing "${title}" on Nawafez and I'm interested.`
+        : `Hi, I saw your listing "${title}" on Nwafiz and I'm interested.`
     )
     const phone = listing.contact_phone.replace(/\D/g, '')
     window.open(`https://wa.me/${phone}?text=${text}`, '_blank')

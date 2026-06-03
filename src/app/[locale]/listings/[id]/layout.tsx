@@ -65,7 +65,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
   if (!listing) {
     return {
-      title: locale === 'ar' ? 'إعلان غير موجود — نوافذ' : 'Listing not found — Nawafez',
+      title: locale === 'ar' ? 'إعلان غير موجود — نوافذ' : 'Listing not found — Nwafiz',
       robots: { index: false, follow: false },
     }
   }
@@ -75,7 +75,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const desc   = truncate(isAr ? listing.description_ar : listing.description_en) ||
                  truncate(listing.description_ar) ||
                  truncate(listing.description_en) ||
-                 (isAr ? 'تصفح فرص اللوجستيك في السعودية على منصة نوافذ' : 'Browse logistics opportunities in Saudi Arabia on Nawafez')
+                 (isAr ? 'تصفح فرص اللوجستيك في السعودية على منصة نوافذ' : 'Browse logistics opportunities in Saudi Arabia on Nwafiz')
 
   const primaryImage = listing.media?.find(m => m.type === 'image' && m.is_primary)
                     ?? listing.media?.find(m => m.type === 'image')
@@ -133,7 +133,7 @@ export default async function ListingDetailLayout({ children, params }: Props) {
   const imageUrl = buildImageUrl(primaryImage?.path) ?? `${BASE}/logo.png`
   const sellerName = listing.user
     ? (isAr ? listing.user.name_ar : listing.user.name_en)
-    : 'Nawafez'
+    : 'Nwafiz'
 
   // Decide schema type based on section
   let mainSchema: Record<string, unknown>

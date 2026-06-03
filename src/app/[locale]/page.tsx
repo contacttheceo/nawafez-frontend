@@ -19,7 +19,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { locale } = await params
   const t = await getTranslations({ locale, namespace: 'hero' })
   const isAr = locale === 'ar'
-  const title = isAr ? 'نوافذ — منصة اللوجستيك B2B' : 'Nawafez — B2B Logistics Marketplace'
+  const title = isAr ? 'نوافذ — منصة اللوجستيك B2B' : 'Nwafiz — B2B Logistics Marketplace'
   return {
     title,
     description: t('desc'),

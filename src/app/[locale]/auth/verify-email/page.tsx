@@ -87,7 +87,7 @@ export default function VerifyEmailPage() {
               <p className="text-gray-500 text-sm mb-6">
                 {isRTL
                   ? 'تم التحقق من بريدك الإلكتروني بنجاح. يمكنك الآن الاستفادة من جميع مزايا نوافذ.'
-                  : 'Your email has been verified. You can now enjoy all Nawafez features.'}
+                  : 'Your email has been verified. You can now enjoy all Nwafiz features.'}
               </p>
               <Link href={`/${locale}/dashboard`} className="btn-primary w-full text-center block">
                 {isRTL ? 'الذهاب إلى لوحة التحكم' : 'Go to Dashboard'}

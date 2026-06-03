@@ -214,7 +214,7 @@ function TypingDemo({ isRTL }: { isRTL: boolean }) {
           <div className="w-2.5 h-2.5 rounded-full bg-green-400" />
         </div>
         <span className="text-white/60 text-[11px] mx-auto font-mono">
-          {isRTL ? '✨ المحلل الذكي — نوافذ' : '✨ AI Extractor — Nawafez'}
+          {isRTL ? '✨ المحلل الذكي — نوافذ' : '✨ AI Extractor — Nwafiz'}
         </span>
       </div>
 

@@ -64,7 +64,7 @@ export default function ReportModal({ isRTL, onClose, onSubmit }: Props) {
             <p className="text-xs text-amber-700">
               {isRTL
                 ? 'سيتم مراجعة بلاغك من فريق نوافذ. يُرجى التأكد من صحة السبب.'
-                : 'Your report will be reviewed by the Nawafez team. Please ensure accuracy.'}
+                : 'Your report will be reviewed by the Nwafiz team. Please ensure accuracy.'}
             </p>
           </div>
 

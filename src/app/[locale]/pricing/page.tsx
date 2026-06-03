@@ -129,7 +129,7 @@ export default function PricingPage() {
         <div className="text-center mb-10">
           <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-bg border border-emerald/20 text-emerald-dark text-xs font-semibold mb-4">
             <Star size={12} className="fill-current" />
-            {t('باقات نوافذ', 'Nawafez Plans')}
+            {t('باقات نوافذ', 'Nwafiz Plans')}
           </div>
           <h1 className="text-3xl sm:text-4xl font-black text-navy mb-3">
             {t('اختر الباقة المناسبة لك', 'Choose the plan that fits you')}

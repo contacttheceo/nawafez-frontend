@@ -85,7 +85,7 @@ export default function ToolsPage() {
           <p className="text-white/60 text-base max-w-2xl mx-auto">
             {isRTL
               ? 'نوافذ تُدمج الذكاء الاصطناعي في كل خطوة من خطوات عملك — من تحليل العقود إلى كتابة الإعلانات.'
-              : 'Nawafez integrates AI into every step of your workflow — from contract analysis to listing creation.'}
+              : 'Nwafiz integrates AI into every step of your workflow — from contract analysis to listing creation.'}
           </p>
         </div>
       </div>

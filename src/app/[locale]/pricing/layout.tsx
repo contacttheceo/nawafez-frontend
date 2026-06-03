@@ -11,7 +11,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     title:       isAr ? 'باقات الاشتراك' : 'Pricing',
     description: isAr
       ? 'اختر باقتك في منصة نوافذ — ابدأ مجاناً ثم ارتقِ لباقات Basic أو Professional أو Enterprise. أسعار شفافة، إعلانات أكثر، ميزات أوسع.'
-      : 'Choose your plan on Nawafez — start free, then upgrade to Basic, Professional, or Enterprise. Transparent pricing, more listings, more features.',
+      : 'Choose your plan on Nwafiz — start free, then upgrade to Basic, Professional, or Enterprise. Transparent pricing, more listings, more features.',
     alternates: {
       canonical: `${BASE}/${locale}/pricing`,
       languages: {
@@ -21,7 +21,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
       },
     },
     openGraph: {
-      title:       isAr ? 'باقات نوافذ' : 'Nawafez Plans',
+      title:       isAr ? 'باقات نوافذ' : 'Nwafiz Plans',
       description: isAr ? 'أسعار شفافة، 4 باقات لكل احتياج' : 'Transparent pricing, 4 plans for every need',
       url:         `${BASE}/${locale}/pricing`,
     },

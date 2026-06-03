@@ -43,8 +43,8 @@ export const faqs: { ar: FaqItem[]; en: FaqItem[] } = {
   ],
   en: [
     {
-      q: 'What is Nawafez?',
-      a: 'Nawafez is a B2B marketplace specialized in the Saudi logistics sector, enabling companies to trade assets (fleet), logistics contracts, M&A opportunities, jobs, and professional discussions.',
+      q: 'What is Nwafiz?',
+      a: 'Nwafiz is a B2B marketplace specialized in the Saudi logistics sector, enabling companies to trade assets (fleet), logistics contracts, M&A opportunities, jobs, and professional discussions.',
     },
     {
       q: 'How do I post a listing?',

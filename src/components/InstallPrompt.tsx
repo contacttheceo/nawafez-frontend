@@ -114,7 +114,7 @@ export default function InstallPrompt() {
 
         <div className="flex-1 min-w-0">
           <p id="install-prompt-title" className="font-semibold text-sm text-gray-900 leading-tight">
-            {t('ثبّت نوافذ على جوالك', 'Install Nawafez on your device')}
+            {t('ثبّت نوافذ على جوالك', 'Install Nwafiz on your device')}
           </p>
           <p className="text-xs text-gray-500 mt-0.5 leading-tight">
             {t('وصول أسرع، إشعارات فورية، يعمل بدون إنترنت', 'Faster access, instant alerts, works offline')}
@@ -150,7 +150,7 @@ export default function InstallPrompt() {
           >
             <div className="flex items-start justify-between mb-4">
               <h2 className="text-lg font-bold text-navy">
-                {t('كيف تُثبّت نوافذ على iPhone', 'Install Nawafez on iPhone')}
+                {t('كيف تُثبّت نوافذ على iPhone', 'Install Nwafiz on iPhone')}
               </h2>
               <button
                 onClick={() => setShowIosModal(false)}
@@ -189,7 +189,7 @@ export default function InstallPrompt() {
                   3
                 </span>
                 <div>
-                  {t('اضغط "إضافة" في الأعلى — وستجد أيقونة نوافذ على شاشتك الرئيسية', 'Tap "Add" in the top right — Nawafez will appear on your home screen')}
+                  {t('اضغط "إضافة" في الأعلى — وستجد أيقونة نوافذ على شاشتك الرئيسية', 'Tap "Add" in the top right — Nwafiz will appear on your home screen')}
                 </div>
               </li>
             </ol>

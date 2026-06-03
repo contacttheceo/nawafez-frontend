@@ -9,10 +9,10 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { locale } = await params
   const isAr = locale === 'ar'
   return {
-    title:       isAr ? 'الأسئلة الشائعة — نوافذ' : 'FAQ — Nawafez',
+    title:       isAr ? 'الأسئلة الشائعة — نوافذ' : 'FAQ — Nwafiz',
     description: isAr
       ? 'إجابات عن أسئلة استخدام منصة نوافذ: التسجيل، نشر الإعلانات، التحقق، المدفوعات.'
-      : 'Common questions about using Nawafez: signing up, posting listings, verification, payments.',
+      : 'Common questions about using Nwafiz: signing up, posting listings, verification, payments.',
     alternates: {
       canonical: `${BASE}/${locale}/faq`,
       languages: { ar: `${BASE}/ar/faq`, en: `${BASE}/en/faq` },

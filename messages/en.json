@@ -70,7 +70,7 @@
     "login_title": "Sign In",
     "login_sub": "Enter your credentials to access your account",
     "register_title": "Create Account",
-    "register_sub": "Join Nawafez platform for free",
+    "register_sub": "Join Nwafiz platform for free",
     "email": "Email Address",
     "password": "Password",
     "name": "Full Name",
@@ -111,7 +111,7 @@
     "secure": "Safe & Trusted"
   },
   "how": {
-    "title": "How Nawafez Works",
+    "title": "How Nwafiz Works",
     "sub": "4 simple steps to access the best deals",
     "step1_title": "Create Account",
     "step1_desc": "Sign up for free and verify your business to access all features",

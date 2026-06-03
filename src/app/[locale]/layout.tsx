@@ -85,7 +85,7 @@ const ORG_SCHEMA = {
   '@context': 'https://schema.org',
   '@type':    'Organization',
   name:       'نوافذ',
-  alternateName: 'Nawafez',
+  alternateName: 'Nwafiz',
   url:        BASE,
   logo:       `${BASE}/logo.png`,
   description: 'منصة اللوجستيك B2B الأولى في السعودية',

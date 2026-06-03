@@ -153,7 +153,7 @@ export default function RegisterPage() {
                 {isRTL ? 'إنشاء حساب جديد' : 'Create Account'}
               </h1>
               <p className="text-gray-400 text-sm mt-1">
-                {isRTL ? 'انضم إلى منصة نوافذ — مجانًا' : 'Join Nawafez platform — it\'s free'}
+                {isRTL ? 'انضم إلى منصة نوافذ — مجانًا' : 'Join Nwafiz platform — it\'s free'}
               </p>
             </div>
 

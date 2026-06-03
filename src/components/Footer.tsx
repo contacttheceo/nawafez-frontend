@@ -21,7 +21,7 @@ export default function Footer() {
             <div className="mb-4">
               <Image
                 src="/logo-white.png"
-                alt="نوافذ — Nawafez"
+                alt="نوافذ — Nwafiz"
                 width={140}
                 height={110}
                 priority

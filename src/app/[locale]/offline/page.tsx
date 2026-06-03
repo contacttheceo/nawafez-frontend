@@ -54,7 +54,7 @@ export default function OfflinePage() {
         <p className="mt-8 text-xs text-gray-400">
           {t(
             'منصة نوافذ تعمل بتقنية PWA — بعض الصفحات تعمل بدون إنترنت.',
-            'Nawafez is a PWA — some pages work offline.'
+            'Nwafiz is a PWA — some pages work offline.'
           )}
         </p>
       </div>

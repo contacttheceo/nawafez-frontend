@@ -8,10 +8,10 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { locale } = await params
   const isAr = locale === 'ar'
   return {
-    title:       isAr ? 'شروط الاستخدام — نوافذ' : 'Terms of Service — Nawafez',
+    title:       isAr ? 'شروط الاستخدام — نوافذ' : 'Terms of Service — Nwafiz',
     description: isAr
       ? 'شروط استخدام منصة نوافذ، التزامات المستخدمين، وسياسة الإلغاء.'
-      : 'Nawafez terms of service, user obligations, and cancellation policy.',
+      : 'Nwafiz terms of service, user obligations, and cancellation policy.',
     alternates: {
       canonical: `${BASE}/${locale}/terms`,
       languages: { ar: `${BASE}/ar/terms`, en: `${BASE}/en/terms` },

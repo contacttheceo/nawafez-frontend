@@ -589,7 +589,7 @@ export default function AdminPage() {
             <h1 className="text-2xl font-black text-navy">
               {isRTL ? 'لوحة الإدارة' : 'Admin Panel'}
             </h1>
-            <p className="text-xs text-gray-500">نوافذ لوجستيك — Nawafez</p>
+            <p className="text-xs text-gray-500">نوافذ لوجستيك — Nwafiz</p>
           </div>
         </div>
 

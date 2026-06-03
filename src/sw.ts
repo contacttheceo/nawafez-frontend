@@ -1,6 +1,6 @@
 /// <reference lib="webworker" />
 /**
- * Nawafez service worker — built from this file via @serwist/next into /sw.js.
+ * Nwafiz service worker — built from this file via @serwist/next into /sw.js.
  *
  * Strategy:
  *   - Static assets (icons, fonts, /_next/static/...) → CacheFirst (immutable)
