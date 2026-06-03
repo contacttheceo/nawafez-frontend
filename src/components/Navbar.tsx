@@ -162,7 +162,8 @@ export default function Navbar() {
                     <div className="w-6 h-6 rounded-full overflow-hidden bg-emerald flex items-center
                                     justify-center text-white font-bold text-xs shrink-0">
                       {storageUrl(user.avatar_url) ? (
-                        <img src={storageUrl(user.avatar_url)!} alt=""
+                        <Image src={storageUrl(user.avatar_url)!} alt=""
+                             width={48} height={48}
                              className="w-full h-full object-cover"
                              onError={(e) => { (e.target as HTMLImageElement).style.display = 'none' }} />
                       ) : (
@@ -260,6 +261,10 @@ export default function Navbar() {
           {/* Mobile Menu Toggle */}
           <button
             onClick={() => setMobileOpen(!mobileOpen)}
+            aria-label={mobileOpen
+              ? (locale === 'ar' ? 'إغلاق القائمة' : 'Close menu')
+              : (locale === 'ar' ? 'فتح القائمة' : 'Open menu')}
+            aria-expanded={mobileOpen}
             className="md:hidden text-white p-2 rounded-lg hover:bg-white/10"
           >
             {mobileOpen ? <X size={22} /> : <Menu size={22} />}
@@ -276,7 +281,8 @@ export default function Navbar() {
               <div className="w-9 h-9 rounded-full overflow-hidden bg-emerald flex items-center
                               justify-center text-white font-bold text-sm shrink-0">
                 {storageUrl(user.avatar_url) ? (
-                  <img src={storageUrl(user.avatar_url)!} alt=""
+                  <Image src={storageUrl(user.avatar_url)!} alt=""
+                       width={72} height={72}
                        className="w-full h-full object-cover"
                        onError={(e) => { (e.target as HTMLImageElement).style.display = 'none' }} />
                 ) : (

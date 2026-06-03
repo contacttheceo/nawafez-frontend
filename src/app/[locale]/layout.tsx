@@ -133,6 +133,11 @@ export default async function LocaleLayout({ children, params }: Props) {
   return (
     <html lang={locale} dir={isRTL ? 'rtl' : 'ltr'}>
       <head>
+        {/* Preconnect to the backend so the first API call doesn't wait on
+            DNS + TLS handshake — saves 150-300ms on first listing render. */}
+        <link rel="preconnect" href="https://nwafiz.creativealphat.com" crossOrigin="anonymous" />
+        <link rel="dns-prefetch" href="https://nwafiz.creativealphat.com" />
+
         {/* hreflang — tells search engines about the language variants */}
         <link rel="alternate" hrefLang="ar"     href={`${BASE}/ar`} />
         <link rel="alternate" hrefLang="en"     href={`${BASE}/en`} />

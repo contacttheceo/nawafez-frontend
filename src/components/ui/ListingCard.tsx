@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { useLocale, useTranslations } from 'next-intl'
 import Link from 'next/link'
+import Image from 'next/image'
 import { MapPin, Clock, Eye, Bookmark, MessageCircle } from 'lucide-react'
 import toast from 'react-hot-toast'
 import type { Listing } from '@/types'
@@ -124,7 +125,16 @@ export function ListingCard({ listing, mode = 'grid' }: Props) {
               ? `${process.env.NEXT_PUBLIC_API_URL}/uploads/${mediaImg.path}`
               : listing.images?.[0]
             return imgUrl
-              ? <img src={imgUrl} alt={title ?? ''} className="w-full h-full object-cover" />
+              ? (
+                  <Image
+                    src={imgUrl}
+                    alt={title ?? ''}
+                    fill
+                    sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
+                    className="object-cover"
+                    loading="lazy"
+                  />
+                )
               : <span>{sectionEmoji[listing.section]}</span>
           })()}
 
@@ -240,11 +250,13 @@ export function ListingCard({ listing, mode = 'grid' }: Props) {
                         flex items-center justify-between">
           <div className="flex items-center gap-2 text-xs text-gray-500">
             <div className="w-6 h-6 rounded-full bg-navy flex items-center justify-center
-                            text-white text-[10px] font-bold flex-shrink-0 overflow-hidden">
+                            text-white text-[10px] font-bold flex-shrink-0 overflow-hidden relative">
               {listing.user?.avatar_url
-                ? <img
+                ? <Image
                     src={storageUrl(listing.user.avatar_url)!}
                     alt={sellerName}
+                    width={48}
+                    height={48}
                     className="w-full h-full object-cover"
                     onError={(e) => { (e.target as HTMLImageElement).style.display = 'none' }}
                   />
