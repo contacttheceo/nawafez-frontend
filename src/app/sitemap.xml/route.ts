@@ -34,7 +34,11 @@ function xml(s: string): string {
 }
 
 async function fetchListings(): Promise<BackendListing[]> {
-  const all: BackendListing[] = []
+  // Dedup by id — pagination can return the same row twice if its
+  // updated_at changes between page fetches (it shifts back to page 1
+  // while page 2 is being read), which would emit duplicate <loc>
+  // entries that Google flags as a quality issue.
+  const byId = new Map<number, BackendListing>()
   for (let page = 1; page <= 10; page++) {
     try {
       const ctrl = new AbortController()
@@ -48,13 +52,13 @@ async function fetchListings(): Promise<BackendListing[]> {
       const json: { data?: BackendListing[]; last_page?: number } = await res.json()
       const items = json.data ?? []
       if (items.length === 0) break
-      all.push(...items)
+      for (const item of items) byId.set(item.id, item)
       if (page >= (json.last_page ?? 1)) break
     } catch {
-      break  // network/timeout — return what we have
+      break
     }
   }
-  return all
+  return Array.from(byId.values())
 }
 
 type ChangeFreq = 'daily' | 'weekly' | 'monthly'
