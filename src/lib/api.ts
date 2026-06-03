@@ -403,6 +403,14 @@ export const adminApi = {
   toggleTrustedPayer: (id: number): Promise<any> =>
     api.patch(`/admin/users/${id}/trusted-payer`),
 
+  // Manual email verification — for users who can't receive the email
+  manuallyVerifyEmail: (id: number, note?: string): Promise<any> =>
+    api.patch(`/admin/users/${id}/verify-email`, { note }),
+
+  // Admin-triggered resend of the verification email
+  adminResendVerification: (id: number): Promise<{ sent: boolean; message: string }> =>
+    api.post(`/admin/users/${id}/resend-verification`),
+
   /* ── Phase 2: bulk actions ── */
   bulkApproveListings: (ids: number[]): Promise<any> =>
     api.post('/admin/listings/bulk-approve', { ids }),

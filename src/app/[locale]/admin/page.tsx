@@ -331,6 +331,31 @@ export default function AdminPage() {
     } catch { toast.error(isRTL ? 'حدث خطأ' : 'Error'); }
   };
 
+  const manuallyVerifyEmail = async (id: number, email: string) => {
+    if (!confirm(isRTL
+      ? `تأكيد التحقق اليدوي من بريد ${email}؟ هذا يُلتفّ على إرسال إيميل التحقق.`
+      : `Manually verify ${email}? This bypasses the verification email entirely.`)) return;
+    try {
+      await adminApi.manuallyVerifyEmail(id);
+      setUsers(prev => prev.map(u => u.id === id
+        ? { ...u, email_verified_at: new Date().toISOString() } : u));
+      toast.success(isRTL ? 'تم التحقق ✓' : 'Verified ✓');
+    } catch (e: any) {
+      toast.error(e?.response?.data?.message ?? (isRTL ? 'فشل التحقق' : 'Verify failed'));
+    }
+  };
+
+  const adminResendVerification = async (id: number, email: string) => {
+    try {
+      const res: any = await adminApi.adminResendVerification(id);
+      toast.success(res?.message ?? (isRTL
+        ? `تم إرسال رابط التحقق إلى ${email}`
+        : `Verification link sent to ${email}`));
+    } catch (e: any) {
+      toast.error(e?.response?.data?.message ?? (isRTL ? 'فشل الإرسال' : 'Resend failed'));
+    }
+  };
+
   /* ── Forum: Comment moderation handlers ────────────────────────────────── */
   const handleMarkCommentOfficial = async (commentId: number, currentlyOfficial: boolean) => {
     try {
@@ -1418,9 +1443,13 @@ export default function AdminPage() {
                               ✓ {isRTL ? 'موثوق' : 'Trusted'}
                             </span>
                           )}
-                          {u.email_verified_at && (
+                          {u.email_verified_at ? (
                             <span className="text-xs bg-gray-100 text-gray-400 px-2 py-0.5 rounded-full">
-                              {isRTL ? 'بريد موثق' : 'Email verified'}
+                              ✉️ {isRTL ? 'بريد موثق' : 'Email verified'}
+                            </span>
+                          ) : (
+                            <span className="text-xs bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full font-bold">
+                              ⚠️ {isRTL ? 'بريد غير موثق' : 'Email NOT verified'}
                             </span>
                           )}
                           {u.suspended_at && (
@@ -1431,17 +1460,38 @@ export default function AdminPage() {
                         </div>
                       </div>
                     </button>
-                    <button
-                      onClick={() => toggleTrustedPayer(u.id)}
-                      className={`px-3 py-1.5 rounded-xl text-xs font-bold transition flex-shrink-0
-                        ${u.is_trusted_payer
-                          ? 'bg-red-50 text-red-500 hover:bg-red-100'
-                          : 'bg-emerald-50 text-emerald-600 hover:bg-emerald-100'}`}
-                    >
-                      {u.is_trusted_payer
-                        ? (isRTL ? 'سحب الموثوقية' : 'Remove Trust')
-                        : (isRTL ? 'منح الموثوقية' : 'Make Trusted')}
-                    </button>
+                    <div className="flex flex-col gap-1 flex-shrink-0">
+                      {/* Verification fast-actions — only show for unverified users */}
+                      {!u.email_verified_at && (
+                        <>
+                          <button
+                            onClick={() => adminResendVerification(u.id, u.email)}
+                            title={isRTL ? 'إعادة إرسال إيميل التحقق' : 'Resend verification email'}
+                            className="px-3 py-1.5 rounded-xl text-xs font-bold bg-blue-50 text-blue-600 hover:bg-blue-100 transition"
+                          >
+                            ✉️ {isRTL ? 'إرسال رابط' : 'Send link'}
+                          </button>
+                          <button
+                            onClick={() => manuallyVerifyEmail(u.id, u.email)}
+                            title={isRTL ? 'تحقق يدوي بدون إرسال إيميل' : 'Manual verify (bypass email)'}
+                            className="px-3 py-1.5 rounded-xl text-xs font-bold bg-amber-50 text-amber-700 hover:bg-amber-100 transition"
+                          >
+                            ✓ {isRTL ? 'تحقق يدوي' : 'Manual verify'}
+                          </button>
+                        </>
+                      )}
+                      <button
+                        onClick={() => toggleTrustedPayer(u.id)}
+                        className={`px-3 py-1.5 rounded-xl text-xs font-bold transition
+                          ${u.is_trusted_payer
+                            ? 'bg-red-50 text-red-500 hover:bg-red-100'
+                            : 'bg-emerald-50 text-emerald-600 hover:bg-emerald-100'}`}
+                      >
+                        {u.is_trusted_payer
+                          ? (isRTL ? 'سحب الموثوقية' : 'Remove Trust')
+                          : (isRTL ? 'منح الموثوقية' : 'Make Trusted')}
+                      </button>
+                    </div>
                   </div>
                 ))}
               </div>
