@@ -411,6 +411,11 @@ export const adminApi = {
   adminResendVerification: (id: number): Promise<{ sent: boolean; message: string }> =>
     api.post(`/admin/users/${id}/resend-verification`),
 
+  // Ceremonial activation: verifies email (if not already) + sends the
+  // big welcome email with features + referral link.
+  activateAccount: (id: number): Promise<{ message: string; email_sent: boolean }> =>
+    api.post(`/admin/users/${id}/activate`),
+
   /* ── Phase 2: bulk actions ── */
   bulkApproveListings: (ids: number[]): Promise<any> =>
     api.post('/admin/listings/bulk-approve', { ids }),
