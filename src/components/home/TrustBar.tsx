@@ -8,16 +8,16 @@ export default function TrustBar() {
 
   const items = isRTL
     ? [
-        { icon: '🇸🇦', title: 'سعودي ١٠٠%',    sub: 'مرخص ومتوافق مع الأنظمة' },
+        { icon: '🇸🇦', title: 'للسوق السعودي',  sub: 'مرخص ومتوافق مع الأنظمة' },
         { icon: '🔒',   title: 'شركات موثّقة',  sub: 'عملية تحقق صارمة'         },
         { icon: '⚡',   title: 'نشر فوري',      sub: 'إعلانك يظهر خلال دقائق'  },
         { icon: '🤝',   title: '+٩٥M ر.س',     sub: 'حجم صفقات مكتملة'         },
       ]
     : [
-        { icon: '🇸🇦', title: '100% Saudi',          sub: 'Licensed & compliant'         },
-        { icon: '🔒',   title: 'Verified Businesses',  sub: 'Strict verification process'  },
-        { icon: '⚡',   title: 'Instant Publishing',   sub: 'Your listing goes live fast'  },
-        { icon: '🤝',   title: '+95M SAR',             sub: 'In completed deals'           },
+        { icon: '🇸🇦', title: 'For the Saudi market',  sub: 'Licensed & compliant'         },
+        { icon: '🔒',   title: 'Verified Businesses',   sub: 'Strict verification process'  },
+        { icon: '⚡',   title: 'Instant Publishing',    sub: 'Your listing goes live fast'  },
+        { icon: '🤝',   title: '+95M SAR',              sub: 'In completed deals'           },
       ]
 
   return (
