@@ -681,11 +681,19 @@ function ListingsContent() {
                         className="shrink-0 w-52 bg-white rounded-xl border border-amber-200 overflow-hidden
                                    hover:shadow-md hover:border-amber-300 transition group">
                         <div className={`h-28 bg-gradient-to-br ${imgBgF[l.section] || 'from-gray-100 to-gray-200'}
-                                         flex items-center justify-center text-3xl relative`}>
-                          {l.images?.[0]
-                            ? <img src={l.images[0]} alt={ftitle ?? ''} className="w-full h-full object-cover" />
-                            : <span>{sEmoji[l.section]}</span>
-                          }
+                                         flex items-center justify-center text-3xl relative overflow-hidden`}>
+                          {(() => {
+                            // Same logic as ListingCard: prefer media[] (current API),
+                            // fall back to legacy images[] field.
+                            const mediaImg = l.media?.find(m => m.type === 'image' && m.is_primary)
+                                          ?? l.media?.find(m => m.type === 'image');
+                            const imgUrl = mediaImg
+                              ? `${process.env.NEXT_PUBLIC_API_URL}/uploads/${mediaImg.path}`
+                              : l.images?.[0];
+                            return imgUrl
+                              ? <img src={imgUrl} alt={ftitle ?? ''} className="w-full h-full object-cover" loading="lazy" />
+                              : <span>{sEmoji[l.section]}</span>;
+                          })()}
                         </div>
                         <div className="p-2.5">
                           <p className="font-semibold text-xs text-gray-900 line-clamp-2 leading-snug mb-1">
