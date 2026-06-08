@@ -4,6 +4,7 @@ import { getMessages } from 'next-intl/server'
 import { notFound } from 'next/navigation'
 import { routing } from '@/i18n/routing'
 import { Toaster } from 'react-hot-toast'
+import { Analytics } from '@vercel/analytics/react'
 import AuthSync from '@/components/AuthSync'
 import InactivityGuard from '@/components/InactivityGuard'
 import InstallPrompt from '@/components/InstallPrompt'
@@ -169,6 +170,9 @@ export default async function LocaleLayout({ children, params }: Props) {
               },
             }}
           />
+          {/* Vercel Analytics — page-view tracker. Dashboard at
+              vercel.com/<team>/<project>/analytics. Zero config, no PII. */}
+          <Analytics />
         </NextIntlClientProvider>
       </body>
     </html>
