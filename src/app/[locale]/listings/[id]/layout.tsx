@@ -3,6 +3,12 @@ import type { Metadata } from 'next'
 const BASE = process.env.NEXT_PUBLIC_APP_URL ?? 'https://www.nwafizlogi.com'
 const API  = process.env.NEXT_PUBLIC_API_URL ?? 'https://nwafiz.creativealphat.com'
 
+// Convert the route from "dynamic, no-store" to ISR (5-minute cache —
+// shorter than category pages because listing details change more often:
+// price edits, status changes, new media). Without this Vercel emits
+// cache-control: no-store which tanks Google indexing.
+export const revalidate = 300
+
 type Props = {
   children: React.ReactNode
   params:   Promise<{ locale: string; id: string }>

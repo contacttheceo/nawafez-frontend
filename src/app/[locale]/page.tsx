@@ -15,14 +15,27 @@ type Props = { params: Promise<{ locale: string }> }
 
 const BASE = process.env.NEXT_PUBLIC_APP_URL ?? 'https://www.nwafizlogi.com'
 
+// Re-render at most once an hour. Without this Next.js 15 treats the page
+// as fully dynamic and emits `cache-control: no-store`, which tells
+// Googlebot the response is ephemeral and tanks indexing.
+export const revalidate = 3600
+
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { locale } = await params
   const t = await getTranslations({ locale, namespace: 'hero' })
   const isAr = locale === 'ar'
-  const title = isAr ? 'نوافذ — منصة اللوجستيك B2B' : 'Nwafiz — B2B Logistics Marketplace'
+  // SEO-tuned title: includes the high-intent KSA keywords people actually
+  // search for ("شاحنات", "نقل", "السعودية"). The plain "B2B platform"
+  // version had zero search volume.
+  const title = isAr
+    ? 'نوافذ — سوق النقل واللوجستيك في السعودية | شاحنات، عقود، توظيف'
+    : 'Nwafiz — Saudi Arabia Logistics Marketplace | Trucks, Contracts, Jobs'
+  const description = isAr
+    ? 'منصة B2B لسوق النقل واللوجستيك في السعودية. بيع وشراء وتأجير الشاحنات والمعدات، عقود نقل، وظائف لوجستية، ومنتدى مختصين في مكان واحد.'
+    : 'B2B marketplace for logistics in Saudi Arabia. Buy, sell, and rent trucks and equipment, post transport contracts, find logistics jobs — all in one place.'
   return {
     title,
-    description: t('desc'),
+    description,
     alternates: {
       canonical: `${BASE}/${locale}`,
       languages: { ar: `${BASE}/ar`, en: `${BASE}/en` },
@@ -33,7 +46,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
       locale: isAr ? 'ar_SA' : 'en_US',
       url: `${BASE}/${locale}`,
       title,
-      description: t('desc'),
+      description,
       images: [{ url: '/logo.png', width: 800, height: 626, alt: 'نوافذ' }],
     },
   }

@@ -2,6 +2,11 @@ import type { Metadata } from 'next'
 
 const BASE = process.env.NEXT_PUBLIC_APP_URL ?? 'https://www.nwafizlogi.com'
 
+// Convert the route from "dynamic, no-store" to ISR (1-hour cache).
+// Without this Vercel emits cache-control: no-store which signals
+// Googlebot the response is ephemeral and tanks indexing.
+export const revalidate = 3600
+
 type Props = {
   children: React.ReactNode
   params:   Promise<{ locale: string }>
