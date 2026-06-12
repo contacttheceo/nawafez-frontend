@@ -83,9 +83,10 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
                  truncate(listing.description_en) ||
                  (isAr ? 'تصفح فرص اللوجستيك في السعودية على منصة نوافذ' : 'Browse logistics opportunities in Saudi Arabia on Nwafiz')
 
-  const primaryImage = listing.media?.find(m => m.type === 'image' && m.is_primary)
-                    ?? listing.media?.find(m => m.type === 'image')
-  const imageUrl = buildImageUrl(primaryImage?.path) ?? `${BASE}/logo.png`
+  // Branded OG card — generated dynamically at /api/og/listing/{id}.
+  // Shows title, city, price, and primary photo. Much higher CTR than a
+  // raw photo when shared on WhatsApp / X / LinkedIn / Telegram.
+  const imageUrl = `${BASE}/api/og/listing/${listing.id}`
 
   const canonical = `${BASE}/${locale}/listings/${listing.id}`
   const altAr = `${BASE}/ar/listings/${listing.id}`

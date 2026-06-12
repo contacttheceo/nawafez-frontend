@@ -13,6 +13,7 @@
  */
 
 import { NextResponse } from 'next/server'
+import { ARTICLES } from '@/content/articles'
 
 const BASE = process.env.NEXT_PUBLIC_APP_URL ?? 'https://www.nwafizlogi.com'
 const API  = process.env.NEXT_PUBLIC_API_URL ?? 'https://nwafiz.creativealphat.com'
@@ -145,11 +146,22 @@ export async function GET() {
     )
   })
 
+  // Editorial articles — long-form SEO content
+  const articleIndex = LOCALES.map(locale =>
+    buildUrl(locale, '/articles', now, 0.8, 'weekly')
+  )
+  const articleEntries = ARTICLES.flatMap(a => {
+    const lastmod = new Date(a.updated_at).toISOString()
+    return LOCALES.map(locale =>
+      buildUrl(locale, `/articles/${a.slug}`, lastmod, 0.7, 'monthly')
+    )
+  })
+
   const xmlBody = `<?xml version="1.0" encoding="UTF-8"?>
 <urlset
   xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"
   xmlns:xhtml="http://www.w3.org/1999/xhtml">
-${[...staticEntries, ...listingEntries].join('\n')}
+${[...staticEntries, ...articleIndex, ...articleEntries, ...listingEntries].join('\n')}
 </urlset>`
 
   return new NextResponse(xmlBody, {
