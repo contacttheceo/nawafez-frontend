@@ -143,6 +143,9 @@ export default async function LocaleLayout({ children, params }: Props) {
         <link rel="alternate" hrefLang="ar"     href={`${BASE}/ar`} />
         <link rel="alternate" hrefLang="en"     href={`${BASE}/en`} />
         <link rel="alternate" hrefLang="x-default" href={`${BASE}/ar`} />
+        {/* RSS / Atom feed — autodiscovery for readers and aggregators */}
+        <link rel="alternate" type="application/atom+xml"
+              title="نوافذ — أحدث الإعلانات" href={`${BASE}/feed.xml`} />
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{ __html: JSON.stringify(ORG_SCHEMA) }}

@@ -14,6 +14,7 @@
 
 import { NextResponse } from 'next/server'
 import { ARTICLES } from '@/content/articles'
+import { CITIES } from '@/content/cities'
 
 const BASE = process.env.NEXT_PUBLIC_APP_URL ?? 'https://www.nwafizlogi.com'
 const API  = process.env.NEXT_PUBLIC_API_URL ?? 'https://nwafiz.creativealphat.com'
@@ -157,11 +158,28 @@ export async function GET() {
     )
   })
 
+  // City landing pages — high commercial intent for local searches
+  const cityIndex = LOCALES.map(locale =>
+    buildUrl(locale, '/cities', now, 0.7, 'weekly')
+  )
+  const cityEntries = CITIES.flatMap(c =>
+    LOCALES.map(locale =>
+      buildUrl(locale, `/cities/${c.slug}`, now, 0.8, 'daily')
+    )
+  )
+
+  // Tools — interactive utilities that drive engagement + backlinks
+  const toolEntries = LOCALES.flatMap(locale => [
+    buildUrl(locale, '/tools',                     now, 0.6, 'monthly'),
+    buildUrl(locale, '/tools/contract-analyzer',   now, 0.6, 'monthly'),
+    buildUrl(locale, '/tools/rental-calculator',   now, 0.7, 'monthly'),
+  ])
+
   const xmlBody = `<?xml version="1.0" encoding="UTF-8"?>
 <urlset
   xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"
   xmlns:xhtml="http://www.w3.org/1999/xhtml">
-${[...staticEntries, ...articleIndex, ...articleEntries, ...listingEntries].join('\n')}
+${[...staticEntries, ...articleIndex, ...articleEntries, ...cityIndex, ...cityEntries, ...toolEntries, ...listingEntries].join('\n')}
 </urlset>`
 
   return new NextResponse(xmlBody, {

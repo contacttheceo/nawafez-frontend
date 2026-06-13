@@ -7,9 +7,13 @@ export default function robots(): MetadataRoute.Robots {
     rules: [
       {
         userAgent: '*',
-        allow: '/',
+        allow: [
+          '/',
+          '/api/og/',        // dynamic OG images — Twitter/Facebook/WhatsApp need these
+        ],
         disallow: [
-          '/api/',           // Next.js API routes (AI etc.) — not for crawlers
+          '/api/ai/',        // AI endpoints — keep them out of crawl
+          '/api/push/',      // push API — internal only
           '/*/admin',        // admin panel
           '/*/dashboard',    // user dashboards
           '/*/profile',      // private profile
