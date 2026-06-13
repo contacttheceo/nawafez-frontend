@@ -1,6 +1,6 @@
 import type { Metadata, Viewport } from 'next'
 import { NextIntlClientProvider } from 'next-intl'
-import { getMessages } from 'next-intl/server'
+import { getMessages, setRequestLocale } from 'next-intl/server'
 import { notFound } from 'next/navigation'
 import { routing } from '@/i18n/routing'
 import { Toaster } from 'react-hot-toast'
@@ -121,12 +121,24 @@ type Props = {
   params: Promise<{ locale: string }>
 }
 
+// Pre-generate the locale segments so each is statically rendered. Combined
+// with setRequestLocale() below, this lets ISR work and avoids the
+// cache-control: no-store header that would tank SEO.
+export function generateStaticParams() {
+  return routing.locales.map(locale => ({ locale }))
+}
+
 export default async function LocaleLayout({ children, params }: Props) {
   const { locale } = await params
 
   if (!routing.locales.includes(locale as 'ar' | 'en')) {
     notFound()
   }
+
+  // Tell next-intl the locale explicitly so it doesn't fall back to reading
+  // headers/cookies — which would mark every page dynamic and force Vercel
+  // to emit cache-control: no-store, killing SEO.
+  setRequestLocale(locale)
 
   const messages = await getMessages()
   const isRTL = locale === 'ar'

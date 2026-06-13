@@ -1,4 +1,4 @@
-import { getTranslations } from 'next-intl/server'
+import { getTranslations, setRequestLocale } from 'next-intl/server'
 import type { Metadata } from 'next'
 import Navbar             from '@/components/Navbar'
 import Footer             from '@/components/Footer'
@@ -22,6 +22,7 @@ export const revalidate = 3600
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { locale } = await params
+  setRequestLocale(locale)
   const t = await getTranslations({ locale, namespace: 'hero' })
   const isAr = locale === 'ar'
   // SEO-tuned title: includes the high-intent KSA keywords people actually
@@ -69,6 +70,7 @@ async function fetchStats() {
 
 export default async function HomePage({ params }: Props) {
   const { locale } = await params
+  setRequestLocale(locale)
   const stats = await fetchStats()
   const isAr  = locale === 'ar'
 
