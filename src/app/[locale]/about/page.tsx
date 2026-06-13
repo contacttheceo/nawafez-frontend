@@ -7,7 +7,14 @@ type Props = { params: Promise<{ locale: string }> }
 
 const BASE = process.env.NEXT_PUBLIC_APP_URL ?? 'https://www.nwafizlogi.com'
 
-export const revalidate = 86400 // daily
+// Pure server-rendered, no per-request data. force-static gives us the
+// strongest cache headers (public, immutable until next deploy).
+export const dynamic    = 'force-static'
+export const revalidate = false
+
+export function generateStaticParams() {
+  return [{ locale: 'ar' }, { locale: 'en' }]
+}
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { locale } = await params

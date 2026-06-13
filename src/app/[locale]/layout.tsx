@@ -8,6 +8,7 @@ import { Analytics } from '@vercel/analytics/react'
 import AuthSync from '@/components/AuthSync'
 import InactivityGuard from '@/components/InactivityGuard'
 import InstallPrompt from '@/components/InstallPrompt'
+import FloatingWhatsApp from '@/components/FloatingWhatsApp'
 import ServiceWorkerRegistrar from '@/components/ServiceWorkerRegistrar'
 import UnverifiedEmailBanner from '@/components/UnverifiedEmailBanner'
 import './globals.css'
@@ -175,6 +176,7 @@ export default async function LocaleLayout({ children, params }: Props) {
           <UnverifiedEmailBanner />
           {children}
           <InstallPrompt />
+          <FloatingWhatsApp />
           <Toaster
             position={isRTL ? 'bottom-left' : 'bottom-right'}
             toastOptions={{
