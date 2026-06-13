@@ -1,12 +1,12 @@
 'use client';
 
-import { useState } from 'react';
+import { Suspense, useState } from 'react';
 import { useLocale } from 'next-intl';
 import { useSearchParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import Image from 'next/image';
 import { useForm } from 'react-hook-form';
-import { ArrowRight, ArrowLeft, Eye, EyeOff, KeyRound } from 'lucide-react';
+import { ArrowRight, ArrowLeft, Eye, EyeOff, KeyRound, Loader2 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { authApi } from '@/lib/api';
 
@@ -15,7 +15,18 @@ type FormData = {
   password_confirmation: string;
 };
 
+// useSearchParams() bails out of static rendering. Wrapping in a Suspense
+// boundary is the canonical fix once static rendering is enabled on the
+// locale layer.
 export default function ResetPasswordPage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen flex items-center justify-center"><Loader2 className="animate-spin text-emerald" size={32} /></div>}>
+      <ResetPasswordInner />
+    </Suspense>
+  );
+}
+
+function ResetPasswordInner() {
   const locale      = useLocale();
   const isRTL       = locale === 'ar';
   const router      = useRouter();

@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { Suspense, useEffect, useState } from 'react';
 import { useLocale } from 'next-intl';
 import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
@@ -10,7 +10,19 @@ import toast from 'react-hot-toast';
 import { authApi } from '@/lib/api';
 import { useAuthStore } from '@/store/auth';
 
+// useSearchParams() bails out of static rendering. Once we enabled static
+// rendering at the locale layer (setRequestLocale + generateStaticParams),
+// this page started failing the prerender step unless we wrap the inner
+// component in a Suspense boundary.
 export default function VerifyEmailPage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen flex items-center justify-center"><Loader2 className="animate-spin text-emerald" size={32} /></div>}>
+      <VerifyEmailInner />
+    </Suspense>
+  );
+}
+
+function VerifyEmailInner() {
   const locale   = useLocale();
   const isRTL    = locale === 'ar';
   const params   = useSearchParams();
