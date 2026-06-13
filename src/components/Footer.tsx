@@ -2,6 +2,7 @@
 
 import { useTranslations, useLocale } from 'next-intl'
 import Link from 'next/link'
+import NewsletterSignup from '@/components/NewsletterSignup'
 import Image from 'next/image'
 import { Phone, Mail, Globe } from 'lucide-react'
 
@@ -143,6 +144,12 @@ export default function Footer() {
               </a>
             </div>
           </div>
+        </div>
+
+        {/* Newsletter signup — site-wide capture. Higher conversion than
+            burying it on the homepage because it appears on every page. */}
+        <div className="border-t border-white/10 pt-6 mb-6 max-w-2xl">
+          <NewsletterSignup source="footer" />
         </div>
 
         {/* Popular searches by city — deep links Googlebot can follow.
