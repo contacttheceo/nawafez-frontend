@@ -48,7 +48,14 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
       url: `${BASE}/${locale}`,
       title,
       description,
-      images: [{ url: '/logo.png', width: 800, height: 626, alt: 'نوافذ' }],
+      // Branded OG card — much better engagement than the bare logo.
+      // Same /api/og endpoint can power any page via query params.
+      images: [{
+        url: `${BASE}/api/og?title=${encodeURIComponent(isAr ? 'منصة اللوجستيك B2B الأولى في السعودية' : "Saudi Arabia's First B2B Logistics Marketplace")}&subtitle=${encodeURIComponent(isAr ? 'شاحنات، عقود نقل، استحواذ، توظيف، منتدى' : 'Trucks, contracts, M&A, jobs, forum')}&stat=583%2B&statLabel=${encodeURIComponent(isAr ? 'إعلان نشط' : 'active listings')}`,
+        width: 1200,
+        height: 630,
+        alt: isAr ? 'نوافذ' : 'Nwafiz',
+      }],
     },
   }
 }
