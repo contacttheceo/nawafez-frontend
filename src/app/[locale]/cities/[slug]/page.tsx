@@ -27,9 +27,10 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
   const isAr = locale === 'ar'
   const cityName = isAr ? c.name_ar : c.name_en
+  // Bare title — root template adds ' | نوافذ'
   const title = isAr
-    ? `شاحنات، عقود، وظائف لوجستية في ${cityName} | نوافذ`
-    : `Trucks, Contracts & Logistics Jobs in ${cityName} | Nwafiz`
+    ? `شاحنات، عقود، وظائف لوجستية في ${cityName}`
+    : `Trucks, Contracts & Logistics Jobs in ${cityName}`
   const description = isAr
     ? `أحدث إعلانات بيع وإيجار الشاحنات، عقود النقل، والوظائف اللوجستية في ${cityName}. منصة B2B موثوقة لمحترفي قطاع النقل.`
     : `Latest listings for truck sales, rentals, transport contracts, and logistics jobs in ${cityName}. Trusted B2B platform for transport professionals.`

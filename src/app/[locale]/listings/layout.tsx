@@ -39,11 +39,15 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { locale } = await params
   const isAr = locale === 'ar'
 
+  // Bare titles (no '— نوافذ' suffix) — the root layout's title.template
+  // appends ' | نوافذ' automatically. Adding it here too produced
+  // 'الإعلانات — نوافذ | نوافذ' which Bing flagged as a duplicate-title
+  // issue and looks unprofessional in SERPs.
   return {
-    title:       isAr ? 'الإعلانات — نوافذ' : 'Listings — Nwafiz',
+    title:       isAr ? 'إعلانات اللوجستيك في السعودية' : 'Saudi Arabia Logistics Listings',
     description: isAr
-      ? 'تصفّح آلاف فرص اللوجستيك B2B في السعودية: استحواذ، أسطول، عقود، وظائف، ومنتدى.'
-      : 'Browse thousands of B2B logistics opportunities in Saudi Arabia: M&A, fleet, contracts, jobs, and forum.',
+      ? 'تصفّح أحدث إعلانات بيع وإيجار الشاحنات والمعدات، عقود النقل ومناقصات التشغيل، صفقات الاستحواذ، الوظائف اللوجستية، ومنتدى المختصين في السعودية — كل ذلك في منصة B2B واحدة موثّقة.'
+      : 'Browse the latest truck and equipment sales/rentals, transport contracts and operations tenders, M&A deals, logistics jobs, and a professional forum across Saudi Arabia — all in one verified B2B marketplace.',
     alternates: {
       canonical: `${BASE}/${locale}/listings`,
       languages: {
@@ -56,7 +60,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
       siteName: 'نوافذ',
       locale: isAr ? 'ar_SA' : 'en_US',
       url:    `${BASE}/${locale}/listings`,
-      title:       isAr ? 'الإعلانات — نوافذ' : 'Listings — Nwafiz',
+      title:       isAr ? 'إعلانات اللوجستيك في السعودية | نوافذ' : 'Saudi Arabia Logistics Listings | Nwafiz',
       description: isAr
         ? 'تصفّح فرص اللوجستيك B2B في السعودية'
         : 'Browse B2B logistics opportunities in Saudi Arabia',

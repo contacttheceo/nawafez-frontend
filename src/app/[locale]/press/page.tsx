@@ -12,9 +12,8 @@ export const revalidate = 86400
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { locale } = await params
   const isAr = locale === 'ar'
-  const title = isAr
-    ? 'الإعلام والمحتوى الصحفي | نوافذ'
-    : 'Press & Media | Nwafiz'
+  // Bare title — root template adds ' | نوافذ'
+  const title = isAr ? 'الإعلام والمحتوى الصحفي' : 'Press & Media'
   const description = isAr
     ? 'مواد صحفية، إحصائيات، وصور لنوافذ — منصة اللوجستيك B2B الأولى في السعودية. مفتوحة للصحفيين والباحثين.'
     : 'Press materials, statistics, and brand assets for Nwafiz — the leading B2B logistics platform in Saudi Arabia. Open for journalists and researchers.'

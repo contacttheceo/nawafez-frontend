@@ -17,7 +17,7 @@ export function generateStaticParams() {
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { locale } = await params
   const isAr = locale === 'ar'
-  const title = isAr ? 'تواصل معنا | نوافذ' : 'Contact Us | Nwafiz'
+  const title = isAr ? 'تواصل معنا' : 'Contact Us'
   const description = isAr
     ? 'تواصل مع فريق نوافذ — منصة اللوجستيك B2B في السعودية. واتساب، بريد، أو من خلال النموذج.'
     : 'Contact the Nwafiz team — Saudi Arabia\'s B2B logistics platform. WhatsApp, email, or via the form.'

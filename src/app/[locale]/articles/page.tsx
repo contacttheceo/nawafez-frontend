@@ -14,9 +14,10 @@ export const revalidate = 3600
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { locale } = await params
   const isAr = locale === 'ar'
+  // Bare title — root template adds ' | نوافذ'
   const title = isAr
-    ? 'دليل اللوجستيك في السعودية | مقالات نوافذ'
-    : 'Saudi Arabia Logistics Guide | Nwafiz Articles'
+    ? 'دليل اللوجستيك في السعودية'
+    : 'Saudi Arabia Logistics Guide'
   const description = isAr
     ? 'مقالات ودلائل عملية لقطاع النقل واللوجستيك في السعودية: التراخيص، الأسعار، العقود، وأفضل الممارسات.'
     : 'Practical articles and guides for the Saudi transport and logistics sector: licenses, pricing, contracts, and best practices.'

@@ -26,16 +26,20 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const t = await getTranslations({ locale, namespace: 'hero' })
   const isAr = locale === 'ar'
   // SEO-tuned title: includes the high-intent KSA keywords people actually
-  // search for ("شاحنات", "نقل", "السعودية"). The plain "B2B platform"
-  // version had zero search volume.
-  const title = isAr
-    ? 'نوافذ — سوق النقل واللوجستيك في السعودية | شاحنات، عقود، توظيف'
-    : 'Nwafiz — Saudi Arabia Logistics Marketplace | Trucks, Contracts, Jobs'
+  // search for ("شاحنات", "نقل", "السعودية"). Use title.absolute so the
+  // root template's ' | نوافذ' suffix is NOT appended — the homepage is
+  // the brand's anchor page and including 'نوافذ' twice (here + via the
+  // template) was producing duplicate-title warnings in Bing.
+  const titleStr = isAr
+    ? 'سوق النقل واللوجستيك في السعودية — نوافذ | شاحنات، عقود، توظيف'
+    : 'Saudi Arabia Logistics Marketplace — Nwafiz | Trucks, Contracts, Jobs'
   const description = isAr
     ? 'منصة B2B لسوق النقل واللوجستيك في السعودية. بيع وشراء وتأجير الشاحنات والمعدات، عقود نقل، وظائف لوجستية، ومنتدى مختصين في مكان واحد.'
     : 'B2B marketplace for logistics in Saudi Arabia. Buy, sell, and rent trucks and equipment, post transport contracts, find logistics jobs — all in one place.'
   return {
-    title,
+    // .absolute opts out of the root template — we already have 'نوافذ'
+    // in the title, no need for the suffix to add it again.
+    title: { absolute: titleStr },
     description,
     alternates: {
       canonical: `${BASE}/${locale}`,
@@ -46,7 +50,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
       siteName: 'نوافذ',
       locale: isAr ? 'ar_SA' : 'en_US',
       url: `${BASE}/${locale}`,
-      title,
+      title: titleStr,
       description,
       // Branded OG card — much better engagement than the bare logo.
       // Same /api/og endpoint can power any page via query params.

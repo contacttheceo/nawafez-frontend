@@ -19,9 +19,8 @@ export function generateStaticParams() {
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { locale } = await params
   const isAr = locale === 'ar'
-  const title = isAr
-    ? 'من نحن | نوافذ — منصة اللوجستيك B2B في السعودية'
-    : 'About | Nwafiz — Saudi Arabia B2B Logistics Marketplace'
+  // Bare title — root template adds ' | نوافذ'
+  const title = isAr ? 'من نحن' : 'About'
   const description = isAr
     ? 'نوافذ هي أول marketplace B2B متخصص في النقل واللوجستيك في السعودية. تعرف على رؤيتنا، فريقنا، والقيم التي تحرّك المنصة.'
     : 'Nwafiz is the first B2B marketplace dedicated to transport and logistics in Saudi Arabia. Learn about our vision, team, and values.'

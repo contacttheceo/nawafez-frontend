@@ -13,9 +13,10 @@ export const revalidate = 86400
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { locale } = await params
   const isAr = locale === 'ar'
+  // Bare title — root template adds ' | نوافذ'
   const title = isAr
-    ? 'سوق اللوجستيك حسب المدينة | نوافذ'
-    : 'Logistics Market by City | Nwafiz'
+    ? 'سوق اللوجستيك حسب المدينة'
+    : 'Logistics Market by City'
   const description = isAr
     ? 'تصفّح إعلانات الشاحنات، عقود النقل، والوظائف اللوجستية في المدن السعودية الكبرى: الرياض، جدة، الدمام، مكة، المدينة.'
     : 'Browse truck listings, transport contracts, and logistics jobs in major Saudi cities: Riyadh, Jeddah, Dammam, Mecca, Medina.'
