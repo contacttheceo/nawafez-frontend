@@ -119,6 +119,12 @@ export default function Footer() {
               <Link href={`/${locale}/cities`} className="hover:text-white transition-colors">
                 {isRTL ? 'تصفّح حسب المدينة' : 'Browse by City'}
               </Link>
+              <Link href={`/${locale}/about`} className="hover:text-white transition-colors">
+                {isRTL ? 'من نحن' : 'About'}
+              </Link>
+              <Link href={`/${locale}/press`} className="hover:text-white transition-colors">
+                {isRTL ? 'الإعلام' : 'Press'}
+              </Link>
               <Link href={`/${locale}/sitemap`} className="hover:text-white transition-colors">
                 {isRTL ? 'خريطة الموقع' : 'Sitemap'}
               </Link>
