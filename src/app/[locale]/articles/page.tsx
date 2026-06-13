@@ -3,6 +3,7 @@ import Link from 'next/link'
 import { ARTICLES } from '@/content/articles'
 import Navbar from '@/components/Navbar'
 import Footer from '@/components/Footer'
+import NewsletterSignup from '@/components/NewsletterSignup'
 
 type Props = { params: Promise<{ locale: string }> }
 
@@ -82,7 +83,11 @@ export default async function ArticlesIndexPage({ params }: Props) {
             ))}
           </div>
 
-          <div className="mt-16 bg-navy text-white rounded-2xl p-8 text-center">
+          <div className="mt-12 max-w-2xl mx-auto">
+            <NewsletterSignup source="articles_index" />
+          </div>
+
+          <div className="mt-12 bg-navy text-white rounded-2xl p-8 text-center">
             <h3 className="text-xl font-black mb-2">
               {isAr ? 'انشر إعلانك على نوافذ' : 'Post Your Listing on Nwafiz'}
             </h3>
