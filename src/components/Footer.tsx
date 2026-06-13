@@ -101,6 +101,28 @@ export default function Footer() {
               <Link href={`/${locale}/dashboard`} className="hover:text-white transition-colors">
                 {isRTL ? 'لوحة التحكم' : 'Dashboard'}
               </Link>
+              <Link href={`/${locale}/tools/rental-calculator`} className="hover:text-white transition-colors">
+                {isRTL ? 'حاسبة الإيجار' : 'Rental Calculator'}
+              </Link>
+            </div>
+          </div>
+
+          {/* Resources */}
+          <div>
+            <h4 className="text-white font-bold text-sm mb-4">
+              {isRTL ? 'مصادر' : 'Resources'}
+            </h4>
+            <div className="flex flex-col gap-2 text-sm">
+              <Link href={`/${locale}/articles`} className="hover:text-white transition-colors">
+                {isRTL ? 'دليل اللوجستيك' : 'Logistics Guide'}
+              </Link>
+              <Link href={`/${locale}/cities`} className="hover:text-white transition-colors">
+                {isRTL ? 'تصفّح حسب المدينة' : 'Browse by City'}
+              </Link>
+              <Link href={`/${locale}/sitemap`} className="hover:text-white transition-colors">
+                {isRTL ? 'خريطة الموقع' : 'Sitemap'}
+              </Link>
+              <Link href={`/${locale}/faq`} className="hover:text-white transition-colors">{t('faq')}</Link>
             </div>
           </div>
 
@@ -113,7 +135,6 @@ export default function Footer() {
               <a href="mailto:info@nwafizlogi.com" className="hover:text-white transition-colors">
                 {t('contact')}
               </a>
-              <Link href={`/${locale}/faq`} className="hover:text-white transition-colors">{t('faq')}</Link>
             </div>
           </div>
         </div>
