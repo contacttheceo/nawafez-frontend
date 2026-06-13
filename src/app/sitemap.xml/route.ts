@@ -105,6 +105,7 @@ const STATIC_PATHS: { path: string; priority: number; changeFrequency: ChangeFre
   { path: '/sitemap',                                                          priority: 0.5, changeFrequency: 'monthly' },
   { path: '/about',                                                            priority: 0.7, changeFrequency: 'monthly' },
   { path: '/press',                                                            priority: 0.6, changeFrequency: 'monthly' },
+  { path: '/contact',                                                          priority: 0.6, changeFrequency: 'monthly' },
   { path: '/tools',                                                            priority: 0.6, changeFrequency: 'monthly' },
   { path: '/tools/contract-analyzer',                                          priority: 0.6, changeFrequency: 'monthly' },
   { path: '/auth/login',                                                       priority: 0.3, changeFrequency: 'monthly' },
