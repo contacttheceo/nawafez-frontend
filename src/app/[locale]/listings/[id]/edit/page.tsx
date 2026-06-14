@@ -103,8 +103,10 @@ export default function EditListingPage() {
         const res = await listingsApi.getOne(Number(id));
         const data = res.data ?? res;
 
-        // Verify ownership
-        if (data.user_id !== user?.id) {
+        // Verify ownership — admins can edit any listing, owners can edit
+        // their own.
+        const isAdmin = user?.role === 'admin'
+        if (!isAdmin && data.user_id !== user?.id) {
           toast.error(isRTL ? 'لا تملك صلاحية تعديل هذا الإعلان' : 'You cannot edit this listing');
           router.push(`/${locale}/dashboard`);
           return;

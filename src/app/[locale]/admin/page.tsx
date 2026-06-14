@@ -7,9 +7,9 @@ import Link from 'next/link';
 import {
   Users, LayoutDashboard, FileText, AlertTriangle,
   CheckCircle, XCircle, Clock, DollarSign, TrendingUp, TrendingDown,
-  Shield, Eye, Star, Loader2, BarChart2, AlertCircle, Flag,
+  Shield, Eye, EyeOff, Star, Loader2, BarChart2, AlertCircle, Flag,
   Activity, Search, Filter, X, Download, MapPin, Calendar,
-  Tag, Mail, Phone, ExternalLink, MessageSquare, Trash2,
+  Tag, Mail, Phone, ExternalLink, MessageSquare, Trash2, Edit3,
   Package, CreditCard,
 } from 'lucide-react';
 import {
@@ -305,6 +305,33 @@ export default function AdminPage() {
     try {
       await adminApi.toggleFeatured(id);
       setListings(prev => prev.map(l => l.id === id ? { ...l, is_featured: !current } : l));
+    } catch { toast.error(isRTL ? 'حدث خطأ' : 'Error'); }
+  };
+
+  // Hide pulls the listing off the public site silently. Owner not notified.
+  const toggleHidden = async (id: number, currentStatus: string) => {
+    const isHidden = currentStatus === 'hidden';
+    try {
+      if (isHidden) {
+        await adminApi.unhideListing(id);
+        setListings(prev => prev.map(l => l.id === id ? { ...l, status: 'active' } : l));
+        toast.success(isRTL ? 'تم إعادة العرض' : 'Listing visible');
+      } else {
+        await adminApi.hideListing(id);
+        setListings(prev => prev.map(l => l.id === id ? { ...l, status: 'hidden' } : l));
+        toast.success(isRTL ? 'تم الإخفاء' : 'Listing hidden');
+      }
+    } catch { toast.error(isRTL ? 'حدث خطأ' : 'Error'); }
+  };
+
+  const deleteListing = async (id: number) => {
+    if (!confirm(isRTL
+      ? 'هل تريد حذف الإعلان نهائياً؟ يمكن استعادته من DB لاحقاً.'
+      : 'Delete this listing? It can be restored from the database later.')) return;
+    try {
+      await adminApi.deleteListing(id);
+      setListings(prev => prev.filter(l => l.id !== id));
+      toast.success(isRTL ? 'تم الحذف' : 'Deleted');
     } catch { toast.error(isRTL ? 'حدث خطأ' : 'Error'); }
   };
 
@@ -1144,10 +1171,12 @@ export default function AdminPage() {
                             ${listing.status === 'active'         ? 'bg-emerald-100 text-emerald-600' :
                               listing.status === 'pending_review' ? 'bg-amber-100 text-amber-600' :
                               listing.status === 'rejected'       ? 'bg-red-100 text-red-600' :
+                              listing.status === 'hidden'         ? 'bg-gray-200 text-gray-600' :
                                                                    'bg-gray-100 text-gray-500'}`}>
                             {listing.status === 'active' ? (isRTL ? 'نشط' : 'Active') :
                              listing.status === 'pending_review' ? (isRTL ? 'قيد المراجعة' : 'Pending') :
-                             listing.status === 'rejected' ? (isRTL ? 'مرفوض' : 'Rejected') : listing.status}
+                             listing.status === 'rejected' ? (isRTL ? 'مرفوض' : 'Rejected') :
+                             listing.status === 'hidden' ? (isRTL ? 'مخفي' : 'Hidden') : listing.status}
                           </span>
                           {listing.is_featured && (
                             <span className="text-xs bg-yellow-100 text-yellow-700 px-2 py-0.5 rounded-full">
@@ -1193,6 +1222,29 @@ export default function AdminPage() {
                             <XCircle size={15} />
                           </button>
                         )}
+
+                        {/* Hide / Unhide — silent moderation (no email to owner) */}
+                        <button onClick={() => toggleHidden(listing.id, listing.status)}
+                          className={`p-2 rounded-lg transition ${listing.status === 'hidden' ? 'bg-gray-100 text-gray-600' : 'hover:bg-gray-50 text-gray-400'}`}
+                          title={listing.status === 'hidden' ? (isRTL ? 'إعادة العرض' : 'Unhide') : (isRTL ? 'إخفاء' : 'Hide')}>
+                          {listing.status === 'hidden' ? <Eye size={15} /> : <EyeOff size={15} />}
+                        </button>
+
+                        {/* Edit — opens the owner-facing edit form. Admin
+                            session can edit anyone's listing because the
+                            page itself checks ownership OR role==admin. */}
+                        <Link href={`/${locale}/listings/${listing.id}/edit`}
+                          className="p-2 hover:bg-blue-50 rounded-lg text-blue-500 transition"
+                          title={isRTL ? 'تعديل' : 'Edit'}>
+                          <Edit3 size={15} />
+                        </Link>
+
+                        {/* Delete — soft delete, restorable from DB */}
+                        <button onClick={() => deleteListing(listing.id)}
+                          className="p-2 hover:bg-red-50 rounded-lg text-red-500 transition"
+                          title={isRTL ? 'حذف نهائي' : 'Delete'}>
+                          <Trash2 size={15} />
+                        </button>
                       </div>
                     </div>
                   ))}

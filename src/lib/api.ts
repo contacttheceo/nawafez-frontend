@@ -381,6 +381,20 @@ export const adminApi = {
   toggleFeatured: (id: number): Promise<any> =>
     api.patch(`/admin/listings/${id}/feature`),
 
+  hideListing: (id: number): Promise<any> =>
+    api.patch(`/admin/listings/${id}/hide`),
+
+  unhideListing: (id: number): Promise<any> =>
+    api.patch(`/admin/listings/${id}/unhide`),
+
+  // Partial update — any subset of the listing's text/numeric fields. Pass
+  // { status: 'active' } to override moderation status manually too.
+  updateListing: (id: number, payload: Record<string, unknown>): Promise<any> =>
+    api.patch(`/admin/listings/${id}`, payload),
+
+  deleteListing: (id: number): Promise<any> =>
+    api.delete(`/admin/listings/${id}`),
+
   getVerifications: (): Promise<any> =>
     api.get('/admin/verifications'),
 
