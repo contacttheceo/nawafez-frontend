@@ -176,6 +176,7 @@ export async function GET() {
     buildUrl(locale, '/tools',                     now, 0.6, 'monthly'),
     buildUrl(locale, '/tools/contract-analyzer',   now, 0.6, 'monthly'),
     buildUrl(locale, '/tools/rental-calculator',   now, 0.7, 'monthly'),
+    buildUrl(locale, '/tools/operating-cost',      now, 0.7, 'monthly'),
   ])
 
   const xmlBody = `<?xml version="1.0" encoding="UTF-8"?>
