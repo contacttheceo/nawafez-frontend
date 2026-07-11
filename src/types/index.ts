@@ -137,7 +137,12 @@ export interface Listing {
   currency: 'SAR'
   status: ListingStatus
   rejection_reason?: string | null
+  // Only the owner (and admins) receive the actual phone/email in the show
+  // response. Public viewers see is_contact_visible as a boolean flag and
+  // use the auth-gated /reveal-contact endpoint to fetch the details.
   contact_phone?: string | null
+  contact_email?: string | null
+  is_contact_visible?: boolean
   dynamic_data: Record<string, unknown>
   media: MediaItem[]
   images?: string[]

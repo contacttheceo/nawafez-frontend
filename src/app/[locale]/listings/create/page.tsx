@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import { useForm }              from 'react-hook-form';
 import { useRouter }            from 'next/navigation';
 import { useLocale }            from 'next-intl';
-import { ArrowRight, ArrowLeft, MapPin, Phone, DollarSign } from 'lucide-react';
+import { ArrowRight, ArrowLeft, MapPin, Phone, Mail, DollarSign } from 'lucide-react';
 import Link                     from 'next/link';
 import toast                    from 'react-hot-toast';
 
@@ -47,6 +47,10 @@ type FormData = {
   price:            string;
   price_type:       string;
   contact_phone:    string;
+  // Contact-visibility opt-in — only shown for fleet/jobs. Backend enforces
+  // false-by-default and rejects the value for contracts/ma/forum.
+  is_contact_visible: boolean;
+  contact_email:      string;
 };
 
 /* ── Section config ───────────────────────────────────────────────── */
@@ -641,23 +645,66 @@ export default function CreateListingPage() {
                 </div>
               )}
 
-              {/* Contact phone */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1 flex items-center gap-1">
-                  <Phone size={13} className="text-gray-400" />
-                  {isRTL ? 'رقم الواتساب / الجوال (اختياري)' : 'WhatsApp / Phone (optional)'}
-                </label>
-                <input
-                  type="tel"
-                  {...register('contact_phone')}
-                  className="input text-sm"
-                  dir="ltr"
-                  placeholder="+966 5X XXX XXXX"
-                />
-                <p className="text-xs text-gray-400 mt-1">
-                  {isRTL ? 'سيظهر للمشترين المهتمين للتواصل معك مباشرةً' : 'Shown to interested buyers for direct contact'}
-                </p>
-              </div>
+              {/* Contact-visibility opt-in — only available for fleet and
+                  jobs sections. Contracts/M&A stay behind internal messaging
+                  so Blind Bidding and confidentiality stay intact. */}
+              {(watch('section') === 'fleet' || watch('section') === 'jobs') && (
+                <div className="border-2 border-emerald/30 bg-emerald/5 rounded-xl p-4 space-y-3">
+                  <label className="flex items-start gap-3 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      {...register('is_contact_visible')}
+                      className="mt-1 w-4 h-4 accent-emerald shrink-0"
+                    />
+                    <div>
+                      <div className="text-sm font-bold text-navy">
+                        {isRTL
+                          ? 'اسمح بعرض بيانات تواصلي على الإعلان'
+                          : 'Allow my contact info to be shown on the listing'}
+                      </div>
+                      <div className="text-xs text-gray-600 mt-1 leading-relaxed">
+                        {isRTL
+                          ? 'موافقة صريحة وفقاً لنظام حماية البيانات السعودي (PDPL). المشترون المسجّلون فقط يستطيعون رؤية بياناتك، ولكل حساب حد أقصى 5 كشف تواصل يومياً لمنع الجمع الآلي.'
+                          : 'Explicit consent per Saudi PDPL. Only signed-in buyers can see your details, capped at 5 reveals per account per day to prevent scraping.'}
+                      </div>
+                    </div>
+                  </label>
+
+                  {watch('is_contact_visible') && (
+                    <div className="space-y-3 ps-7 pt-2 border-t border-emerald/20">
+                      <div>
+                        <label className="block text-xs font-medium text-gray-700 mb-1 flex items-center gap-1">
+                          <Phone size={12} className="text-emerald" />
+                          {isRTL ? 'رقم الواتساب / الجوال' : 'WhatsApp / Phone'}
+                        </label>
+                        <input
+                          type="tel"
+                          {...register('contact_phone')}
+                          className="input text-sm"
+                          dir="ltr"
+                          placeholder="+966 5X XXX XXXX"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-medium text-gray-700 mb-1 flex items-center gap-1">
+                          <Mail size={12} className="text-emerald" />
+                          {isRTL ? 'الإيميل (اختياري)' : 'Email (optional)'}
+                        </label>
+                        <input
+                          type="email"
+                          {...register('contact_email')}
+                          className="input text-sm"
+                          dir="ltr"
+                          placeholder="you@example.com"
+                        />
+                        <p className="text-[10px] text-gray-400 mt-1">
+                          {isRTL ? 'اتركه فارغاً لاستخدام إيميل الحساب' : 'Leave blank to use account email'}
+                        </p>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
           )}
 

@@ -22,6 +22,7 @@ import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
 import SimilarListings from '@/components/listings/SimilarListings';
 import ShareButtons from '@/components/listings/ShareButtons';
+import ContactReveal from '@/components/listings/ContactReveal';
 import Lightbox from '@/components/ui/Lightbox';
 import ReportModal from '@/components/ui/ReportModal';
 import { ListingCard } from '@/components/ui/ListingCard';
@@ -1309,6 +1310,20 @@ export default function ListingDetailPage() {
               />
             </div>
           </div>
+
+          {/* ── Direct contact (fleet + jobs only, owner opt-in) ────────── */}
+          {!isOwner && listing.is_contact_visible && (
+            <div className="mt-6">
+              <ContactReveal
+                listingId={listing.id}
+                section={listing.section}
+                isVisible={!!listing.is_contact_visible}
+                ownerName={isRTL
+                  ? (listing.user?.name_ar ?? listing.user?.name_en ?? undefined)
+                  : (listing.user?.name_en ?? listing.user?.name_ar ?? undefined)}
+              />
+            </div>
+          )}
 
           {/* ── Similar listings (internal linking + engagement) ────────── */}
           <SimilarListings currentId={listing.id} />

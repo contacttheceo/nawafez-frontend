@@ -520,4 +520,25 @@ export const aiApi = {
   },
 };
 
+// ─── Contact reveal (opt-in fleet/jobs listings only) ────────────────────────
+export const contactApi = {
+  // Auth-gated. Rate-limited 5/day. Only works for fleet/jobs sections whose
+  // owner opted in. 403 with reason='opt_out' | 'section_not_allowed', 429
+  // with reason='rate_limited'.
+  reveal: (id: number): Promise<{
+    phone?: string
+    email?: string
+    owner_name?: string
+    remaining_today?: number
+  }> => api.post(`/listings/${id}/reveal-contact`),
+
+  // Public — server-side 302 to wa.me/… so the raw phone never appears in
+  // HTML that Google/scrapers can harvest. We just build the URL; the
+  // browser follows the redirect on click.
+  whatsappUrl: (id: number): string => {
+    const base = (process.env.NEXT_PUBLIC_API_URL ?? 'https://nwafiz.creativealphat.com').replace(/\/$/, '')
+    return `${base}/api/listings/${id}/wa-redirect`
+  },
+}
+
 export default api;
