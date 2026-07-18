@@ -283,7 +283,7 @@ export default function AIFeaturesSection() {
   const Arrow = isRTL ? ArrowLeft : ArrowRight
 
   return (
-    <section className="relative bg-gradient-to-br from-[#0a1628] via-[#0f2044] to-[#0a1628]
+    <section className="relative bg-gradient-to-br from-[#3B4A65] via-[#526483] to-[#3B4A65]
                         py-24 px-6 overflow-hidden">
 
       {/* Animated background blobs */}

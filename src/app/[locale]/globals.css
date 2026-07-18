@@ -3,11 +3,21 @@
 @tailwind utilities;
 
 :root {
-  --navy: #1B2C6E;
-  --navy-dark: #0F1E52;
-  --emerald: #0D9B6C;
-  --emerald-dark: #097A54;
-  --emerald-bg: #F0FAF6;
+  /* Brand primary — Warm Slate Blue. --navy vars kept as aliases so any
+     `var(--navy)` in existing components picks up the new value without a
+     rename sweep. */
+  --slate:      #526483;
+  --slate-dark: #3B4A65;
+  --slate-soft: #94A3B8;
+  --slate-tint: #E2E8F0;
+  --slate-bg:   #F1F5F9;
+
+  --navy:       #526483;   /* alias — was #1B2C6E */
+  --navy-dark:  #3B4A65;   /* alias — was #0F1E52 */
+
+  --emerald:      #0D9B6C;
+  --emerald-dark: #087054;
+  --emerald-bg:   #ECFDF5;
 }
 
 @layer base {

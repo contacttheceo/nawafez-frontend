@@ -736,7 +736,7 @@ export default function AdminPage() {
                           contentStyle={{ borderRadius: '10px', border: 'none', boxShadow: '0 4px 20px rgba(0,0,0,0.1)' }}
                           cursor={{ fill: '#f3f4f6' }}
                         />
-                        <Bar dataKey="value" fill="#0a2342" radius={[6, 6, 0, 0]}
+                        <Bar dataKey="value" fill="#526483" radius={[6, 6, 0, 0]}
                           label={{ position: 'top', fontSize: 11, fill: '#6b7280' }} />
                       </BarChart>
                     </ResponsiveContainer>
@@ -853,7 +853,7 @@ export default function AdminPage() {
                         <Tooltip
                           contentStyle={{ borderRadius: '10px', border: 'none', boxShadow: '0 4px 20px rgba(0,0,0,0.1)' }}
                         />
-                        <Line type="monotone" dataKey="count" stroke="#0a2342" strokeWidth={2.5} dot={false} activeDot={{ r: 5 }} />
+                        <Line type="monotone" dataKey="count" stroke="#526483" strokeWidth={2.5} dot={false} activeDot={{ r: 5 }} />
                       </LineChart>
                     </ResponsiveContainer>
                   </div>
@@ -877,7 +877,7 @@ export default function AdminPage() {
                         <Tooltip
                           contentStyle={{ borderRadius: '10px', border: 'none', boxShadow: '0 4px 20px rgba(0,0,0,0.1)' }}
                         />
-                        <Bar dataKey="count" fill="#10b981" radius={[4, 4, 0, 0]} />
+                        <Bar dataKey="count" fill="#0D9B6C" radius={[4, 4, 0, 0]} />
                       </BarChart>
                     </ResponsiveContainer>
                   </div>

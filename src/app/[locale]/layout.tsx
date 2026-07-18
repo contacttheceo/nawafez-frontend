@@ -45,7 +45,7 @@ export const metadata: Metadata = {
       { url: '/icons/apple-touch-icon.png', sizes: '180x180', type: 'image/png' },
     ],
     other: [
-      { rel: 'mask-icon', url: '/icons/icon-512.png', color: '#1e3a5f' },
+      { rel: 'mask-icon', url: '/icons/icon-512.png', color: '#526483' },
     ],
   },
   openGraph: {
@@ -72,8 +72,8 @@ export const metadata: Metadata = {
 // PWA viewport + theme color — must be a separate `viewport` export in Next 14+
 export const viewport: Viewport = {
   themeColor: [
-    { media: '(prefers-color-scheme: light)', color: '#1e3a5f' },
-    { media: '(prefers-color-scheme: dark)',  color: '#0f1e30' },
+    { media: '(prefers-color-scheme: light)', color: '#526483' },
+    { media: '(prefers-color-scheme: dark)',  color: '#3B4A65' },
   ],
   width: 'device-width',
   initialScale: 1,

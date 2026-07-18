@@ -9,16 +9,28 @@ const config: Config = {
   theme: {
     extend: {
       colors: {
+        // Brand primary — Warm Slate Blue (replaced the heavier Navy #1B2C6E
+        // after the color audit). Classifieds-appropriate: light enough to
+        // let listings/images be the visual anchor, dark enough to stay
+        // WCAG AA compliant on white. `navy` alias kept so existing
+        // components don't need a bulk rename.
+        slate: {
+          DEFAULT: '#526483',
+          dark:    '#3B4A65',
+          light:   '#94A3B8',
+          tint:    '#E2E8F0',
+          bg:      '#F1F5F9',
+        },
         navy: {
-          DEFAULT: '#1B2C6E',
-          dark:    '#0F1E52',
-          light:   '#243580',
+          DEFAULT: '#526483',   // ← was #1B2C6E; alias for backward compat
+          dark:    '#3B4A65',   // ← was #0F1E52
+          light:   '#94A3B8',   // ← was #243580
         },
         emerald: {
           DEFAULT: '#0D9B6C',
-          dark:    '#097A54',
-          light:   '#10B87F',
-          bg:      '#F0FAF6',
+          dark:    '#087054',
+          light:   '#10B981',
+          bg:      '#ECFDF5',
         },
       },
       fontFamily: {

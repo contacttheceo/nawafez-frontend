@@ -62,7 +62,7 @@ export async function GET(_req: NextRequest, ctx: { params: Promise<{ id: string
           width: '1200px',
           height: '630px',
           display: 'flex',
-          background: 'linear-gradient(135deg, #0a2342 0%, #1e3a5f 100%)',
+          background: 'linear-gradient(135deg, #3B4A65 0%, #526483 100%)',
           fontFamily: 'sans-serif',
           direction: 'rtl',
           position: 'relative',
@@ -76,7 +76,7 @@ export async function GET(_req: NextRequest, ctx: { params: Promise<{ id: string
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            background: imgUrl ? '#111' : '#10b981',
+            background: imgUrl ? '#111' : '#0D9B6C',
             overflow: 'hidden',
           }}
         >
@@ -110,7 +110,7 @@ export async function GET(_req: NextRequest, ctx: { params: Promise<{ id: string
             <div
               style={{
                 display: 'flex',
-                background: '#10b981',
+                background: '#0D9B6C',
                 padding: '8px 22px',
                 borderRadius: '999px',
                 fontSize: 24,
@@ -166,7 +166,7 @@ export async function GET(_req: NextRequest, ctx: { params: Promise<{ id: string
                 <span style={{ fontSize: 26, color: '#94a3b8' }}>ر.س</span>
               </div>
             ) : (
-              <div style={{ display: 'flex', fontSize: 28, color: '#10b981', fontWeight: 700 }}>
+              <div style={{ display: 'flex', fontSize: 28, color: '#0D9B6C', fontWeight: 700 }}>
                 {BASE.replace('https://', '')}
               </div>
             )}

@@ -31,7 +31,7 @@ export async function GET(req: NextRequest) {
           height: '630px',
           display: 'flex',
           flexDirection: 'column',
-          background: 'linear-gradient(135deg, #0a2342 0%, #1e3a5f 50%, #10b981 100%)',
+          background: 'linear-gradient(135deg, #3B4A65 0%, #526483 50%, #0D9B6C 100%)',
           fontFamily: 'sans-serif',
           direction:  'rtl',
           padding:    '60px',
@@ -57,7 +57,7 @@ export async function GET(req: NextRequest) {
           <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
             <div style={{
               width: 64, height: 64,
-              background: '#10b981',
+              background: '#0D9B6C',
               borderRadius: 16,
               display: 'flex', alignItems: 'center', justifyContent: 'center',
               fontSize: 38,
@@ -114,7 +114,7 @@ export async function GET(req: NextRequest) {
           position: 'relative',
         }}>
           <div style={{ display: 'flex', flexDirection: 'column' }}>
-            <div style={{ fontSize: 48, fontWeight: 900, color: '#10b981', lineHeight: 1 }}>{stat}</div>
+            <div style={{ fontSize: 48, fontWeight: 900, color: '#0D9B6C', lineHeight: 1 }}>{stat}</div>
             <div style={{ fontSize: 18, color: '#94a3b8', marginTop: 4 }}>{statLabel}</div>
           </div>
           <div style={{ flex: 1, display: 'flex' }} />
