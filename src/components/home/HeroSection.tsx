@@ -93,13 +93,14 @@ export default function HeroSection() {
   ]
 
   return (
-    <section className="relative bg-gradient-to-br from-navy-dark via-navy to-[#1E3A8A]
-                        text-white pt-20 pb-32 px-6 overflow-hidden">
-      {/* Background glow blobs */}
+    <section className="relative bg-gradient-to-b from-slate-bg via-white to-white
+                        text-slate-dark pt-20 pb-32 px-6 overflow-hidden
+                        border-b border-slate-tint">
+      {/* Background glow blobs — soft emerald tint on light background */}
       <div className="absolute inset-0 pointer-events-none">
         <div className="absolute top-0 start-1/4 w-96 h-96 bg-emerald/10
                         rounded-full blur-3xl -translate-y-1/2" />
-        <div className="absolute bottom-0 end-1/4 w-64 h-64 bg-white/5
+        <div className="absolute bottom-0 end-1/4 w-64 h-64 bg-slate/5
                         rounded-full blur-2xl" />
         <div className="absolute top-1/2 start-0 w-48 h-48 bg-emerald/5
                         rounded-full blur-2xl" />
@@ -116,8 +117,8 @@ export default function HeroSection() {
           <div
             key={badge.text}
             className="absolute hidden lg:flex items-center gap-1.5
-                       bg-white/8 backdrop-blur-sm border border-white/15
-                       text-white/60 text-[11px] font-medium
+                       bg-white backdrop-blur-sm border border-slate-tint
+                       text-slate text-[11px] font-medium shadow-sm
                        px-3 py-1.5 rounded-full
                        animate-[floatBadge_6s_ease-in-out_infinite]"
             style={{
@@ -134,7 +135,7 @@ export default function HeroSection() {
       <div className="relative max-w-4xl mx-auto text-center">
 
         {/* Trust line */}
-        <p className="text-white/50 text-xs mb-3 tracking-widest uppercase font-medium">
+        <p className="text-slate text-xs mb-3 tracking-widest uppercase font-medium">
           🇸🇦{' '}
           {isRTL
             ? 'الأول في السعودية للقطاع اللوجستي'
@@ -143,18 +144,18 @@ export default function HeroSection() {
 
         {/* Badge */}
         <div className="inline-block bg-emerald/20 border border-emerald/40
-                        text-emerald-light px-4 py-1.5 rounded-full text-sm mb-6">
+                        text-emerald-dark px-4 py-1.5 rounded-full text-sm mb-6">
           🚀 {t('badge')}
         </div>
 
         {/* Heading */}
         <h1 className="text-5xl font-black leading-tight mb-4">
           {t('title')}{' '}
-          <span className="text-emerald-light">{t('title_highlight')}</span>
+          <span className="text-emerald-dark">{t('title_highlight')}</span>
         </h1>
 
         {/* Description */}
-        <p className="text-white/80 text-lg leading-relaxed mb-8 max-w-xl mx-auto">
+        <p className="text-slate text-lg leading-relaxed mb-8 max-w-xl mx-auto">
           {t('desc')}
         </p>
 
@@ -218,7 +219,7 @@ export default function HeroSection() {
         </form>
 
         {/* AI hint */}
-        <p className="text-white/40 text-xs text-center mb-8">
+        <p className="text-slate-light text-xs text-center mb-8">
           {isRTL
             ? '✨ جرّب: "أريد شاحنة مبردة في جدة بأقل من 8000" ← يضبط الفلاتر تلقائياً'
             : '✨ Try: "refrigerated truck for rent in Jeddah under 8000" → filters set automatically'}
@@ -239,9 +240,9 @@ export default function HeroSection() {
               onClick={() =>
                 router.push(`/${locale}/listings?section=${sec.value}`)
               }
-              className="text-xs px-3.5 py-1.5 rounded-full border border-white/25
-                         text-white/70 hover:text-white hover:border-white/60
-                         hover:bg-white/10 transition-all duration-150 font-medium"
+              className="text-xs px-3.5 py-1.5 rounded-full border border-slate-tint
+                         text-slate hover:text-slate-dark hover:border-slate-light
+                         hover:bg-slate-bg transition-all duration-150 font-medium bg-white"
             >
               {isRTL ? sec.ar : sec.en}
             </button>
@@ -260,8 +261,8 @@ export default function HeroSection() {
           </Link>
           <Link
             href="#how"
-            className="bg-white/10 hover:bg-white/15 border border-white/30
-                       text-white px-8 py-3.5 rounded-xl font-semibold text-base
+            className="bg-white hover:bg-slate-bg border border-slate-tint
+                       text-slate-dark px-8 py-3.5 rounded-xl font-semibold text-base
                        transition-all duration-200"
           >
             {t('cta_secondary')}
@@ -270,11 +271,11 @@ export default function HeroSection() {
 
         {/* Stats */}
         <div className="flex gap-10 justify-center mt-16 pt-10
-                        border-t border-white/10 flex-wrap">
+                        border-t border-slate-tint flex-wrap">
           {statItems.map((stat) => (
             <div key={stat.label} className="text-center">
-              <div className="text-3xl font-black text-emerald-light">{stat.num}</div>
-              <div className="text-white/60 text-xs mt-1">{stat.label}</div>
+              <div className="text-3xl font-black text-emerald-dark">{stat.num}</div>
+              <div className="text-slate text-xs mt-1">{stat.label}</div>
             </div>
           ))}
         </div>

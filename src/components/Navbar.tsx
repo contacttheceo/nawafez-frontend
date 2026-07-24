@@ -77,14 +77,14 @@ export default function Navbar() {
 
   return (
     <>
-    <header className="bg-navy sticky top-0 z-50 shadow-lg pt-safe">
+    <header className="bg-white border-b border-slate-tint sticky top-0 z-50 shadow-sm pt-safe">
       <div className="max-w-7xl mx-auto px-4 sm:px-6">
         <div className="flex items-center justify-between h-16">
 
           {/* Logo */}
           <Link href={`/${locale}`} className="flex items-center gap-2.5 flex-shrink-0" aria-label="نوافذ — Nwafiz">
             <Image
-              src="/logo-white.png"
+              src="/logo.png"
               alt="نوافذ"
               width={100}
               height={78}
@@ -92,7 +92,7 @@ export default function Navbar() {
               className="h-10 w-auto"
             />
             <div className="hidden sm:block">
-              <div className="text-white/50 text-[10px] leading-none">
+              <div className="text-slate-light text-[10px] leading-none">
                 منصة اللوجستيك B2B
               </div>
             </div>
@@ -104,7 +104,7 @@ export default function Navbar() {
               <Link
                 key={link.href}
                 href={link.href}
-                className="text-white/80 hover:text-white hover:bg-white/10
+                className="text-slate hover:text-slate-dark hover:bg-slate-bg
                            px-3 py-2 rounded-lg text-sm transition-all duration-150"
               >
                 {link.label}
@@ -116,8 +116,8 @@ export default function Navbar() {
           <div className="hidden md:flex items-center gap-2">
             <button
               onClick={switchLocale}
-              className="bg-white/10 text-white text-xs px-3 py-1.5 rounded-lg
-                         hover:bg-white/20 transition-colors flex items-center gap-1"
+              className="bg-slate-bg text-slate-dark text-xs px-3 py-1.5 rounded-lg
+                         hover:bg-slate-tint transition-colors flex items-center gap-1"
             >
               <Globe size={12} />
               {locale === 'ar' ? 'EN' : 'ع'}
@@ -138,8 +138,8 @@ export default function Navbar() {
                 {/* Messages icon with badge — opens drawer */}
                 <button
                   onClick={() => setDrawerOpen(true)}
-                  className="relative p-2 rounded-lg text-white/80 hover:text-white
-                             hover:bg-white/10 transition-colors"
+                  className="relative p-2 rounded-lg text-slate hover:text-slate-dark
+                             hover:bg-slate-bg transition-colors"
                   title={isRTL ? 'الرسائل' : 'Messages'}
                 >
                   <MessageSquare size={18} />
@@ -156,7 +156,7 @@ export default function Navbar() {
                 <div className="relative" ref={dropdownRef}>
                   <button
                     onClick={() => setDropdownOpen(!dropdownOpen)}
-                    className="flex items-center gap-2 bg-white/10 hover:bg-white/20 text-white
+                    className="flex items-center gap-2 bg-slate-bg hover:bg-slate-tint text-slate-dark
                                px-3 py-1.5 rounded-lg text-sm transition-colors"
                   >
                     <div className="w-6 h-6 rounded-full overflow-hidden bg-emerald flex items-center
@@ -241,8 +241,8 @@ export default function Navbar() {
               <>
                 <Link
                   href={`/${locale}/auth/login`}
-                  className="text-white/80 hover:text-white border border-white/30
-                             hover:border-white px-4 py-2 rounded-lg text-sm transition-all"
+                  className="text-slate hover:text-slate-dark border border-slate-tint
+                             hover:border-slate-light px-4 py-2 rounded-lg text-sm transition-all"
                 >
                   {t('login')}
                 </Link>
@@ -265,7 +265,7 @@ export default function Navbar() {
               ? (locale === 'ar' ? 'إغلاق القائمة' : 'Close menu')
               : (locale === 'ar' ? 'فتح القائمة' : 'Open menu')}
             aria-expanded={mobileOpen}
-            className="md:hidden text-white p-2 rounded-lg hover:bg-white/10"
+            className="md:hidden text-slate-dark p-2 rounded-lg hover:bg-slate-bg"
           >
             {mobileOpen ? <X size={22} /> : <Menu size={22} />}
           </button>
@@ -274,10 +274,10 @@ export default function Navbar() {
 
       {/* Mobile Menu */}
       {mobileOpen && (
-        <div className="md:hidden border-t border-white/10 bg-navy-dark px-4 py-3">
+        <div className="md:hidden border-t border-slate-tint bg-white px-4 py-3">
 
           {isAuthenticated && user && (
-            <div className="flex items-center gap-3 mb-3 px-2 py-2 bg-white/5 rounded-xl border border-white/10">
+            <div className="flex items-center gap-3 mb-3 px-2 py-2 bg-slate-bg rounded-xl border border-slate-tint">
               <div className="w-9 h-9 rounded-full overflow-hidden bg-emerald flex items-center
                               justify-center text-white font-bold text-sm shrink-0">
                 {storageUrl(user.avatar_url) ? (
@@ -290,10 +290,10 @@ export default function Navbar() {
                 )}
               </div>
               <div className="flex-1 min-w-0">
-                <p className="text-white text-sm font-bold truncate">
+                <p className="text-slate-dark text-sm font-bold truncate">
                   {isRTL ? user.name_ar : user.name_en}
                 </p>
-                <p className="text-white/50 text-[10px] truncate">{user.email}</p>
+                <p className="text-slate-light text-[10px] truncate">{user.email}</p>
               </div>
             </div>
           )}
@@ -305,7 +305,7 @@ export default function Navbar() {
                 key={link.href}
                 href={link.href}
                 onClick={() => setMobileOpen(false)}
-                className="text-white/80 hover:text-white hover:bg-white/10
+                className="text-slate hover:text-slate-dark hover:bg-slate-bg
                            px-3 py-2.5 rounded-lg text-sm transition-all"
               >
                 {link.label}
@@ -328,12 +328,12 @@ export default function Navbar() {
               </Link>
 
               {/* User menu items */}
-              <div className="flex flex-col gap-1 pt-3 border-t border-white/10">
+              <div className="flex flex-col gap-1 pt-3 border-t border-slate-tint">
                 <Link
                   href={`/${locale}/dashboard`}
                   onClick={() => setMobileOpen(false)}
-                  className="flex items-center gap-2.5 px-3 py-2.5 text-sm text-white/90
-                             hover:bg-white/10 rounded-lg transition-colors"
+                  className="flex items-center gap-2.5 px-3 py-2.5 text-sm text-slate
+                             hover:bg-slate-bg rounded-lg transition-colors"
                 >
                   <LayoutDashboard size={16} className="text-emerald" />
                   {isRTL ? 'لوحة التحكم' : 'Dashboard'}
@@ -341,8 +341,8 @@ export default function Navbar() {
 
                 <button
                   onClick={() => { setMobileOpen(false); setDrawerOpen(true); }}
-                  className="flex items-center gap-2.5 px-3 py-2.5 text-sm text-white/90
-                             hover:bg-white/10 rounded-lg transition-colors w-full text-start"
+                  className="flex items-center gap-2.5 px-3 py-2.5 text-sm text-slate
+                             hover:bg-slate-bg rounded-lg transition-colors w-full text-start"
                 >
                   <MessageSquare size={16} className="text-emerald" />
                   {isRTL ? 'الرسائل' : 'Messages'}
@@ -357,8 +357,8 @@ export default function Navbar() {
                 <Link
                   href={`/${locale}/profile`}
                   onClick={() => setMobileOpen(false)}
-                  className="flex items-center gap-2.5 px-3 py-2.5 text-sm text-white/90
-                             hover:bg-white/10 rounded-lg transition-colors"
+                  className="flex items-center gap-2.5 px-3 py-2.5 text-sm text-slate
+                             hover:bg-slate-bg rounded-lg transition-colors"
                 >
                   <User size={16} className="text-emerald" />
                   {isRTL ? 'الملف الشخصي' : 'Profile'}
@@ -388,11 +388,11 @@ export default function Navbar() {
               </div>
 
               {/* Locale + Logout */}
-              <div className="flex gap-2 pt-3 mt-2 border-t border-white/10">
+              <div className="flex gap-2 pt-3 mt-2 border-t border-slate-tint">
                 <button
                   onClick={switchLocale}
-                  className="flex-1 bg-white/10 text-white text-sm py-2 rounded-lg
-                             hover:bg-white/20 transition-colors"
+                  className="flex-1 bg-slate-bg text-slate-dark text-sm py-2 rounded-lg
+                             hover:bg-slate-tint transition-colors"
                 >
                   {locale === 'ar' ? 'English' : 'العربية'}
                 </button>
@@ -408,16 +408,16 @@ export default function Navbar() {
               </div>
             </>
           ) : (
-            <div className="flex gap-2 pt-2 border-t border-white/10">
+            <div className="flex gap-2 pt-2 border-t border-slate-tint">
               <button
                 onClick={switchLocale}
-                className="flex-1 bg-white/10 text-white text-sm py-2 rounded-lg
-                           hover:bg-white/20 transition-colors"
+                className="flex-1 bg-slate-bg text-slate-dark text-sm py-2 rounded-lg
+                           hover:bg-slate-tint transition-colors"
               >
                 {locale === 'ar' ? 'English' : 'العربية'}
               </button>
               <Link href={`/${locale}/auth/login`} onClick={() => setMobileOpen(false)}
-                className="flex-1 text-center text-white border border-white/30 py-2 rounded-lg text-sm">
+                className="flex-1 text-center text-slate border border-slate-tint py-2 rounded-lg text-sm">
                 {t('login')}
               </Link>
               <Link href={`/${locale}/listings/create`} onClick={() => setMobileOpen(false)}
