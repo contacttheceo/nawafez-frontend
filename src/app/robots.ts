@@ -25,6 +25,9 @@ export default function robots(): MetadataRoute.Robots {
       },
     ],
     sitemap: `${BASE}/sitemap.xml`,
-    host:    BASE,
+    // Note: intentionally NOT emitting `Host:` directive — it is Yandex-
+    // specific, and Bing/Google/DuckDuckGo flag it as a syntax error.
+    // Canonical host is enforced via the www→apex 307 redirect Vercel
+    // handles automatically for the domain.
   }
 }

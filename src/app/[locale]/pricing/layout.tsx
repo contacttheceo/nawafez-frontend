@@ -11,7 +11,9 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const BASE = process.env.NEXT_PUBLIC_APP_URL ?? 'https://www.nwafizlogi.com'
 
   return {
-    title:       isAr ? 'باقات الاشتراك' : 'Pricing',
+    title:       isAr
+      ? 'باقات الاشتراك — أسعار خطط نوافذ للمعلنين والشركات'
+      : 'Subscription Plans — Nwafiz Pricing for Sellers and Businesses',
     description: isAr
       ? 'اختر باقتك في منصة نوافذ — ابدأ مجاناً ثم ارتقِ لباقات Basic أو Professional أو Enterprise. أسعار شفافة، إعلانات أكثر، ميزات أوسع.'
       : 'Choose your plan on Nwafiz — start free, then upgrade to Basic, Professional, or Enterprise. Transparent pricing, more listings, more features.',

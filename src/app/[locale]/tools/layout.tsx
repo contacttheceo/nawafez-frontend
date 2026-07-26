@@ -21,7 +21,9 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
       siteName: 'نوافذ',
       locale: isAr ? 'ar_SA' : 'en_US',
       url:    `${BASE}/${locale}/tools`,
-      title:       isAr ? 'أدوات الذكاء الاصطناعي' : 'AI Tools',
+      title:       isAr
+        ? 'أدوات الذكاء الاصطناعي — نوافذ للوجستيك السعودي'
+        : 'AI Tools — Nwafiz for Saudi Logistics',
       description: isAr
         ? 'محلل العقود، كاتب الإعلانات، مستشار التسعير.'
         : 'Contract analyzer, listing writer, pricing advisor.',

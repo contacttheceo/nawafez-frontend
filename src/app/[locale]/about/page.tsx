@@ -19,8 +19,12 @@ export function generateStaticParams() {
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { locale } = await params
   const isAr = locale === 'ar'
-  // Bare title — root template adds ' | نوافذ'
-  const title = isAr ? 'من نحن' : 'About'
+  // Descriptive title so the rendered <title> (with the template's
+  // ' | نوافذ' suffix) hits ~55-70 chars — Bing flagged the previous
+  // 'من نحن | نوافذ' (24 chars) as too short.
+  const title = isAr
+    ? 'من نحن — قصة نوافذ ورؤيتنا لسوق اللوجستيك السعودي'
+    : 'About Us — The Nwafiz Story and Our Vision for Saudi Logistics'
   const description = isAr
     ? 'نوافذ هي أول marketplace B2B متخصص في النقل واللوجستيك في السعودية. تعرف على رؤيتنا، فريقنا، والقيم التي تحرّك المنصة.'
     : 'Nwafiz is the first B2B marketplace dedicated to transport and logistics in Saudi Arabia. Learn about our vision, team, and values.'

@@ -17,7 +17,10 @@ export function generateStaticParams() {
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { locale } = await params
   const isAr = locale === 'ar'
-  const title = isAr ? 'تواصل معنا' : 'Contact Us'
+  // Extended for Bing minimum-title-length recommendation
+  const title = isAr
+    ? 'تواصل معنا — فريق نوافذ للدعم والاستفسارات'
+    : 'Contact Us — Nwafiz Support and Sales Team'
   const description = isAr
     ? 'تواصل مع فريق نوافذ — منصة اللوجستيك B2B في السعودية. واتساب، بريد، أو من خلال النموذج.'
     : 'Contact the Nwafiz team — Saudi Arabia\'s B2B logistics platform. WhatsApp, email, or via the form.'

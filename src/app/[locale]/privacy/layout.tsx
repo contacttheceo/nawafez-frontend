@@ -8,7 +8,9 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { locale } = await params
   const isAr = locale === 'ar'
   return {
-    title:       isAr ? 'سياسة الخصوصية' : 'Privacy Policy',
+    title:       isAr
+      ? 'سياسة الخصوصية — التزامنا بحماية بياناتك وفق PDPL'
+      : 'Privacy Policy — Our PDPL Data Protection Commitment',
     description: isAr
       ? 'كيف تتعامل نوافذ مع بياناتك. التزام كامل بقانون حماية البيانات السعودي (PDPL).'
       : 'How Nwafiz handles your data. Full compliance with the Saudi PDPL.',
