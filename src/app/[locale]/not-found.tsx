@@ -2,7 +2,6 @@ import Link from 'next/link'
 import Navbar from '@/components/Navbar'
 import Footer from '@/components/Footer'
 import { Search, ArrowRight } from 'lucide-react'
-import { getLocale } from 'next-intl/server'
 
 /**
  * Custom 404 page for the [locale] segment.
@@ -12,12 +11,16 @@ import { getLocale } from 'next-intl/server'
  * generic 404 text with a branded landing that keeps the visitor inside
  * the funnel: search box + category quick-links.
  *
- * IMPORTANT: keep this file free of dynamic APIs (headers, cookies, etc.
- * called directly). Reading them here forces Next to render the boundary
- * as fully dynamic and the response silently downgrades from HTTP 404 to
- * 200 — the classic "soft 404" Google penalises. `getLocale()` from
- * next-intl reads the segment locale through the framework and does not
- * trip this bug.
+ * **Kept fully static on purpose.** No async, no dynamic APIs (headers,
+ * cookies, getLocale, params). Under Next 14 App Router, `notFound()`
+ * only propagates the HTTP 404 status when the not-found boundary can
+ * be rendered as a static Server Component; any await or dynamic-only
+ * API silently downgrades the response to 200 (soft 404), which Google
+ * penalises.
+ *
+ * The page is bilingual by default (Arabic first, English mirror below)
+ * so we don't need to read the segment locale here. Category links
+ * default to /ar; a small language toggle lets English visitors reroute.
  */
 
 const SECTIONS = [
@@ -28,13 +31,9 @@ const SECTIONS = [
   { value: 'forum',     ar: 'المنتدى',       en: 'Forum',     emoji: '💬' },
 ]
 
-export default async function LocaleNotFound() {
-  const rawLocale = await getLocale().catch(() => 'ar')
-  const locale: 'ar' | 'en' = rawLocale === 'en' ? 'en' : 'ar'
-  const isRTL  = locale === 'ar'
-
+export default function LocaleNotFound() {
   return (
-    <div className="min-h-screen bg-slate-bg flex flex-col" dir={isRTL ? 'rtl' : 'ltr'}>
+    <div className="min-h-screen bg-slate-bg flex flex-col" dir="rtl">
       <Navbar />
 
       <main className="flex-1 flex items-center justify-center px-5 py-16">
@@ -46,21 +45,22 @@ export default async function LocaleNotFound() {
             404
           </p>
 
-          {/* Message */}
-          <h1 className="text-2xl sm:text-3xl font-black text-slate-dark mb-3 text-balance">
-            {isRTL
-              ? 'الصفحة التي تبحث عنها غير موجودة'
-              : "We couldn't find that page"}
+          {/* Message (Arabic primary) */}
+          <h1 className="text-2xl sm:text-3xl font-black text-slate-dark mb-2 text-balance">
+            الصفحة التي تبحث عنها غير موجودة
           </h1>
-          <p className="text-slate text-sm sm:text-base leading-relaxed mb-8 max-w-lg mx-auto text-balance">
-            {isRTL
-              ? 'قد يكون الإعلان انتهت مدته أو غيّر البائع رابطه. جرّب البحث أدناه، أو استعرض أحد الأقسام.'
-              : 'The listing may have expired or the URL may be wrong. Try the search below, or browse a category.'}
+          <p className="text-slate text-sm sm:text-base leading-relaxed mb-4 max-w-lg mx-auto text-balance">
+            قد يكون الإعلان انتهت مدته أو غيّر البائع رابطه. جرّب البحث أدناه، أو استعرض أحد الأقسام.
           </p>
 
-          {/* Search box → dumps into /listings?search=... */}
+          {/* English mirror — smaller, quieter */}
+          <p className="text-slate-light text-xs sm:text-sm leading-relaxed mb-8 max-w-lg mx-auto text-balance" dir="ltr">
+            We couldn't find that page. The listing may have expired or the URL may be wrong. Try the search or browse a category.
+          </p>
+
+          {/* Search box → dumps into /ar/listings?search=... */}
           <form
-            action={`/${locale}/listings`}
+            action="/ar/listings"
             method="get"
             className="flex gap-2 max-w-md mx-auto mb-10"
           >
@@ -72,7 +72,7 @@ export default async function LocaleNotFound() {
               <input
                 name="search"
                 type="text"
-                placeholder={isRTL ? 'ابحث في السوق…' : 'Search the marketplace…'}
+                placeholder="ابحث في السوق…"
                 className="w-full ps-10 pe-4 py-3 rounded-xl bg-white border border-slate-tint
                            text-sm text-slate-dark placeholder-gray-400 focus:outline-none
                            focus:ring-2 focus:ring-emerald"
@@ -83,36 +83,44 @@ export default async function LocaleNotFound() {
               className="bg-emerald hover:bg-emerald-dark text-white px-5 py-3
                          rounded-xl font-bold text-sm whitespace-nowrap transition-colors"
             >
-              {isRTL ? 'بحث' : 'Search'}
+              بحث
             </button>
           </form>
 
-          {/* Category quick-links */}
+          {/* Category quick-links (Arabic — 95%+ of our traffic) */}
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 mb-8">
             {SECTIONS.map(s => (
               <Link
                 key={s.value}
-                href={`/${locale}/listings?section=${s.value}`}
+                href={`/ar/listings?section=${s.value}`}
                 className="bg-white border border-slate-tint hover:border-emerald
                            hover:shadow-sm text-slate-dark rounded-xl px-4 py-3
                            text-sm font-medium transition-all
                            flex items-center gap-2 justify-center"
               >
                 <span className="text-lg" aria-hidden>{s.emoji}</span>
-                {isRTL ? s.ar : s.en}
+                {s.ar}
               </Link>
             ))}
           </div>
 
-          {/* Home link */}
-          <Link
-            href={`/${locale}`}
-            className="inline-flex items-center gap-1.5 text-emerald-dark
-                       hover:text-emerald text-sm font-bold transition-colors"
-          >
-            {isRTL ? 'العودة إلى الرئيسية' : 'Back to home'}
-            <ArrowRight size={14} className={isRTL ? 'rotate-180' : ''} />
-          </Link>
+          {/* Nav row: home + language switch */}
+          <div className="flex items-center justify-center gap-6 text-sm">
+            <Link
+              href="/ar"
+              className="inline-flex items-center gap-1.5 text-emerald-dark
+                         hover:text-emerald font-bold transition-colors"
+            >
+              العودة إلى الرئيسية
+              <ArrowRight size={14} className="rotate-180" />
+            </Link>
+            <Link
+              href="/en"
+              className="text-slate hover:text-slate-dark transition-colors"
+            >
+              English version →
+            </Link>
+          </div>
         </div>
       </main>
 
