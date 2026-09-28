@@ -169,6 +169,13 @@ export interface ListingUser {
   is_trusted_payer: boolean
   role: UserRole
   avatar_url?: string | null
+  // Optional trust / recency signals surfaced on the listing detail
+  // "Posted By" card. The backend includes these on the public listing
+  // response when they are set; the UI hides each row when its field
+  // is missing.
+  created_at?: string
+  email_verified_at?: string | null
+  business_verification?: BusinessVerification | null
 }
 
 // ─── Interactions ─────────────────────────────────────────────────────────────
