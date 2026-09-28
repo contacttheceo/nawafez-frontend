@@ -12,6 +12,7 @@ import Link from 'next/link';
 import { listingsApi, interactionsApi, aiApi } from '@/lib/api';
 import { useAuthStore } from '@/store/auth';
 import { ListingCard } from '@/components/ui/ListingCard';
+import CategoryPlaceholder from '@/components/ui/CategoryPlaceholder';
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
 import toast from 'react-hot-toast';
@@ -670,18 +671,11 @@ function ListingsContent() {
                 <div className="flex gap-3 overflow-x-auto pb-1 scrollbar-hide">
                   {featured.map(l => {
                     const ftitle = isRTL ? (l.title_ar ?? l.title_en) : (l.title_en ?? l.title_ar);
-                    const imgBgF: Record<string, string> = {
-                      ma: 'from-green-100 to-green-200', fleet: 'from-blue-100 to-blue-200',
-                      contracts: 'from-amber-100 to-amber-200', jobs: 'from-purple-100 to-purple-200',
-                      forum: 'from-red-100 to-red-200',
-                    };
-                    const sEmoji: Record<string, string> = { ma: '🏢', fleet: '🚛', contracts: '📄', jobs: '💼', forum: '💬' };
                     return (
                       <Link key={l.id} href={`/${locale}/listings/${l.id}`}
                         className="shrink-0 w-52 bg-white rounded-xl border border-amber-200 overflow-hidden
                                    hover:shadow-md hover:border-amber-300 transition group">
-                        <div className={`h-28 bg-gradient-to-br ${imgBgF[l.section] || 'from-gray-100 to-gray-200'}
-                                         flex items-center justify-center text-3xl relative overflow-hidden`}>
+                        <div className="h-28 relative overflow-hidden">
                           {(() => {
                             // Same logic as ListingCard: prefer media[] (current API),
                             // fall back to legacy images[] field.
@@ -692,7 +686,7 @@ function ListingsContent() {
                               : l.images?.[0];
                             return imgUrl
                               ? <img src={imgUrl} alt={ftitle ?? ''} className="w-full h-full object-cover" loading="lazy" />
-                              : <span>{sEmoji[l.section]}</span>;
+                              : <CategoryPlaceholder section={l.section} variant={l.listing_type} />;
                           })()}
                         </div>
                         <div className="p-2.5">

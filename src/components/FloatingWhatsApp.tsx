@@ -11,6 +11,9 @@ import { MessageCircle, X } from 'lucide-react'
  *   - /admin/* (no leads from staff)
  *   - /dashboard/* and /messages/* (would conflict with the in-app chat)
  *   - /auth/* (distracts from signup)
+ *   - /listings/<id>  (its sticky mobile CTA bar owns the bottom edge — the
+ *                     bubble would sit on top of the seller's own WhatsApp
+ *                     button)
  *
  * Opens wa.me with a pre-filled greeting. The receiving number is the
  * brand's main contact line — the founder picks up directly.
@@ -18,6 +21,10 @@ import { MessageCircle, X } from 'lucide-react'
 
 const PHONE   = '966556716705'
 const HIDE_ON = ['/admin', '/dashboard', '/messages', '/auth/']
+
+// /ar/listings/123 or /en/listings/some-slug — the detail view.
+// /ar/listings alone (the index) still shows the bubble.
+const LISTING_DETAIL = /^\/[a-z]{2}\/listings\/[^/]+/i
 
 export default function FloatingWhatsApp() {
   const locale = useLocale()
@@ -37,6 +44,7 @@ export default function FloatingWhatsApp() {
 
   if (hidden) return null
   if (HIDE_ON.some(p => path.includes(p))) return null
+  if (LISTING_DETAIL.test(path)) return null
 
   const greeting = isRTL
     ? 'مرحباً، أرغب بمعرفة المزيد عن نوافذ'

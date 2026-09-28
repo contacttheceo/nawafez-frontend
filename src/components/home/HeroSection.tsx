@@ -31,9 +31,7 @@ export default function HeroSection() {
       .catch(() => {})
   }, [])
 
-  const handleSearch = (e: React.FormEvent) => {
-    e.preventDefault()
-    const q = query.trim()
+  const runTextSearch = (q: string) => {
     router.push(q
       ? `/${locale}/listings?search=${encodeURIComponent(q)}`
       : `/${locale}/listings`
@@ -45,11 +43,22 @@ export default function HeroSection() {
     inputRef.current?.focus()
   }
 
-  const handleAiSearch = async () => {
-    if (!query.trim() || aiSearching) return
+  /**
+   * Single search entry point. Empty query → jump straight to the listings
+   * page (no AI call needed). Otherwise try the AI extractor first — it
+   * parses free-form Arabic/English into structured filters. If it fails
+   * or times out, fall back to a plain full-text search so the user always
+   * gets a result set.
+   */
+  const handleSearch = async (e?: React.FormEvent) => {
+    e?.preventDefault()
+    const q = query.trim()
+    if (!q) { runTextSearch(''); return }
+    if (aiSearching)  return
+
     setAiSearching(true)
     try {
-      const res = await aiApi.extractListing({ text: query.trim() })
+      const res = await aiApi.extractListing({ text: q })
       const params = new URLSearchParams()
 
       if (res.section && res.section !== 'forum') params.set('section', res.section)
@@ -67,10 +76,12 @@ export default function HeroSection() {
       if (res.fields?.salary_max) params.set('price_max', res.fields.salary_max)
       if (res.fields?.salary_min) params.set('price_min', res.fields.salary_min)
 
-      router.push(`/${locale}/listings?${params.toString()}`)
+      const qs = params.toString()
+      router.push(qs
+        ? `/${locale}/listings?${qs}`
+        : `/${locale}/listings?search=${encodeURIComponent(q)}`)
     } catch {
-      // Fallback: regular text search
-      router.push(`/${locale}/listings?search=${encodeURIComponent(query.trim())}`)
+      runTextSearch(q)
     } finally {
       setAiSearching(false)
     }
@@ -105,14 +116,13 @@ export default function HeroSection() {
         <div className="absolute top-1/2 start-0 w-48 h-48 bg-emerald/5
                         rounded-full blur-2xl" />
 
-        {/* Floating AI feature badges — Animation 1 */}
+        {/* Floating AI feature badges — thinned from 6 to 3, pushed to the
+            page edges so they no longer visually compete with the search
+            bar. The full AI feature list lives in AIFeaturesSection below. */}
         {[
-          { text: '✨ بحث ذكي',          delay: '0s',    x: '8%',  y: '20%' },
-          { text: '✍️ كاتب إعلانات',     delay: '1.8s',  x: '82%', y: '15%' },
-          { text: '📄 محلل العقود',       delay: '3.2s',  x: '5%',  y: '65%' },
-          { text: '💬 ردود مقترحة',       delay: '0.9s',  x: '78%', y: '60%' },
-          { text: '📊 مستشار الإعلانات',  delay: '2.5s',  x: '15%', y: '82%' },
-          { text: '🔍 AI Search',          delay: '1.2s',  x: '72%', y: '80%' },
+          { text: '✨ بحث ذكي',        delay: '0s',    x: '4%',  y: '18%' },
+          { text: '✍️ كاتب إعلانات',   delay: '2s',    x: '86%', y: '78%' },
+          { text: '📄 محلل العقود',    delay: '3.2s',  x: '4%',  y: '78%' },
         ].map((badge) => (
           <div
             key={badge.text}
@@ -134,28 +144,29 @@ export default function HeroSection() {
 
       <div className="relative max-w-4xl mx-auto text-center">
 
-        {/* Trust line */}
-        <p className="text-slate text-xs mb-3 tracking-widest uppercase font-medium">
-          🇸🇦{' '}
-          {isRTL
-            ? 'الأول في السعودية للقطاع اللوجستي'
-            : "Saudi Arabia's #1 Logistics B2B Platform"}
-        </p>
-
-        {/* Badge */}
-        <div className="inline-block bg-emerald/20 border border-emerald/40
-                        text-emerald-dark px-4 py-1.5 rounded-full text-sm mb-6">
-          🚀 {t('badge')}
+        {/* Single trust pill — merged the "🇸🇦 #1" line and the "🚀 badge"
+            pill (two consecutive lines with overlapping meaning) into one
+            restrained badge. Saves ~60px of vertical space above the H1. */}
+        <div className="inline-flex items-center gap-2 bg-emerald/10 border
+                        border-emerald/30 text-emerald-dark px-4 py-1.5
+                        rounded-full text-xs sm:text-sm font-medium mb-6">
+          <span>🇸🇦</span>
+          <span>
+            {isRTL
+              ? 'المنصة B2B الأولى للنقل واللوجستيك في السعودية'
+              : "Saudi Arabia's #1 B2B logistics marketplace"}
+          </span>
         </div>
 
-        {/* Heading */}
-        <h1 className="text-5xl font-black leading-tight mb-4">
+        {/* Heading — text-balance keeps the line breaks from splitting a
+            single Arabic word ("اللوجستيك") across two lines. */}
+        <h1 className="text-4xl sm:text-5xl font-black leading-tight mb-4 text-balance">
           {t('title')}{' '}
           <span className="text-emerald-dark">{t('title_highlight')}</span>
         </h1>
 
         {/* Description */}
-        <p className="text-slate text-lg leading-relaxed mb-8 max-w-xl mx-auto">
+        <p className="text-slate text-base sm:text-lg leading-relaxed mb-8 max-w-xl mx-auto text-balance">
           {t('desc')}
         </p>
 
@@ -193,37 +204,48 @@ export default function HeroSection() {
             )}
           </div>
 
-          {/* ✨ AI Search */}
+          {/* Single primary CTA — AI-first with graceful text-search
+              fallback. Merged the previous dual "✨ AI" + "Search" buttons
+              that caused decision-paralysis at the top of the page. */}
           <button
-            type="button"
-            onClick={handleAiSearch}
-            disabled={!query.trim() || aiSearching}
+            type="submit"
+            disabled={aiSearching}
             title={isRTL ? 'تحليل النص وضبط الفلاتر تلقائياً' : 'Analyse and set filters automatically'}
-            className="px-4 py-3.5 rounded-xl bg-violet-600 hover:bg-violet-700
-                       text-white text-sm font-bold flex items-center gap-1.5
-                       transition-colors disabled:opacity-40 whitespace-nowrap shrink-0"
+            className="bg-emerald hover:bg-emerald-dark disabled:opacity-60
+                       text-white px-5 py-3.5 rounded-xl font-bold text-sm
+                       flex items-center gap-1.5 transition-colors whitespace-nowrap shrink-0"
           >
             {aiSearching
               ? <Loader2 size={16} className="animate-spin" />
               : <span className="text-base leading-none">✨</span>}
-            <span className="hidden sm:inline">{isRTL ? 'بحث ذكي' : 'AI'}</span>
-          </button>
-
-          <button
-            type="submit"
-            className="bg-emerald hover:bg-emerald-dark text-white px-6 py-3.5
-                       rounded-xl font-bold text-sm transition-colors whitespace-nowrap"
-          >
-            {isRTL ? 'بحث' : 'Search'}
+            {isRTL ? 'بحث ذكي' : 'AI Search'}
           </button>
         </form>
 
         {/* AI hint */}
-        <p className="text-slate-light text-xs text-center mb-8">
+        <p className="text-slate-light text-xs text-center mb-6">
           {isRTL
             ? '✨ جرّب: "أريد شاحنة مبردة في جدة بأقل من 8000" ← يضبط الفلاتر تلقائياً'
             : '✨ Try: "refrigerated truck for rent in Jeddah under 8000" → filters set automatically'}
         </p>
+
+        {/* Stats — pulled up above the fold. The four social-proof numbers
+            were previously at the very bottom of the hero (below CTAs), so
+            mobile users who didn't scroll never saw them. */}
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 max-w-2xl
+                        mx-auto mb-8 border-y border-slate-tint py-4">
+          {statItems.map((stat) => (
+            <div key={stat.label} className="text-center">
+              <div className="text-xl sm:text-2xl font-black text-emerald-dark
+                              tabular-nums leading-tight">
+                {stat.num}
+              </div>
+              <div className="text-slate text-[11px] sm:text-xs mt-0.5">
+                {stat.label}
+              </div>
+            </div>
+          ))}
+        </div>
 
         {/* Section quick-filter pills — click redirects with section param */}
         <div className="flex flex-wrap gap-2 justify-center mb-8">
@@ -250,7 +272,7 @@ export default function HeroSection() {
         </div>
 
         {/* CTA Buttons */}
-        <div className="flex gap-3 justify-center flex-wrap mb-0">
+        <div className="flex gap-3 justify-center flex-wrap">
           <Link
             href={`/${locale}/listings`}
             className="bg-emerald hover:bg-emerald-dark text-white px-8 py-3.5
@@ -267,17 +289,6 @@ export default function HeroSection() {
           >
             {t('cta_secondary')}
           </Link>
-        </div>
-
-        {/* Stats */}
-        <div className="flex gap-10 justify-center mt-16 pt-10
-                        border-t border-slate-tint flex-wrap">
-          {statItems.map((stat) => (
-            <div key={stat.label} className="text-center">
-              <div className="text-3xl font-black text-emerald-dark">{stat.num}</div>
-              <div className="text-slate text-xs mt-1">{stat.label}</div>
-            </div>
-          ))}
         </div>
 
       </div>

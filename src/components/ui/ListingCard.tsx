@@ -11,6 +11,7 @@ import { formatDistanceToNow, storageUrl } from '@/lib/utils'
 import { interactionsApi } from '@/lib/api'
 import { useAuthStore } from '@/store/auth'
 import { useRouter } from 'next/navigation'
+import CategoryPlaceholder from './CategoryPlaceholder'
 
 interface Props {
   listing: Listing
@@ -41,18 +42,6 @@ export function ListingCard({ listing, mode = 'grid' }: Props) {
 
   const title      = isRTL ? (listing.title_ar ?? listing.title_en) : (listing.title_en ?? listing.title_ar)
   const sellerName = isRTL ? (listing.user?.name_ar ?? '') : (listing.user?.name_en ?? '')
-
-  const sectionEmoji: Record<string, string> = {
-    ma: '🏢', fleet: '🚛', contracts: '📄', jobs: '💼', forum: '💬',
-  }
-
-  const imgBg: Record<string, string> = {
-    ma:        'from-green-100 to-green-200',
-    fleet:     'from-blue-100 to-blue-200',
-    contracts: 'from-amber-100 to-amber-200',
-    jobs:      'from-purple-100 to-purple-200',
-    forum:     'from-red-100 to-red-200',
-  }
 
   /* ── Price label ── */
   const priceLabel = () => {
@@ -114,8 +103,7 @@ export function ListingCard({ listing, mode = 'grid' }: Props) {
                            ${listing.is_featured ? 'border-amber-400 shadow-amber-100 shadow-md' : ''}`}>
 
         {/* Image */}
-        <div className={`h-44 bg-gradient-to-br ${imgBg[listing.section] || 'from-gray-100 to-gray-200'}
-                         flex items-center justify-center text-5xl relative overflow-hidden`}>
+        <div className="h-44 relative overflow-hidden">
 
           {(() => {
             // Build image URL from media array (primary source) or legacy images field
@@ -135,7 +123,12 @@ export function ListingCard({ listing, mode = 'grid' }: Props) {
                     loading="lazy"
                   />
                 )
-              : <span>{sectionEmoji[listing.section]}</span>
+              : (
+                  <CategoryPlaceholder
+                    section={listing.section}
+                    variant={listing.listing_type}
+                  />
+                )
           })()}
 
           {/* Featured ribbon */}

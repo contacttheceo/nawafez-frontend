@@ -1,6 +1,7 @@
 'use client';
 
 import { MapPin, Clock, Eye, Phone } from 'lucide-react';
+import CategoryPlaceholder from '@/components/ui/CategoryPlaceholder';
 
 interface PreviewData {
   section:      string;
@@ -40,13 +41,6 @@ const sectionLabel: Record<string, { ar: string; en: string }> = {
   forum:     { ar: 'منتدى',  en: 'Forum' },
 };
 
-const imgBg: Record<string, string> = {
-  ma:        'from-green-100 to-green-200',
-  fleet:     'from-blue-100 to-blue-200',
-  contracts: 'from-amber-100 to-amber-200',
-  jobs:      'from-purple-100 to-purple-200',
-  forum:     'from-red-100 to-red-200',
-};
 
 export default function ListingPreview({ data, previews, isRTL, userName }: Props) {
   const title = isRTL
@@ -67,11 +61,10 @@ export default function ListingPreview({ data, previews, isRTL, userName }: Prop
 
       <article className="card overflow-hidden border-2 border-emerald/30 shadow-lg">
         {/* Image / placeholder */}
-        <div className={`h-48 bg-gradient-to-br ${imgBg[data.section] || 'from-gray-100 to-gray-200'}
-                         flex items-center justify-center text-6xl relative`}>
+        <div className="h-48 relative overflow-hidden">
           {previews[0]
             ? <img src={previews[0]} alt="" className="w-full h-full object-cover" />
-            : <span>{sectionEmoji[data.section] || '📋'}</span>}
+            : <CategoryPlaceholder section={data.section} variant={data.listing_type} />}
 
           {/* Section badge */}
           <span className="absolute top-3 start-3 bg-white/90 text-navy text-[10px]

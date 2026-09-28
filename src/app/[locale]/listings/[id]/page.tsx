@@ -26,6 +26,7 @@ import ContactReveal from '@/components/listings/ContactReveal';
 import Lightbox from '@/components/ui/Lightbox';
 import ReportModal from '@/components/ui/ReportModal';
 import { ListingCard } from '@/components/ui/ListingCard';
+import CategoryPlaceholder from '@/components/ui/CategoryPlaceholder';
 
 /* ── Static maps ─────────────────────────────────────────────────────────── */
 
@@ -49,22 +50,38 @@ const LISTING_TYPE_MAP: Record<string, { ar: string; en: string; color: string }
 };
 
 const FIELD_LABELS: Record<string, { ar: string; en: string }> = {
+  // Fleet / vehicles
   vehicle_type:     { ar: 'نوع المركبة',       en: 'Vehicle Type'      },
   condition:        { ar: 'الحالة',             en: 'Condition'         },
   year:             { ar: 'سنة الصنع',          en: 'Year'              },
   mileage:          { ar: 'عداد الكيلومترات',   en: 'Mileage (km)'      },
   capacity:         { ar: 'الحمولة',            en: 'Capacity'          },
+  fuel_type:        { ar: 'نوع الوقود',         en: 'Fuel Type'         },
+  transmission:     { ar: 'ناقل الحركة',        en: 'Transmission'      },
+  warranty:         { ar: 'الضمان',             en: 'Warranty'          },
+  // Container / heavy
+  container_size:   { ar: 'مقاس الحاوية',       en: 'Container Size'    },
+  container_type:   { ar: 'نوع الحاوية',        en: 'Container Type'    },
+  last_inspection:  { ar: 'آخر فحص فني',        en: 'Last Inspection'   },
+  gross_weight:     { ar: 'الوزن الإجمالي',     en: 'Gross Weight (t)'  },
+  // Contracts
   contract_type:    { ar: 'نوع العقد',          en: 'Contract Type'     },
   duration:         { ar: 'مدة العقد',          en: 'Duration'          },
+  destinations:     { ar: 'عدد الوجهات',        en: 'Destinations'      },
+  payment_terms:    { ar: 'شروط الدفع',         en: 'Payment Terms'     },
+  cargo_type:       { ar: 'نوع الشحنة',         en: 'Cargo Type'        },
+  // Jobs
   employment_type:  { ar: 'نوع التوظيف',        en: 'Employment Type'   },
   experience_years: { ar: 'سنوات الخبرة',       en: 'Experience'        },
   salary_type:      { ar: 'نوع الراتب',         en: 'Salary Type'       },
   salary_min:       { ar: 'الراتب الأدنى',      en: 'Min Salary'        },
   salary_max:       { ar: 'الراتب الأقصى',      en: 'Max Salary'        },
+  license_required: { ar: 'الرخصة المطلوبة',    en: 'License Required'  },
+  job_title:        { ar: 'المسمى الوظيفي',     en: 'Job Title'         },
+  // M&A
   company_type:     { ar: 'نوع الشركة',         en: 'Company Type'      },
   employees_count:  { ar: 'عدد الموظفين',       en: 'Employees'         },
   annual_revenue:   { ar: 'الإيرادات السنوية',  en: 'Annual Revenue'    },
-  job_title:        { ar: 'المسمى الوظيفي',     en: 'Job Title'         },
 };
 
 /* ── Component ──────────────────────────────────────────────────────────────  */
@@ -597,9 +614,11 @@ export default function ListingDetailPage() {
                   )}
                 </div>
               ) : (
-                <div className="rounded-2xl aspect-video bg-gradient-to-br from-navy/5 to-emerald/10
-                               flex items-center justify-center">
-                  <span className="text-7xl opacity-40">{sectionMeta.emoji}</span>
+                <div className="rounded-2xl aspect-video overflow-hidden shadow-sm">
+                  <CategoryPlaceholder
+                    section={listing.section}
+                    variant={listing.listing_type}
+                  />
                 </div>
               )}
 
@@ -1098,7 +1117,11 @@ export default function ListingDetailPage() {
                       </button>
                     )}
 
-                    {/* Message seller */}
+                    {/* Message seller — signed-in only. When we already show
+                        WhatsApp above (phone present), a second big navy
+                        "Login to Contact" button competes with it and adds
+                        friction for guests. Only surface the sign-in path
+                        when we have no faster route. */}
                     {isAuthenticated && !isOwner ? (
                       <Link
                         href={`/${locale}/messages?to=${listing.user_id}&listing=${listing.id}`}
@@ -1109,9 +1132,9 @@ export default function ListingDetailPage() {
                         <MessageSquare size={16} />
                         {isRTL ? 'مراسلة البائع' : 'Message Seller'}
                       </Link>
-                    ) : !isAuthenticated ? (
+                    ) : !isAuthenticated && !listing.contact_phone ? (
                       <Link
-                        href={`/${locale}/auth/login`}
+                        href={`/${locale}/auth/login?redirect=${encodeURIComponent(`/${locale}/listings/${listing.id}`)}`}
                         className="w-full flex items-center justify-center gap-2 py-2.5 px-4
                                    rounded-xl bg-navy hover:bg-navy-dark text-white font-semibold
                                    text-sm transition-colors"
@@ -1240,42 +1263,93 @@ export default function ListingDetailPage() {
                   </div>
                 </div>
 
-                {/* Seller card */}
-                <div className="card p-4">
-                  <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-3">
-                    {isRTL ? 'معلومات المُعلِن' : 'Posted By'}
-                  </h3>
-                  <div className="flex items-center gap-3">
-                    <div className="w-11 h-11 rounded-full bg-navy/10 flex items-center justify-center
-                                    font-black text-navy text-base shrink-0">
-                      {sellerName?.[0]?.toUpperCase() ?? '?'}
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="font-bold text-gray-800 text-sm truncate">{sellerName}</p>
-                      <p className="text-xs text-gray-400 capitalize">
-                        {listing.user?.role === 'business'
-                          ? (isRTL ? 'شركة' : 'Business')
-                          : (isRTL ? 'فرد' : 'Individual')}
-                      </p>
-                    </div>
-                    <div className="flex flex-col gap-1 shrink-0">
-                      {listing.user?.role === 'business' && (
-                        <span title={isRTL ? 'حساب موثق' : 'Verified Business'}
-                              className="flex items-center gap-1 text-[10px] text-emerald font-semibold
-                                         bg-emerald/10 px-2 py-0.5 rounded-full">
-                          <BadgeCheck size={11} /> {isRTL ? 'موثق' : 'Verified'}
-                        </span>
+                {/* Seller card — a stronger trust signal than "first letter
+                    in a circle". Bigger avatar, business badge with the CR
+                    verification pill, join year, and role label all in one
+                    scannable block. */}
+                {listing.user && (() => {
+                  const u = listing.user
+                  const initial = sellerName?.[0]?.toUpperCase() ?? '?'
+                  const joinYear = u.created_at
+                    ? new Date(u.created_at).getFullYear()
+                    : null
+                  const isBusiness = u.role === 'business'
+                  const crApproved = u.business_verification?.status === 'approved'
+                  const avatarUrl  = u.avatar_url ? storageUrl(u.avatar_url) : null
+                  return (
+                    <div className="card p-4 space-y-3">
+                      <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wide">
+                        {isRTL ? 'معلومات المُعلِن' : 'Posted By'}
+                      </h3>
+
+                      <div className="flex items-start gap-3">
+                        {/* Avatar */}
+                        <div className="relative shrink-0">
+                          <div className="w-14 h-14 rounded-full bg-gradient-to-br from-navy/15 to-emerald/15
+                                          border border-navy/10 flex items-center justify-center
+                                          font-black text-navy text-lg overflow-hidden">
+                            {avatarUrl
+                              ? <img src={avatarUrl} alt={sellerName ?? ''} className="w-full h-full object-cover" />
+                              : <span>{initial}</span>}
+                          </div>
+                          {crApproved && (
+                            <span
+                              title={isRTL ? 'حساب أعمال موثق' : 'Verified business'}
+                              className="absolute -bottom-0.5 -end-0.5 w-5 h-5 rounded-full bg-emerald
+                                         border-2 border-white flex items-center justify-center"
+                            >
+                              <BadgeCheck size={11} className="text-white" />
+                            </span>
+                          )}
+                        </div>
+
+                        {/* Name + meta */}
+                        <div className="flex-1 min-w-0">
+                          <p className="font-bold text-gray-800 text-sm truncate">
+                            {sellerName ?? '—'}
+                          </p>
+                          <p className="text-xs text-gray-400 mt-0.5">
+                            {isBusiness
+                              ? (isRTL ? 'حساب أعمال' : 'Business account')
+                              : (isRTL ? 'حساب فردي' : 'Individual')}
+                          </p>
+                          {joinYear && (
+                            <p className="text-[11px] text-gray-400 mt-0.5 flex items-center gap-1">
+                              <Calendar size={10} />
+                              {isRTL ? `عضو منذ ${joinYear}` : `Member since ${joinYear}`}
+                            </p>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Trust chips row */}
+                      {(crApproved || u.is_trusted_payer || u.email_verified_at) && (
+                        <div className="flex flex-wrap gap-1.5 pt-1 border-t border-gray-100">
+                          {crApproved && (
+                            <span className="flex items-center gap-1 text-[10px] text-emerald font-semibold
+                                             bg-emerald/10 px-2 py-1 rounded-full">
+                              <BadgeCheck size={11} />
+                              {isRTL ? 'سجل تجاري مُتحقَّق' : 'CR verified'}
+                            </span>
+                          )}
+                          {u.is_trusted_payer && (
+                            <span className="flex items-center gap-1 text-[10px] text-amber-700 font-semibold
+                                             bg-amber-50 px-2 py-1 rounded-full">
+                              <Shield size={11} />
+                              {isRTL ? 'دافع موثوق' : 'Trusted payer'}
+                            </span>
+                          )}
+                          {u.email_verified_at && (
+                            <span className="flex items-center gap-1 text-[10px] text-slate font-semibold
+                                             bg-slate-bg px-2 py-1 rounded-full">
+                              ✓ {isRTL ? 'بريد مؤكد' : 'Email verified'}
+                            </span>
+                          )}
+                        </div>
                       )}
-                      {listing.user?.is_trusted_payer && (
-                        <span title={isRTL ? 'دافع موثوق' : 'Trusted Payer'}
-                              className="flex items-center gap-1 text-[10px] text-amber-600 font-semibold
-                                         bg-amber-50 px-2 py-0.5 rounded-full">
-                          <Shield size={11} /> {isRTL ? 'موثوق' : 'Trusted'}
-                        </span>
-                      )}
                     </div>
-                  </div>
-                </div>
+                  )
+                })()}
 
                 {/* Report */}
                 <button
@@ -1355,9 +1429,9 @@ export default function ListingDetailPage() {
               <MessageSquare size={16} />
               {isRTL ? 'مراسلة' : 'Message'}
             </Link>
-          ) : !isAuthenticated ? (
+          ) : !isAuthenticated && !listing.contact_phone ? (
             <Link
-              href={`/${locale}/auth/login`}
+              href={`/${locale}/auth/login?redirect=${encodeURIComponent(`/${locale}/listings/${listing.id}`)}`}
               className="flex-1 flex items-center justify-center py-3 rounded-xl
                          bg-navy text-white font-bold text-sm"
             >
