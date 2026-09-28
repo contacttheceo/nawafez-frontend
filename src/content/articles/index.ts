@@ -128,14 +128,33 @@ export const ARTICLES: Article[] = [
   },
   {
     slug:           'last-mile-delivery-saudi-arabia',
-    title_ar:       'لوجستيك الميل الأخير في السعودية: تحديات وفرص نمو 30%',
-    title_en:       'Last-Mile Delivery in Saudi Arabia: Challenges and 30% Growth Opportunities',
-    description_ar: 'تحليل سوق توصيل الميل الأخير في السعودية — حجم السوق، اللاعبون الرئيسيون، التحديات، وفرص للناقلين الصغار.',
-    description_en: 'Analysis of the Saudi last-mile delivery market — size, key players, challenges, and opportunities for small carriers.',
+    // Meta rewritten 2026-09 based on GSC: 51 impressions for the query
+    // "saudi arabia on-demand delivery market" landed on this article with
+    // 0 clicks. Description now front-loads the exact query terms
+    // ("on-demand delivery market", "3.2 billion") to boost SERP CTR.
+    title_ar:       'سوق توصيل الميل الأخير والطلب الفوري في السعودية 2026: حجم 3.2 مليار ريال وفرص النمو 30%',
+    title_en:       'Saudi Arabia On-Demand Delivery Market 2026: SAR 3.2B Size, Last-Mile Trends & Growth Opportunities',
+    description_ar: 'تحليل شامل لسوق توصيل الميل الأخير والطلب الفوري (on-demand) في السعودية 2026: حجم 3.2 مليار ريال، نمو 30% سنوياً، اللاعبون الرئيسيون، وفرص للناقلين الصغار.',
+    description_en: 'Complete 2026 analysis of the Saudi Arabia on-demand delivery market: SAR 3.2B size, 30% annual growth, last-mile players, market share, and entry opportunities for small carriers.',
     icon:           '📦',
-    updated_at:     '2026-06-09',
+    updated_at:     '2026-09-28',
     reading_minutes: 8,
-    tags:           ['الميل الأخير', 'E-commerce', 'توصيل', 'فرص نمو'],
+    tags:           ['الميل الأخير', 'on-demand delivery', 'E-commerce', 'توصيل', 'saudi arabia'],
+    primary_section: 'contracts',
+  },
+  {
+    // Added 2026-09 in response to GSC queries "container transport
+    // saoedi-arabië" (4 impressions, Dutch searchers) and the more
+    // general "container transport" — no existing page was matching.
+    slug:           'container-transport-saudi-arabia',
+    title_ar:       'نقل الحاويات في السعودية 2026: الأسعار، الموانئ، والتراخيص',
+    title_en:       'Container Transport in Saudi Arabia 2026: Prices, Ports, and Licensing',
+    description_ar: 'دليل شامل لنقل الحاويات في السعودية 2026: أسعار نقل الحاويات من ميناء جدة والدمام، تراخيص TIR، اشتراطات الأمن الجمركي، ومناقصات النقل الدولي.',
+    description_en: 'Complete 2026 guide to container transport in Saudi Arabia: shipping rates from Jeddah and Dammam ports, TIR licenses, customs security requirements, and cross-border tender opportunities.',
+    icon:           '🚢',
+    updated_at:     '2026-09-28',
+    reading_minutes: 9,
+    tags:           ['نقل الحاويات', 'container transport', 'موانئ السعودية', 'TIR', 'ميناء جدة', 'ميناء الدمام'],
     primary_section: 'contracts',
   },
   {

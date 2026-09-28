@@ -1,4 +1,5 @@
 import type { Metadata } from 'next'
+import { notFound } from 'next/navigation'
 
 const BASE = process.env.NEXT_PUBLIC_APP_URL ?? 'https://www.nwafizlogi.com'
 const API  = process.env.NEXT_PUBLIC_API_URL ?? 'https://nwafiz.creativealphat.com'
@@ -127,7 +128,18 @@ export default async function ListingDetailLayout({ children, params }: Props) {
   const { locale, id } = await params
   const listing = await fetchListing(id)
 
-  if (!listing || ['rejected', 'draft'].includes(listing.status)) {
+  // Missing listing → hard 404 (real HTTP status). Previously we returned
+  // the page shell with error UI at 200, which Google treats as Soft 404
+  // and drops the URL from the index. notFound() triggers Next's proper
+  // 404 pipeline with the correct status code.
+  if (!listing) {
+    notFound()
+  }
+
+  // rejected/draft listings still render (so the owner sees their status
+  // banner) but skip the JSON-LD schemas since we don't want them in
+  // Google's rich-result cache.
+  if (['rejected', 'draft'].includes(listing.status)) {
     return <>{children}</>
   }
 

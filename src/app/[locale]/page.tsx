@@ -33,9 +33,13 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const titleStr = isAr
     ? 'سوق النقل واللوجستيك في السعودية — نوافذ | شاحنات، عقود، توظيف'
     : 'Saudi Arabia Logistics Marketplace — Nwafiz | Trucks, Contracts, Jobs'
+  // Description tuned for GSC queries that impressed but didn't click:
+  // "join logistics network ksa", "saudi arabia on-demand delivery market",
+  // "لوجي سوق النقل الذكي". Under 160 chars for SERP truncation safety
+  // while packing brand + benefit + call-to-action.
   const description = isAr
-    ? 'منصة B2B لسوق النقل واللوجستيك في السعودية. بيع وشراء وتأجير الشاحنات والمعدات، عقود نقل، وظائف لوجستية، ومنتدى مختصين في مكان واحد.'
-    : 'B2B marketplace for logistics in Saudi Arabia. Buy, sell, and rent trucks and equipment, post transport contracts, find logistics jobs — all in one place.'
+    ? 'انضم لأكبر شبكة B2B للنقل واللوجستيك في السعودية — شاحنات، عقود، وظائف، ميل أخير، حاويات. أكثر من 80 إعلاناً نشطاً. سجّل مجاناً.'
+    : 'Join the largest B2B logistics network in Saudi Arabia — trucks, contracts, jobs, last-mile, containers. 80+ active listings. Sign up free.'
   return {
     // .absolute opts out of the root template — we already have 'نوافذ'
     // in the title, no need for the suffix to add it again.
