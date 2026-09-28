@@ -1,8 +1,8 @@
 import Link from 'next/link'
-import { headers } from 'next/headers'
 import Navbar from '@/components/Navbar'
 import Footer from '@/components/Footer'
 import { Search, ArrowRight } from 'lucide-react'
+import { getLocale } from 'next-intl/server'
 
 /**
  * Custom 404 page for the [locale] segment.
@@ -12,8 +12,12 @@ import { Search, ArrowRight } from 'lucide-react'
  * generic 404 text with a branded landing that keeps the visitor inside
  * the funnel: search box + category quick-links.
  *
- * Locale is read from the referer (the URL that produced the 404); the
- * `params` prop is not available inside not-found.tsx.
+ * IMPORTANT: keep this file free of dynamic APIs (headers, cookies, etc.
+ * called directly). Reading them here forces Next to render the boundary
+ * as fully dynamic and the response silently downgrades from HTTP 404 to
+ * 200 — the classic "soft 404" Google penalises. `getLocale()` from
+ * next-intl reads the segment locale through the framework and does not
+ * trip this bug.
  */
 
 const SECTIONS = [
@@ -25,12 +29,8 @@ const SECTIONS = [
 ]
 
 export default async function LocaleNotFound() {
-  // Best-effort locale detection from the referer path. This runs on the
-  // server so we can inspect request headers directly.
-  const h = await headers()
-  const referer = h.get('referer') ?? ''
-  const match   = referer.match(/\/(ar|en)(?:\/|$)/)
-  const locale: 'ar' | 'en' = match?.[1] === 'en' ? 'en' : 'ar'
+  const rawLocale = await getLocale().catch(() => 'ar')
+  const locale: 'ar' | 'en' = rawLocale === 'en' ? 'en' : 'ar'
   const isRTL  = locale === 'ar'
 
   return (
