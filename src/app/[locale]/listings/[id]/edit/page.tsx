@@ -9,6 +9,7 @@ import {
 } from 'lucide-react';
 import { listingsApi } from '@/lib/api';
 import { useAuthStore } from '@/store/auth';
+import { useAuthGuard } from '@/hooks/useAuthGuard';
 import Navbar from '@/components/Navbar';
 import toast from 'react-hot-toast';
 
@@ -65,7 +66,10 @@ export default function EditListingPage() {
   const locale                    = useLocale();
   const router                    = useRouter();
   const isRTL                     = locale === 'ar';
-  const { user, isAuthenticated } = useAuthStore();
+  const user = useAuthStore((s) => s.user);
+  // Wait for persist hydration before redirecting — was racing before,
+  // signed-in users landed on /auth/login when opening edit directly.
+  const { isAuthenticated, isReady } = useAuthGuard();
   const fileInputRef              = useRef<HTMLInputElement>(null);
 
   const [loading,     setLoading]     = useState(true);
@@ -97,7 +101,8 @@ export default function EditListingPage() {
 
   /* ── Load listing ── */
   useEffect(() => {
-    if (!isAuthenticated) { router.push(`/${locale}/auth/login`); return; }
+    if (!isReady) return;              // wait for persist hydration
+    if (!isAuthenticated) return;      // useAuthGuard already redirects
     const load = async () => {
       try {
         const res = await listingsApi.getOne(Number(id));
@@ -138,7 +143,7 @@ export default function EditListingPage() {
       }
     };
     load();
-  }, [id, isAuthenticated]);
+  }, [id, isAuthenticated, isReady]);
 
   /* ── New image selection ── */
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {

@@ -16,6 +16,7 @@ import ImageUploader   from '@/components/listings/ImageUploader';
 import ListingPreview  from '@/components/listings/ListingPreview';
 import { listingsApi, aiApi } from '@/lib/api';
 import { useAuthStore } from '@/store/auth';
+import { useAuthGuard } from '@/hooks/useAuthGuard';
 import type { ListingSection } from '@/types';
 
 /* ── Types ────────────────────────────────────────────────────────── */
@@ -72,7 +73,12 @@ export default function CreateListingPage() {
   const locale   = useLocale();
   const router   = useRouter();
   const isRTL    = locale === 'ar';
-  const { isAuthenticated, user } = useAuthStore();
+  const user     = useAuthStore((s) => s.user);
+  // Wait for the Zustand persist hydration before deciding whether to
+  // redirect. The previous inline guard fired on the first render (with
+  // isAuthenticated still `false` — the default before hydration) and
+  // bounced signed-in users straight back to /auth/login.
+  const { isAuthenticated, isReady } = useAuthGuard();
 
   const [step,          setStep]          = useState(1);
   const [images,        setImages]        = useState<File[]>([]);
@@ -92,10 +98,9 @@ export default function CreateListingPage() {
   // Duplicate detection
   const [duplicateWarning, setDuplicateWarning] = useState<any | null>(null);
 
-  /* ── Auth guard ─────────────────────────────────────────────────── */
-  useEffect(() => {
-    if (!isAuthenticated) router.push(`/${locale}/auth/login`);
-  }, [isAuthenticated, locale, router]);
+  /* Auth guard now handled by useAuthGuard() above — it waits for the
+     persist middleware to rehydrate before deciding, so signed-in
+     users are not bounced to /auth/login on first render. */
 
   /* ── Unsaved changes warning ────────────────────────────────────── */
   useEffect(() => {
@@ -330,6 +335,15 @@ export default function CreateListingPage() {
     }
   };
 
+  // Wait for hydration before rendering — the guard hook only redirects
+  // once the persist store has finished loading from localStorage.
+  if (!isReady) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="w-8 h-8 border-2 border-emerald border-t-transparent rounded-full animate-spin" />
+      </div>
+    );
+  }
   if (!isAuthenticated) return null;
 
   const userName = isRTL

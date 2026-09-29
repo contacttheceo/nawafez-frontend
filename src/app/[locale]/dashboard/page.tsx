@@ -13,6 +13,7 @@ import {
 } from 'lucide-react';
 import { userApi, authApi, listingsApi } from '@/lib/api';
 import { useAuthStore } from '@/store/auth';
+import { useAuthGuard } from '@/hooks/useAuthGuard';
 import { formatDistanceToNow, storageUrl } from '@/lib/utils';
 import Navbar from '@/components/Navbar';
 import toast from 'react-hot-toast';
@@ -48,7 +49,12 @@ export default function DashboardPage() {
   const locale  = useLocale();
   const isRTL   = locale === 'ar';
   const router  = useRouter();
-  const { user, isAuthenticated, clearAuth } = useAuthStore();
+  const user      = useAuthStore((s) => s.user);
+  const clearAuth = useAuthStore((s) => s.clearAuth);
+  // Wait for persist hydration before deciding whether to redirect —
+  // stops signed-in users from being bounced to /auth/login on the
+  // first render.
+  const { isAuthenticated, isReady } = useAuthGuard();
 
   const [stats,        setStats]        = useState<any>(null);
   const [listings,     setListings]     = useState<any[]>([]);
@@ -85,12 +91,13 @@ export default function DashboardPage() {
   };
 
   useEffect(() => {
-    if (!isAuthenticated) { router.push(`/${locale}/auth/login`); return; }
+    if (!isReady) return;            // wait for store hydration
+    if (!isAuthenticated) return;    // useAuthGuard already redirects
     setLoading(true);
     Promise.all([loadStats(), loadListings(1)])
       .catch(() => toast.error(isRTL ? 'تعذر تحميل البيانات' : 'Failed to load data'))
       .finally(() => setLoading(false));
-  }, [isAuthenticated]);
+  }, [isAuthenticated, isReady]);
 
   const handleLogout = async () => {
     try { await authApi.logout(); } catch {}
@@ -185,6 +192,13 @@ export default function DashboardPage() {
     finally  { setLoadingTips(false); }
   };
 
+  if (!isReady) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="w-8 h-8 border-2 border-emerald border-t-transparent rounded-full animate-spin" />
+      </div>
+    );
+  }
   if (!isAuthenticated) return null;
 
   const displayName   = isRTL ? user?.name_ar : user?.name_en;

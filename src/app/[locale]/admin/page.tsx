@@ -17,6 +17,7 @@ import {
   LineChart, Line, CartesianGrid,
 } from 'recharts';
 import { useAuthStore } from '@/store/auth';
+import { useAuthGuard } from '@/hooks/useAuthGuard';
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
 import { adminApi } from '@/lib/api';
@@ -87,7 +88,11 @@ export default function AdminPage() {
   const locale = useLocale();
   const router = useRouter();
   const isRTL  = locale === 'ar';
-  const { user, isAuthenticated } = useAuthStore();
+  const user = useAuthStore((s) => s.user);
+  // Wait for persist hydration; the previous inline guard bounced
+  // authenticated admins to /auth/login on first render because the
+  // store had not yet loaded from localStorage.
+  const { isAuthenticated, isReady } = useAuthGuard();
 
   const [activeTab, setActiveTab]   = useState<AdminTab>('dashboard');
   const [stats, setStats]           = useState<any>(null);
@@ -146,11 +151,13 @@ export default function AdminPage() {
   const [commentsReportedOnly, setCommentsReportedOnly] = useState(false);
   const [commentsSearch, setCommentsSearch] = useState('');
 
-  // Guard: only admin
+  // Guard: only admin. useAuthGuard() above already handles the
+  // authenticated redirect after hydration; here we only enforce the
+  // admin-role check once the store is ready.
   useEffect(() => {
-    if (!isAuthenticated) { router.push(`/${locale}/auth/login`); return; }
+    if (!isReady || !isAuthenticated) return;
     if (user?.role !== 'admin') { router.push(`/${locale}`); return; }
-  }, [isAuthenticated, user, locale, router]);
+  }, [isReady, isAuthenticated, user, locale, router]);
 
   // Load dashboard stats
   useEffect(() => {
@@ -577,6 +584,13 @@ export default function AdminPage() {
     }
   };
 
+  if (!isReady) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="w-8 h-8 border-2 border-emerald border-t-transparent rounded-full animate-spin" />
+      </div>
+    );
+  }
   if (!isAuthenticated || user?.role !== 'admin') return null;
 
   const tabConfig = [

@@ -6,7 +6,7 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { Bookmark, Search } from 'lucide-react';
 import { interactionsApi } from '@/lib/api';
-import { useAuthStore } from '@/store/auth';
+import { useAuthGuard } from '@/hooks/useAuthGuard';
 import { ListingCard } from '@/components/ui/ListingCard';
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
@@ -17,19 +17,29 @@ export default function BookmarksPage() {
   const locale  = useLocale();
   const isRTL   = locale === 'ar';
   const router  = useRouter();
-  const { isAuthenticated } = useAuthStore();
+  // Guard waits for persist hydration; without it, isAuthenticated is
+  // false on first render and the user gets bounced to /auth/login
+  // even when signed in.
+  const { isAuthenticated, isReady } = useAuthGuard();
 
   const [bookmarks, setBookmarks] = useState<Listing[]>([]);
   const [loading,   setLoading]   = useState(true);
 
   useEffect(() => {
-    if (!isAuthenticated) { router.push(`/${locale}/auth/login`); return; }
+    if (!isReady || !isAuthenticated) return;
     interactionsApi.getBookmarks()
       .then(res => setBookmarks(res.data ?? res))
       .catch(() => toast.error(isRTL ? 'تعذر تحميل المحفوظات' : 'Failed to load bookmarks'))
       .finally(() => setLoading(false));
-  }, [isAuthenticated]);
+  }, [isAuthenticated, isReady]);
 
+  if (!isReady) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="w-8 h-8 border-2 border-emerald border-t-transparent rounded-full animate-spin" />
+      </div>
+    );
+  }
   if (!isAuthenticated) return null;
 
   return (
