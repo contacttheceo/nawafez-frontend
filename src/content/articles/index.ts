@@ -11,6 +11,13 @@
  * them to the top by adding dedicated content).
  */
 
+export interface ArticleFaqItem {
+  q_ar: string
+  a_ar: string
+  q_en: string
+  a_en: string
+}
+
 export interface Article {
   slug: string
   title_ar: string
@@ -27,6 +34,23 @@ export interface Article {
   tags: string[]
   /** Section this article links to most. Drives "see related listings" CTA. */
   primary_section: 'fleet' | 'contracts' | 'jobs' | 'ma' | 'forum'
+
+  /**
+   * Short answer that previews the article's core takeaway. Rendered as
+   * a highlighted callout above the body AND surfaced to AI assistants
+   * (Perplexity / ChatGPT) that prefer extractable TL;DR openers over
+   * long preambles.
+   */
+  tldr_ar?: string
+  tldr_en?: string
+
+  /**
+   * Frequently asked questions related to this topic. When provided,
+   * the article page renders them as an FAQ section + emits a FAQPage
+   * JSON-LD schema that qualifies for Google's FAQ rich result
+   * (collapsible panels on the SERP).
+   */
+  faq?: ArticleFaqItem[]
 }
 
 export const ARTICLES: Article[] = [
@@ -49,10 +73,51 @@ export const ARTICLES: Article[] = [
     description_ar: 'تعرّف على فئات تراخيص نقل البضائع التي تصدرها الهيئة العامة للنقل (TGA): البري، الثقيل، المبرّد، الخطر — متطلبات كل فئة والرسوم.',
     description_en: 'Learn about the freight transport license categories issued by the Saudi Transport General Authority (TGA): land, heavy, refrigerated, hazardous.',
     icon:           '📜',
-    updated_at:     '2026-06-09',
+    updated_at:     '2026-10-24',
     reading_minutes: 9,
     tags:           ['تراخيص', 'TGA', 'الهيئة العامة للنقل', 'نقل البضائع'],
     primary_section: 'ma',
+    tldr_ar:
+      'تُصدر الهيئة العامة للنقل (TGA) أربع فئات رئيسية لتراخيص نقل البضائع في السعودية: ' +
+      'النقل البري العام، النقل الثقيل، النقل المبرّد، ونقل المواد الخطرة. كل فئة لها متطلبات ' +
+      'ورسوم مختلفة، ويتم التقديم إلكترونياً عبر منصة TGA. مدة إصدار الرخصة 15-30 يوم عمل.',
+    tldr_en:
+      'Saudi Arabia\'s Transport General Authority (TGA) issues four main freight transport ' +
+      'license categories: general land transport, heavy transport, refrigerated, and hazardous ' +
+      'materials. Each has distinct requirements and fees; applications go through the TGA ' +
+      'portal and typically take 15–30 business days.',
+    faq: [
+      {
+        q_ar: 'ما الجهة المصدرة لتراخيص نقل البضائع في السعودية؟',
+        a_ar: 'الهيئة العامة للنقل (Transport General Authority — TGA) هي الجهة الحكومية المسؤولة عن إصدار كل تراخيص نقل البضائع البرية في المملكة.',
+        q_en: 'Which authority issues freight transport licenses in Saudi Arabia?',
+        a_en: 'The Transport General Authority (TGA) is the government body responsible for issuing all land freight transport licenses in the Kingdom.',
+      },
+      {
+        q_ar: 'كم المدة اللازمة لإصدار رخصة نقل البضائع؟',
+        a_ar: 'تستغرق المدة بين 15 إلى 30 يوم عمل من تاريخ اكتمال المستندات والدفع، وتزداد المدة للتراخيص الخاصة (مثل نقل المواد الخطرة) التي تتطلب تفتيش ميداني.',
+        q_en: 'How long does a freight transport license take to issue?',
+        a_en: 'Between 15 and 30 business days from the date documents and fees are complete. Specialty licenses (e.g. hazmat) take longer due to the required field inspection.',
+      },
+      {
+        q_ar: 'هل يمكن الحصول على ترخيص نقل كفرد أم للشركات فقط؟',
+        a_ar: 'بعض الفئات (كتأجير الشاحنات الفردي) متاحة للأفراد السعوديين بشروط، بينما فئات النقل التجاري والنقل الثقيل تتطلب سجل تجاري ساري.',
+        q_en: 'Can individuals get a transport license, or is it companies only?',
+        a_en: 'Some categories (like single-vehicle rental) are open to Saudi individuals under conditions, while commercial and heavy transport categories require a valid commercial registration (CR).',
+      },
+      {
+        q_ar: 'كم تكلفة رخصة نقل البضائع في السعودية؟',
+        a_ar: 'الرسوم تبدأ من 1,000 ر.س للفئة البرية الأساسية، وتصل إلى 10,000 ر.س+ للنقل الثقيل أو المواد الخطرة، وتُجدَّد كل سنة أو ثلاث سنوات حسب الفئة.',
+        q_en: 'How much does a freight transport license cost?',
+        a_en: 'Fees start at SAR 1,000 for basic land transport and reach SAR 10,000+ for heavy transport or hazardous materials. Renewals are annual or every three years depending on the class.',
+      },
+      {
+        q_ar: 'هل أحتاج رخصة منفصلة لكل شاحنة أم رخصة واحدة للأسطول؟',
+        a_ar: 'رخصة التشغيل تُمنح للنشاط التجاري ككل، لكن كل شاحنة تحتاج بطاقة تشغيل مستقلة ترتبط بالرخصة الأم وتُدرج ضمن أسطول المنشأة في منصة TGA.',
+        q_en: 'Do I need a separate license per truck or one for the whole fleet?',
+        a_en: 'The operating license is issued for the business as a whole, but each truck requires its own operating card linked to the parent license and registered under the entity\'s fleet in the TGA portal.',
+      },
+    ],
   },
   {
     slug:           'truck-rental-prices-saudi-arabia',
@@ -109,10 +174,52 @@ export const ARTICLES: Article[] = [
     description_ar: 'دليل تراخيص قيادة الشاحنات في السعودية — الفئات الخامسة والسادسة، شهادات HAZMAT، التجديد، والاعتمادات المهنية.',
     description_en: 'Saudi truck driver licensing guide — class 5 and 6, HAZMAT certifications, renewals, and professional accreditations.',
     icon:           '🪪',
-    updated_at:     '2026-06-09',
+    updated_at:     '2026-10-24',
     reading_minutes: 6,
     tags:           ['سائقون', 'تراخيص قيادة', 'فئة خامسة', 'HAZMAT'],
     primary_section: 'jobs',
+    tldr_ar:
+      'تنقسم رخص قيادة الشاحنات في السعودية إلى فئتين رئيسيتين: الفئة الخامسة ' +
+      '(شاحنة متوسطة حتى 12 طن) والفئة السادسة (شاحنة ثقيلة فوق 12 طن أو قاطرة). ' +
+      'تتطلب كل فئة اختبار نظري + عملي ودورة في مدرسة قيادة معتمدة، وتُصدر الرخصة ' +
+      'لـ 10 سنوات. نقل المواد الخطرة يحتاج شهادة HAZMAT إضافية من TGA.',
+    tldr_en:
+      'Saudi truck licenses split into two main classes: Class 5 (medium trucks up to 12 t) ' +
+      'and Class 6 (heavy trucks over 12 t or articulated). Each requires a theory + practical ' +
+      'exam and a certified driving-school course; the license is issued for 10 years. ' +
+      'Hazardous materials transport needs an additional TGA HAZMAT certificate.',
+    faq: [
+      {
+        q_ar: 'ما الفرق بين رخصة القيادة الخامسة والسادسة؟',
+        a_ar: 'الفئة الخامسة تُجيز قيادة الشاحنات المتوسطة حتى 12 طن إجمالي. الفئة السادسة تشمل الشاحنات الثقيلة فوق 12 طن أو الشاحنات القاطرة (نصف نقل + مقطورة). الفئة السادسة تتطلب خبرة مسبقة بالفئة الخامسة.',
+        q_en: 'What is the difference between a Class 5 and Class 6 driver license?',
+        a_en: 'Class 5 permits medium trucks up to 12 tonnes total weight. Class 6 covers heavy trucks over 12 tonnes or articulated semi-trucks with trailers; it also requires prior Class 5 experience.',
+      },
+      {
+        q_ar: 'كم تكلفة إصدار رخصة قيادة شاحنة في السعودية؟',
+        a_ar: 'الرسوم الحكومية 400 ر.س لكل 10 سنوات. تُضاف تكلفة دورة مدرسة القيادة (1,500-3,500 ر.س حسب المدرسة) + الفحص الطبي (~300 ر.س).',
+        q_en: 'How much does a Saudi truck driver license cost?',
+        a_en: 'Government fee is SAR 400 for 10 years. Add the driving-school course (SAR 1,500–3,500 depending on the school) and a medical exam (~SAR 300).',
+      },
+      {
+        q_ar: 'هل يستطيع المقيم غير السعودي استخراج رخصة قيادة شاحنة؟',
+        a_ar: 'نعم. المقيم بإقامة سارية يستطيع التقديم، ويحتاج موافقة صاحب العمل + فحص طبي + دورة مدرسة قيادة معتمدة. المدة الإجمالية ~30 يوم.',
+        q_en: 'Can non-Saudi residents get a truck driver license?',
+        a_en: 'Yes. Residents with valid iqama can apply, provided their employer approves plus a medical exam and a certified driving-school course. Full process takes ~30 days.',
+      },
+      {
+        q_ar: 'ما شهادة HAZMAT ومتى أحتاجها؟',
+        a_ar: 'شهادة HAZMAT (المواد الخطرة) تصدرها الهيئة العامة للنقل. مطلوبة لنقل الوقود والمواد الكيماوية والغازات المضغوطة والمواد المشعة. تتطلب دورة متخصصة لمدة 3-5 أيام + اختبار سنوي.',
+        q_en: 'What is HAZMAT certification and when do I need it?',
+        a_en: 'A HAZMAT certificate from the TGA, required for transporting fuel, chemicals, compressed gases, and radioactive materials. It needs a specialised 3–5 day course and an annual exam.',
+      },
+      {
+        q_ar: 'كيف أجدد رخصة قيادة الشاحنة؟',
+        a_ar: 'عبر تطبيق أبشر أو منصة التجارة. الرسوم 400 ر.س. يُشترط عدم وجود مخالفات مرورية غير مسددة + فحص طبي حديث للسائقين فوق سن 60.',
+        q_en: 'How do I renew my truck driver license?',
+        a_en: 'Through the Absher app or the Commerce portal. Fee is SAR 400. Requires no unpaid traffic violations plus a recent medical exam for drivers over 60.',
+      },
+    ],
   },
   {
     slug:           'cold-chain-logistics-saudi-arabia',

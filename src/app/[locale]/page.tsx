@@ -40,6 +40,15 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const description = isAr
     ? 'انضم لأكبر شبكة B2B للنقل واللوجستيك في السعودية — شاحنات، عقود، وظائف، ميل أخير، حاويات. أكثر من 80 إعلاناً نشطاً. سجّل مجاناً.'
     : 'Join the largest B2B logistics network in Saudi Arabia — trucks, contracts, jobs, last-mile, containers. 80+ active listings. Sign up free.'
+
+  // Real listings count for the OG badge. The earlier hard-coded "583+"
+  // mismatched the on-page "80+" stat and read as untrustworthy on
+  // WhatsApp previews. fetchStats() is cached (next: revalidate=3600)
+  // and shared with the page render, so this is one API call per hour.
+  const stats = await fetchStats()
+  const activeCount = stats?.total_listings ?? 80
+  const statStr = `${activeCount}+`
+
   return {
     // .absolute opts out of the root template — we already have 'نوافذ'
     // in the title, no need for the suffix to add it again.
@@ -59,7 +68,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
       // Branded OG card — much better engagement than the bare logo.
       // Same /api/og endpoint can power any page via query params.
       images: [{
-        url: `${BASE}/api/og?title=${encodeURIComponent(isAr ? 'منصة اللوجستيك B2B الأولى في السعودية' : "Saudi Arabia's First B2B Logistics Marketplace")}&subtitle=${encodeURIComponent(isAr ? 'شاحنات، عقود نقل، استحواذ، توظيف، منتدى' : 'Trucks, contracts, M&A, jobs, forum')}&stat=583%2B&statLabel=${encodeURIComponent(isAr ? 'إعلان نشط' : 'active listings')}`,
+        url: `${BASE}/api/og?title=${encodeURIComponent(isAr ? 'منصة اللوجستيك B2B الأولى في السعودية' : "Saudi Arabia's First B2B Logistics Marketplace")}&subtitle=${encodeURIComponent(isAr ? 'شاحنات، عقود نقل، استحواذ، توظيف، منتدى' : 'Trucks, contracts, M&A, jobs, forum')}&stat=${encodeURIComponent(statStr)}&statLabel=${encodeURIComponent(isAr ? 'إعلان نشط' : 'active listings')}`,
         width: 1200,
         height: 630,
         alt: isAr ? 'نوافذ' : 'Nwafiz',

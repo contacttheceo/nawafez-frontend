@@ -139,15 +139,37 @@ export default async function ArticlePage({ params }: Props) {
     ],
   }
 
+  // FAQPage schema — only emitted when the article has FAQ content.
+  // Qualifies for Google's FAQ rich result (expandable Q/A boxes on
+  // the SERP) and gives LLM crawlers extractable Q/A pairs.
+  const faqSchema = a.faq && a.faq.length > 0 ? {
+    '@context': 'https://schema.org',
+    '@type':    'FAQPage',
+    mainEntity: a.faq.map(item => ({
+      '@type': 'Question',
+      name:    isAr ? item.q_ar : item.q_en,
+      acceptedAnswer: {
+        '@type': 'Answer',
+        text:    isAr ? item.a_ar : item.a_en,
+      },
+    })),
+  } : null
+
   // Related articles — same primary section
   const related = ARTICLES
     .filter(other => other.slug !== a.slug && other.primary_section === a.primary_section)
     .slice(0, 3)
 
+  const tldr = isAr ? a.tldr_ar : a.tldr_en
+  const updatedLabel = isAr ? 'آخر تحديث' : 'Last updated'
+
   return (
     <>
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(schema) }} />
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumb) }} />
+      {faqSchema && (
+        <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(faqSchema) }} />
+      )}
 
       <Navbar />
       <main className="min-h-screen bg-white py-10 px-4">
@@ -167,10 +189,28 @@ export default async function ArticlePage({ params }: Props) {
               {isAr ? a.description_ar : a.description_en}
             </p>
             <div className="flex flex-wrap items-center gap-4 text-xs text-gray-500">
-              <span>📅 {a.updated_at}</span>
+              <span>📅 {updatedLabel}: <time dateTime={a.updated_at}>{a.updated_at}</time></span>
               <span>📖 {a.reading_minutes} {isAr ? 'دقائق قراءة' : 'min read'}</span>
             </div>
           </header>
+
+          {/* TL;DR — surfaces the article's core answer in one paragraph.
+              AI engines (Perplexity, ChatGPT) prefer extractable openers;
+              human readers scanning the SERP get the gist immediately. */}
+          {tldr && (
+            <aside
+              className="mb-10 rounded-xl border-s-4 border-emerald bg-emerald/5
+                         px-5 py-4"
+              aria-label={isAr ? 'ملخص سريع' : 'Quick summary'}
+            >
+              <div className="text-xs font-bold text-emerald-700 mb-2 uppercase tracking-wide">
+                {isAr ? '💡 ملخص سريع' : '💡 TL;DR'}
+              </div>
+              <p className="text-navy font-medium leading-relaxed text-base">
+                {tldr}
+              </p>
+            </aside>
+          )}
 
           <div
             className="text-gray-700 leading-relaxed text-base sm:text-lg
@@ -187,6 +227,42 @@ export default async function ArticlePage({ params }: Props) {
                        [&_.lead]:text-lg sm:[&_.lead]:text-xl [&_.lead]:text-gray-700 [&_.lead]:leading-relaxed [&_.lead]:mb-8 [&_.lead]:font-medium [&_.lead]:border-s-4 [&_.lead]:border-emerald [&_.lead]:ps-4"
             dangerouslySetInnerHTML={{ __html: body }}
           />
+
+          {/* FAQ — rendered when the article declares `faq` items.
+              Paired with the FAQPage JSON-LD above so Google can show
+              expandable Q/A tiles in the SERP. LLM crawlers get a
+              clearly-scoped Q/A block to extract. */}
+          {a.faq && a.faq.length > 0 && (
+            <section className="mt-12 pt-8 border-t border-gray-200">
+              <h2 className="text-2xl font-black text-navy mb-2">
+                {isAr ? '❓ أسئلة شائعة' : '❓ Frequently asked questions'}
+              </h2>
+              <p className="text-sm text-gray-500 mb-6">
+                {isAr
+                  ? 'الأسئلة الأكثر تكراراً حول هذا الموضوع'
+                  : 'The questions most readers ask about this topic'}
+              </p>
+              <div className="space-y-3">
+                {a.faq.map((item, i) => (
+                  <details
+                    key={i}
+                    className="group rounded-xl border border-gray-200 bg-gray-50 open:bg-white
+                               open:shadow-sm open:border-emerald/40 transition-colors"
+                  >
+                    <summary className="cursor-pointer list-none flex items-start justify-between
+                                        gap-3 px-5 py-4 font-bold text-navy text-base">
+                      <span className="flex-1 leading-snug">{isAr ? item.q_ar : item.q_en}</span>
+                      <span className="text-emerald text-xl shrink-0 transition-transform
+                                       group-open:rotate-45 leading-none">+</span>
+                    </summary>
+                    <div className="px-5 pb-4 text-gray-700 leading-relaxed">
+                      {isAr ? item.a_ar : item.a_en}
+                    </div>
+                  </details>
+                ))}
+              </div>
+            </section>
+          )}
 
           {/* Tags */}
           <div className="mt-10 pt-6 border-t border-gray-200 flex flex-wrap gap-2">

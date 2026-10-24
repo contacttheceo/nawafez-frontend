@@ -85,7 +85,13 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   }
 
   const isAr   = locale === 'ar'
-  const title  = (isAr ? listing.title_ar : listing.title_en) || listing.title_ar || listing.title_en || ''
+  const rawTitle = (isAr ? listing.title_ar : listing.title_en) || listing.title_ar || listing.title_en || ''
+  // Append the brand suffix explicitly. The root layout defines
+  // `title.template: '%s | نوافذ'` but Next does not consistently
+  // apply the template to grandchild layouts whose metadata is built
+  // via `generateMetadata` — the live SERP showed bare titles with no
+  // brand recognition. Hard-coding the suffix guarantees it.
+  const title    = rawTitle ? `${rawTitle} | نوافذ` : 'نوافذ'
   const desc   = truncate(isAr ? listing.description_ar : listing.description_en) ||
                  truncate(listing.description_ar) ||
                  truncate(listing.description_en) ||

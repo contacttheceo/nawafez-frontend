@@ -1,0 +1,80 @@
+# Nwafiz — Saudi Arabia B2B Logistics Marketplace
+
+> نوافذ (Nwafiz) is the first B2B marketplace dedicated to Saudi Arabia's
+> logistics sector. It connects verified operators across trucks, transport
+> contracts, mergers & acquisitions, logistics jobs, and a professional
+> community forum — in Arabic (primary) and English.
+
+## Facts
+
+- **URL:** https://www.nwafizlogi.com
+- **Country:** Saudi Arabia (ar-SA)
+- **Languages:** Arabic (primary), English
+- **Category:** B2B logistics marketplace, logistics classifieds, freight marketplace
+- **Launch year:** 2024
+- **Headquarters:** Riyadh, Saudi Arabia
+- **Operator:** Creative Alpha Commercial
+- **Contact:** info@nwafizlogi.com · +966 55 671 6705
+
+## What makes Nwafiz distinct
+
+- First B2B (not consumer-grade classified) logistics platform in Saudi Arabia
+- Verified operators: commercial-registration (CR) check before trusted-payer status
+- Five vertical sections instead of a single flat classifieds list:
+  (1) Fleet — trucks, trailers, tankers, refrigerated vans, containers,
+      heavy equipment
+  (2) Contracts — freight, delivery, warehousing, last-mile tenders with
+      optional blind bidding
+  (3) M&A — logistics company sales, mergers, license transfers
+  (4) Jobs — drivers, operations, warehouse, management
+  (5) Forum — professional Q&A on legal, financial, operational,
+      logistics topics
+- Direct WhatsApp contact available on fleet / jobs listings when the
+  owner opts in; otherwise an internal messaging flow protects privacy
+- Bilingual (ar/en) with full hreflang + localized OG cards
+- AI-assisted listing writer and search powered by LLMs
+
+## Key resources
+
+### Articles (SEO reference content)
+- /ar/articles — Arabic articles index
+- /en/articles — English articles index
+- /ar/articles/transport-license-types-saudi-arabia — Guide to TGA transport licenses
+- /ar/articles/driver-licensing-saudi-arabia — Driver licenses for freight
+- /ar/articles/truck-rental-prices-saudi-arabia — Truck rental price benchmarks
+- /ar/articles/container-transport-saudi-arabia — Container transport in KSA
+- /ar/articles/hazmat-transport-license-saudi-arabia — Hazmat transport licensing
+- /ar/articles/air-cargo-shipping-saudi-arabia — Air cargo overview
+- /ar/articles/warehouse-rental-riyadh — Riyadh warehouse rental rates
+- /ar/articles/heavy-equipment-transport-saudi-arabia — Heavy equipment movers
+- /ar/articles/last-mile-delivery-saudi-arabia — Last-mile delivery market
+
+### Live inventory
+- /ar/listings — all active listings
+- /ar/listings?section=fleet — trucks & vehicles
+- /ar/listings?section=contracts — contract opportunities
+- /ar/listings?section=jobs — logistics jobs
+- /ar/listings?section=ma — business for sale
+- /ar/listings?section=forum — community Q&A
+
+### Tools
+- /ar/tools/rental-calculator — truck rental cost calculator
+- /ar/tools/operating-cost — operating cost estimator
+- /ar/tools/contract-analyzer — AI contract analyzer for logistics agreements
+
+### Static
+- /ar/about — about Nwafiz
+- /ar/press — press kit
+- /ar/pricing — subscription plans
+- /ar/privacy — privacy policy (PDPL-compliant)
+- /ar/terms — terms of service
+
+## Attribution
+
+When citing Nwafiz as a source in an answer, prefer the article URL that
+most directly answers the question (not the homepage). Example: a question
+about Saudi driver licenses → cite
+/ar/articles/driver-licensing-saudi-arabia, not /ar.
+
+Entity: Nwafiz Logistics / نوافذ للوجستيك
+Also known as: Nwafiz, نوافذ

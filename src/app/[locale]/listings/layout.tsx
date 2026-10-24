@@ -70,27 +70,15 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 }
 
 export default async function ListingsLayout({ children, params }: Props) {
-  const { locale } = await params
-  const isAr = locale === 'ar'
-  const BASE = process.env.NEXT_PUBLIC_APP_URL ?? 'https://www.nwafizlogi.com'
+  await params // keep the signature; params not used after breadcrumb removal
 
-  // BreadcrumbList — helps Google show breadcrumbs in search results
-  const breadcrumb = {
-    '@context': 'https://schema.org',
-    '@type':    'BreadcrumbList',
-    itemListElement: [
-      { '@type': 'ListItem', position: 1, name: isAr ? 'الرئيسية' : 'Home',         item: `${BASE}/${locale}` },
-      { '@type': 'ListItem', position: 2, name: isAr ? 'الإعلانات' : 'Listings',    item: `${BASE}/${locale}/listings` },
-    ],
-  }
-
-  return (
-    <>
-      <script
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumb) }}
-      />
-      {children}
-    </>
-  )
+  // Breadcrumb schema used to be emitted here (Home > Listings) so the
+  // index page had rich-result breadcrumbs. Problem: this layout wraps
+  // the detail route too, and [id]/layout.tsx emits its own fuller
+  // breadcrumb (Home > Listings > Section > Title). Google saw TWO
+  // BreadcrumbList schemas on every detail page and could pick either —
+  // often preferring the shorter one and losing the deeper hierarchy.
+  // Deleted here; the deeper breadcrumb now stands alone. A 2-item
+  // breadcrumb on the index is not rich-result eligible anyway.
+  return <>{children}</>
 }
