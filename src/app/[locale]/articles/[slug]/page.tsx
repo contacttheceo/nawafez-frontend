@@ -12,6 +12,28 @@ const BASE = process.env.NEXT_PUBLIC_APP_URL ?? 'https://www.nwafizlogi.com'
 
 export const revalidate = 86400 // refresh once a day (articles change rarely)
 
+// Section label used as the OG subtitle so each shared article card
+// carries its real category instead of the generic "منصة B2B".
+const SECTION_LABEL_AR: Record<string, string> = {
+  fleet:     'الأسطول اللوجستي',
+  contracts: 'العقود والمناقصات',
+  jobs:      'الوظائف اللوجستية',
+  ma:        'الاستحواذ والدمج',
+  forum:     'المنتدى المهني',
+}
+const SECTION_LABEL_EN: Record<string, string> = {
+  fleet:     'Fleet & Logistics',
+  contracts: 'Contracts & Tenders',
+  jobs:      'Logistics Jobs',
+  ma:        'M&A',
+  forum:     'Professional Forum',
+}
+
+function buildOgImageUrl(title: string, subtitle: string): string {
+  const q = new URLSearchParams({ title, subtitle })
+  return `${BASE}/api/og?${q.toString()}`
+}
+
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { locale, slug } = await params
   const a = getArticle(slug)
@@ -20,6 +42,14 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const isAr = locale === 'ar'
   const title = isAr ? a.title_ar : a.title_en
   const desc  = isAr ? a.description_ar : a.description_en
+  const subtitle = isAr
+    ? (SECTION_LABEL_AR[a.primary_section] ?? 'منصة نوافذ')
+    : (SECTION_LABEL_EN[a.primary_section] ?? 'Nwafiz')
+
+  // Branded, article-specific OG card — much higher share CTR than the
+  // generic logo.png we were serving. The /api/og edge route renders
+  // a 1200x630 image with the title + section as subtitle.
+  const ogImage = buildOgImageUrl(title, subtitle)
 
   return {
     title,
@@ -42,12 +72,13 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
       modifiedTime:  a.updated_at,
       authors:       ['Nwafiz Editorial'],
       tags:          a.tags,
-      images:        [{ url: '/logo.png', alt: title }],
+      images:        [{ url: ogImage, width: 1200, height: 630, alt: title }],
     },
     twitter: {
       card:  'summary_large_image',
       title,
       description: desc,
+      images: [ogImage],
     },
   }
 }
@@ -67,16 +98,24 @@ export default async function ArticlePage({ params }: Props) {
   const isAr = locale === 'ar'
   const body = ARTICLE_BODIES[slug] ?? '<p>المقال قيد التحضير.</p>'
 
-  // Schema.org Article — helps Google show it as a rich result
+  const articleTitle = isAr ? a.title_ar : a.title_en
+  const articleSubtitle = isAr
+    ? (SECTION_LABEL_AR[a.primary_section] ?? 'منصة نوافذ')
+    : (SECTION_LABEL_EN[a.primary_section] ?? 'Nwafiz')
+  const articleOgImage = buildOgImageUrl(articleTitle, articleSubtitle)
+
+  // Schema.org Article — helps Google show it as a rich result. `image`
+  // uses the same dynamic OG card as the social share so the SERP
+  // thumbnail, the WhatsApp preview and the Twitter card all match.
   const schema = {
     '@context':       'https://schema.org',
     '@type':          'Article',
-    headline:         isAr ? a.title_ar : a.title_en,
+    headline:         articleTitle,
     description:      isAr ? a.description_ar : a.description_en,
     inLanguage:       isAr ? 'ar' : 'en',
     datePublished:    a.updated_at,
     dateModified:     a.updated_at,
-    author:           { '@type': 'Organization', name: 'Nwafiz' },
+    author:           { '@type': 'Organization', name: 'Nwafiz', url: BASE },
     publisher: {
       '@type': 'Organization',
       name:    'Nwafiz',
@@ -86,7 +125,7 @@ export default async function ArticlePage({ params }: Props) {
       },
     },
     mainEntityOfPage: `${BASE}/${locale}/articles/${a.slug}`,
-    image:            [`${BASE}/logo.png`],
+    image:            [articleOgImage],
   }
 
   // Breadcrumbs

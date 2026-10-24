@@ -4,11 +4,13 @@ import { notFound } from 'next/navigation'
 const BASE = process.env.NEXT_PUBLIC_APP_URL ?? 'https://www.nwafizlogi.com'
 const API  = process.env.NEXT_PUBLIC_API_URL ?? 'https://nwafiz.creativealphat.com'
 
-// Convert the route from "dynamic, no-store" to ISR (5-minute cache —
-// shorter than category pages because listing details change more often:
-// price edits, status changes, new media). Without this Vercel emits
-// cache-control: no-store which tanks Google indexing.
-export const revalidate = 300
+// NOTE on `revalidate`: previously set to 300 to serve this route via ISR.
+// That froze the HTTP response status at 200 even when `notFound()` was
+// called downstream (classic Next.js ISR + notFound bug), so stale/
+// deleted listing URLs returned 200 with the 404 UI — a soft 404 that
+// Google penalises. The layout now renders dynamically. The expensive
+// part — the API fetch — is still cached via `next: { revalidate: 300 }`
+// inside fetchListing(), so load on the Laravel backend is unchanged.
 
 type Props = {
   children: React.ReactNode

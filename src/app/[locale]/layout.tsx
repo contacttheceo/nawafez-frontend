@@ -152,10 +152,12 @@ export default async function LocaleLayout({ children, params }: Props) {
         <link rel="preconnect" href="https://nwafiz.creativealphat.com" crossOrigin="anonymous" />
         <link rel="dns-prefetch" href="https://nwafiz.creativealphat.com" />
 
-        {/* hreflang — tells search engines about the language variants */}
-        <link rel="alternate" hrefLang="ar"     href={`${BASE}/ar`} />
-        <link rel="alternate" hrefLang="en"     href={`${BASE}/en`} />
-        <link rel="alternate" hrefLang="x-default" href={`${BASE}/ar`} />
+        {/* hreflang is emitted per-page via each route's
+            `alternates.languages` in its Metadata export. Hard-coding
+            homepage hreflang here duplicated it on every nested page
+            and told Google that every /ar/listings/{id} and
+            /ar/articles/{slug} had the homepage as its Arabic version
+            — a conflict that broke canonical consolidation. Removed. */}
         {/* RSS / Atom feed — autodiscovery for readers and aggregators */}
         <link rel="alternate" type="application/atom+xml"
               title="نوافذ — أحدث الإعلانات" href={`${BASE}/feed.xml`} />
