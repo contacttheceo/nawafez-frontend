@@ -49,6 +49,8 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const activeCount = stats?.total_listings ?? 80
   const statStr = `${activeCount}+`
 
+  const ogImageUrl = `${BASE}/api/og?title=${encodeURIComponent(isAr ? 'منصة اللوجستيك B2B الأولى في السعودية' : "Saudi Arabia's First B2B Logistics Marketplace")}&subtitle=${encodeURIComponent(isAr ? 'شاحنات، عقود نقل، استحواذ، توظيف، منتدى' : 'Trucks, contracts, M&A, jobs, forum')}&stat=${encodeURIComponent(statStr)}&statLabel=${encodeURIComponent(isAr ? 'إعلان نشط' : 'active listings')}`
+
   return {
     // .absolute opts out of the root template — we already have 'نوافذ'
     // in the title, no need for the suffix to add it again.
@@ -68,11 +70,20 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
       // Branded OG card — much better engagement than the bare logo.
       // Same /api/og endpoint can power any page via query params.
       images: [{
-        url: `${BASE}/api/og?title=${encodeURIComponent(isAr ? 'منصة اللوجستيك B2B الأولى في السعودية' : "Saudi Arabia's First B2B Logistics Marketplace")}&subtitle=${encodeURIComponent(isAr ? 'شاحنات، عقود نقل، استحواذ، توظيف، منتدى' : 'Trucks, contracts, M&A, jobs, forum')}&stat=${encodeURIComponent(statStr)}&statLabel=${encodeURIComponent(isAr ? 'إعلان نشط' : 'active listings')}`,
+        url: ogImageUrl,
         width: 1200,
         height: 630,
         alt: isAr ? 'نوافذ' : 'Nwafiz',
       }],
+    },
+    // Twitter uses the same dynamic card so X previews match WhatsApp
+    // and LinkedIn (fixes the earlier mismatch where Twitter still
+    // served the bare logo while OG was branded).
+    twitter: {
+      card: 'summary_large_image',
+      title: titleStr,
+      description,
+      images: [ogImageUrl],
     },
   }
 }

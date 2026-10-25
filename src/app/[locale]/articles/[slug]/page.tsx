@@ -155,6 +155,24 @@ export default async function ArticlePage({ params }: Props) {
     })),
   } : null
 
+  // HowTo schema — only for guide-style articles with ordered steps.
+  // Qualifies for Google's step-by-step rich result (numbered carousel)
+  // and gives LLMs an unambiguous procedure to cite.
+  const howtoSchema = a.howto && a.howto.steps.length > 0 ? {
+    '@context': 'https://schema.org',
+    '@type':    'HowTo',
+    name:        isAr ? a.howto.name_ar : a.howto.name_en,
+    description: isAr ? a.description_ar : a.description_en,
+    image:       articleOgImage,
+    step: a.howto.steps.map((s, i) => ({
+      '@type':   'HowToStep',
+      position:  i + 1,
+      name:      isAr ? s.name_ar : s.name_en,
+      text:      isAr ? s.text_ar : s.text_en,
+      url:       `${BASE}/${locale}/articles/${a.slug}#step-${i + 1}`,
+    })),
+  } : null
+
   // Related articles — same primary section
   const related = ARTICLES
     .filter(other => other.slug !== a.slug && other.primary_section === a.primary_section)
@@ -169,6 +187,9 @@ export default async function ArticlePage({ params }: Props) {
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumb) }} />
       {faqSchema && (
         <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(faqSchema) }} />
+      )}
+      {howtoSchema && (
+        <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(howtoSchema) }} />
       )}
 
       <Navbar />
