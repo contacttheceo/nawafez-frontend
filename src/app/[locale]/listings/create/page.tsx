@@ -380,8 +380,25 @@ export default function CreateListingPage() {
         if (!data.price_type) data.price_type = 'fixed';
       }
 
+      // Boolean fields need explicit "1"/"0" serialization — Laravel's
+      // `boolean` validator rejects "on" (the native HTML checkbox value)
+      // and the generic falsy-skip below would drop `false` entirely,
+      // leaving the field undefined on the request. We send it always,
+      // normalised to 1/0, so the backend validator accepts both states.
+      const BOOLEAN_FIELDS = ['is_contact_visible'] as const;
+      const booleanValues: Record<string, '1' | '0'> = {};
+      BOOLEAN_FIELDS.forEach(k => {
+        const raw = (data as unknown as Record<string, unknown>)[k];
+        booleanValues[k] = raw === true || raw === 'true' || raw === '1' || raw === 1 || raw === 'on'
+          ? '1' : '0';
+      });
+
       const formData = new FormData();
-      Object.entries(data).forEach(([k, v]) => { if (v) formData.append(k, String(v)); });
+      Object.entries(data).forEach(([k, v]) => {
+        if (BOOLEAN_FIELDS.includes(k as (typeof BOOLEAN_FIELDS)[number])) return; // handled below
+        if (v !== undefined && v !== null && v !== '') formData.append(k, String(v));
+      });
+      Object.entries(booleanValues).forEach(([k, v]) => formData.append(k, v));
       images.forEach((img) => formData.append('images[]', img));
       const res = await listingsApi.create(formData);
       toast.success(isRTL ? '🎉 تم نشر إعلانك بنجاح!' : '🎉 Listing published!');
