@@ -8,6 +8,7 @@ interface Props {
   reg:     (name: string, opts?: object) => object; // react-hook-form register
   errors:  Record<string, any>;
   watch:   (name: string) => any;
+  setValue?: (name: string, value: string) => void; // for cross-field mirroring (job_title → title_ar)
 }
 
 const inputCls = 'input text-sm';
@@ -166,16 +167,34 @@ function ContractsFields({ isRTL, reg, errors }: Props) {
 /* ════════════════════════════════════════════════════════════════════
    Jobs fields
 ════════════════════════════════════════════════════════════════════ */
-function JobsFields({ isRTL, reg, errors, watch }: Props) {
+function JobsFields({ isRTL, reg, errors, watch, setValue }: Props) {
   const salaryType = watch('salary_type');
+
+  // Keep `title_ar` in sync with `job_title`. The old UI asked for both
+  // separately so the user typed almost identical text twice; now there
+  // is one job-title field and the listing title mirrors it. If a user
+  // still wants a different headline, they can edit it after publishing.
+  const syncTitle = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (setValue) setValue('title_ar', e.target.value)
+  }
 
   return (
     <div className="space-y-5">
       <div>
         <label className={labelCls}>{isRTL ? 'المسمى الوظيفي *' : 'Job Title *'}</label>
-        <input {...(reg('job_title', { required: true }) as object)} className={inputCls}
-          placeholder={isRTL ? 'مثال: سائق شاحنة، مدير مستودع' : 'e.g. Truck Driver, Warehouse Manager'} />
+        <input
+          {...(reg('job_title', {
+            required: true,
+            onChange: syncTitle,
+          }) as object)}
+          className={inputCls}
+          placeholder={isRTL ? 'مثال: سائق شاحنة، مدير مستودع' : 'e.g. Truck Driver, Warehouse Manager'}
+        />
         {errors.job_title && <p className={errorCls}>{isRTL ? 'مطلوب' : 'Required'}</p>}
+        {/* Hidden mirror field so the shared validation + submit path
+            continues to see a required title_ar — the backend expects
+            it. Users don't see this input. */}
+        <input type="hidden" {...(reg('title_ar', { required: true }) as object)} />
       </div>
 
       <div>
@@ -221,12 +240,9 @@ function JobsFields({ isRTL, reg, errors, watch }: Props) {
         </div>
       )}
 
-      <div>
-        <label className={labelCls}>{isRTL ? 'عنوان الوظيفة *' : 'Job Listing Title *'}</label>
-        <input {...(reg('title_ar', { required: true }) as object)} className={inputCls} dir="rtl"
-          placeholder={isRTL ? 'مثال: مطلوب سائق شاحنة — الرياض' : ''} />
-        {errors.title_ar && <p className={errorCls}>{isRTL ? 'مطلوب' : 'Required'}</p>}
-      </div>
+      {/* "Job Listing Title" removed — it duplicated the Job Title above.
+          `title_ar` is now mirrored from `job_title` via onChange + a
+          hidden input, so the backend contract is unchanged. */}
 
       <div>
         <label className={labelCls}>{isRTL ? 'متطلبات ووصف الوظيفة *' : 'Job Description *'}</label>
@@ -282,6 +298,17 @@ function MAFields({ isRTL, reg, errors }: Props) {
           ? '⚠️ إعلانات الاستحواذ والدمج تخضع للمراجعة من الفريق قبل النشر (خلال 24 ساعة).'
           : '⚠️ M&A listings are reviewed by our team before publishing (within 24h).'}
       </p>
+
+      <div>
+        <label className={labelCls}>{isRTL ? 'نوع الصفقة *' : 'Deal Type *'}</label>
+        <RadioGroup name="listing_type" isRTL={isRTL} reg={reg} required
+          options={[
+            { value: 'acquisition', labelAr: '🏢 استحواذ (شراء شركة قائمة)',    labelEn: '🏢 Acquisition (buy an existing business)' },
+            { value: 'merger',      labelAr: '🤝 دمج (شراكة بين كيانين)',       labelEn: '🤝 Merger (combine two entities)' },
+            { value: 'investment',  labelAr: '💰 استثمار (حصة بلا سيطرة)',    labelEn: '💰 Investment (minority stake)' },
+          ]} />
+        {errors.listing_type && <p className={errorCls}>{isRTL ? 'مطلوب' : 'Required'}</p>}
+      </div>
 
       <div>
         <label className={labelCls}>{isRTL ? 'نوع الشركة *' : 'Company Type *'}</label>

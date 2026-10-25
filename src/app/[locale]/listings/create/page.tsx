@@ -322,6 +322,14 @@ export default function CreateListingPage() {
         if (defaults[data.section]) data.listing_type = defaults[data.section];
       }
 
+      // Jobs: Step 3's generic price field is hidden (salary lives in
+      // Step 2). Mirror salary_min → price so the backend's price-based
+      // search/sort still finds the listing.
+      if (data.section === 'jobs' && !data.price && data.salary_min) {
+        data.price = data.salary_min;
+        if (!data.price_type) data.price_type = 'fixed';
+      }
+
       const formData = new FormData();
       Object.entries(data).forEach(([k, v]) => { if (v) formData.append(k, String(v)); });
       images.forEach((img) => formData.append('images[]', img));
@@ -584,6 +592,7 @@ export default function CreateListingPage() {
                 reg={register as any}
                 errors={errors as any}
                 watch={watch as any}
+                setValue={setValue as any}
               />
             </div>
           )}
@@ -627,42 +636,51 @@ export default function CreateListingPage() {
                 </div>
               </div>
 
-              {/* Price type */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2 flex items-center gap-1">
-                  <DollarSign size={13} className="text-gray-400" />
-                  {isRTL ? 'نوع السعر' : 'Price Type'}
-                </label>
-                <div className="flex flex-wrap gap-2">
-                  {[
-                    { v: 'fixed',      ar: '💵 سعر ثابت',       en: '💵 Fixed Price'  },
-                    { v: 'negotiable', ar: '🤝 قابل للتفاوض',   en: '🤝 Negotiable'   },
-                    { v: 'on_request', ar: '📞 عند الطلب',       en: '📞 On Request'   },
-                  ].map((o) => (
-                    <label key={o.v} className="flex items-center gap-2 px-3 py-2 rounded-lg border border-gray-200
-                                                cursor-pointer hover:border-emerald text-sm
-                                                has-[:checked]:border-emerald has-[:checked]:bg-emerald/5 transition">
-                      <input type="radio" value={o.v} {...register('price_type')} className="accent-emerald" />
-                      {isRTL ? o.ar : o.en}
+              {/* Price type + amount — HIDDEN for Jobs (salary is already
+                  captured on Step 2 as salary_type + salary_min + salary_max)
+                  and for Forum (price not applicable to Q&A posts).
+                  Showing both caused the "ask for salary twice" bug. */}
+              {selectedSection !== 'jobs' && selectedSection !== 'forum' && (
+                <>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2 flex items-center gap-1">
+                      <DollarSign size={13} className="text-gray-400" />
+                      {isRTL ? 'نوع السعر' : 'Price Type'}
                     </label>
-                  ))}
-                </div>
-              </div>
+                    <div className="flex flex-wrap gap-2">
+                      {[
+                        { v: 'fixed',      ar: '💵 سعر ثابت',       en: '💵 Fixed Price'  },
+                        { v: 'negotiable', ar: '🤝 قابل للتفاوض',   en: '🤝 Negotiable'   },
+                        { v: 'on_request', ar: '📞 عند الطلب',       en: '📞 On Request'   },
+                      ].map((o) => (
+                        <label key={o.v} className="flex items-center gap-2 px-3 py-2 rounded-lg border border-gray-200
+                                                    cursor-pointer hover:border-emerald text-sm
+                                                    has-[:checked]:border-emerald has-[:checked]:bg-emerald/5 transition">
+                          <input type="radio" value={o.v} {...register('price_type')} className="accent-emerald" />
+                          {isRTL ? o.ar : o.en}
+                        </label>
+                      ))}
+                    </div>
+                  </div>
 
-              {/* Price amount */}
-              {watch('price_type') !== 'on_request' && (
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    {isRTL ? 'السعر (ر.س)' : 'Price (SAR)'}
-                  </label>
-                  <input type="number" min="0" {...register('price')} className="input text-sm" placeholder="0" />
-                </div>
+                  {watch('price_type') !== 'on_request' && (
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        {isRTL ? 'السعر (ر.س)' : 'Price (SAR)'}
+                      </label>
+                      <input type="number" min="0" {...register('price')} className="input text-sm" placeholder="0" />
+                    </div>
+                  )}
+                </>
               )}
 
-              {/* Contact-visibility opt-in — only available for fleet and
-                  jobs sections. Contracts/M&A stay behind internal messaging
-                  so Blind Bidding and confidentiality stay intact. */}
-              {(watch('section') === 'fleet' || watch('section') === 'jobs') && (
+              {/* Contact-visibility opt-in — now available on every
+                  monetary section. Contracts and M&A owners wanted it
+                  too: an operator posting a 6-month freight tender or
+                  a SAR 25M company sale had no way to publish a phone
+                  number, which pushed real inbound to zero. Forum
+                  stays excluded (it's Q&A, not a transactional post). */}
+              {watch('section') !== 'forum' && (
                 <div className="border-2 border-emerald/30 bg-emerald/5 rounded-xl p-4 space-y-3">
                   <label className="flex items-start gap-3 cursor-pointer">
                     <input
