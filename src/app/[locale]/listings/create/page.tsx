@@ -339,14 +339,48 @@ export default function CreateListingPage() {
   };
 
   /* ── Navigation ─────────────────────────────────────────────────── */
+
+  /**
+   * Required fields the step needs to pass before advancing. The old
+   * version only validated title/description on Step 2, so section-
+   * specific required fields (vehicle_type, condition, employment_type,
+   * company_type, forum_category, …) and the Step-3 city were bypassed
+   * silently — the user only discovered the gap at submit time and had
+   * to go back several steps to fix it. The lookup below mirrors every
+   * `register(name, { required: true })` call in SectionFields.
+   */
+  const fieldsFor = (currentStep: number, section: ListingSection): (keyof FormData)[] => {
+    if (currentStep === 1) return ['section'];
+
+    if (currentStep === 2) {
+      // Everyone except Jobs needs a title (Jobs mirrors job_title → title_ar).
+      const titleFields: (keyof FormData)[] = section === 'jobs' ? [] : ['title_ar'];
+      const common: (keyof FormData)[] = [...titleFields, 'description_ar'];
+      switch (section) {
+        case 'fleet':
+          return [...common, 'listing_type', 'vehicle_type', 'condition'];
+        case 'contracts':
+          return [...common, 'listing_type', 'contract_type'];
+        case 'jobs':
+          return [...common, 'job_title', 'employment_type'];
+        case 'forum':
+          return [...common, 'forum_category'];
+        case 'ma':
+          return [...common, 'listing_type', 'company_type'];
+        default:
+          return common;
+      }
+    }
+
+    // City is required everywhere except Forum (price/location noted as
+    // optional in the Forum copy).
+    if (currentStep === 3) return section === 'forum' ? [] : ['city'];
+
+    return [];
+  };
+
   const goNext = async () => {
-    const fieldsToValidate: (keyof FormData)[][] = [
-      ['section'],
-      ['title_ar', 'description_ar'],
-      [],
-      [],
-    ];
-    const valid = await trigger(fieldsToValidate[step - 1]);
+    const valid = await trigger(fieldsFor(step, selectedSection));
     if (!valid) return;
     // Duplicate check after step 2 (we now know section + listing_type)
     if (step === 2) {

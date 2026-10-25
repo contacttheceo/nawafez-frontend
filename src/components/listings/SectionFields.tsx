@@ -80,6 +80,7 @@ function FleetFields({ isRTL, reg, errors }: Props) {
             <option key={v} value={v}>{isRTL ? ar : en}</option>
           ))}
         </select>
+        {errors.vehicle_type && <p className={errorCls}>{isRTL ? 'مطلوب' : 'Required'}</p>}
       </div>
 
       {/* Condition */}
@@ -90,6 +91,7 @@ function FleetFields({ isRTL, reg, errors }: Props) {
             { value: 'new',  labelAr: '✨ جديد',    labelEn: '✨ New'      },
             { value: 'used', labelAr: '🔧 مستعمل', labelEn: '🔧 Used'     },
           ]} />
+        {errors.condition && <p className={errorCls}>{isRTL ? 'مطلوب' : 'Required'}</p>}
       </div>
 
       {/* Year + Mileage */}
@@ -151,6 +153,7 @@ function ContractsFields({ isRTL, reg, errors }: Props) {
             <option key={v} value={v}>{isRTL ? ar : en}</option>
           ))}
         </select>
+        {errors.contract_type && <p className={errorCls}>{isRTL ? 'مطلوب' : 'Required'}</p>}
       </div>
 
       <div>
@@ -240,6 +243,7 @@ function JobsFields({ isRTL, reg, errors, watch, setValue }: Props) {
             { value: 'part',     labelAr: 'دوام جزئي',  labelEn: 'Part-time'  },
             { value: 'contract', labelAr: 'عقد مؤقت',   labelEn: 'Contract'   },
           ]} />
+        {errors.employment_type && <p className={errorCls}>{isRTL ? 'مطلوب' : 'Required'}</p>}
       </div>
 
       <div>
@@ -377,6 +381,7 @@ function MAFields({ isRTL, reg, errors }: Props) {
             <option key={v} value={v}>{isRTL ? ar : en}</option>
           ))}
         </select>
+        {errors.company_type && <p className={errorCls}>{isRTL ? 'مطلوب' : 'Required'}</p>}
       </div>
 
       <div className="grid grid-cols-2 gap-3">
