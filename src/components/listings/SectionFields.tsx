@@ -159,6 +159,41 @@ function ContractsFields({ isRTL, reg, errors }: Props) {
           placeholder={isRTL ? 'مثال: سنة، 6 أشهر' : 'e.g. 1 year, 6 months'} />
       </div>
 
+      <div className="grid grid-cols-2 gap-3">
+        <div>
+          <label className={labelCls}>{isRTL ? 'نوع الشحنة' : 'Cargo Type'}</label>
+          <select {...(reg('cargo_type') as object)} className={inputCls}>
+            <option value="">{isRTL ? 'اختر' : 'Select'}</option>
+            <option value="general">{isRTL ? 'بضائع عامة' : 'General goods'}</option>
+            <option value="food">{isRTL ? 'مواد غذائية' : 'Food'}</option>
+            <option value="pharma">{isRTL ? 'أدوية' : 'Pharma'}</option>
+            <option value="building">{isRTL ? 'مواد بناء' : 'Building materials'}</option>
+            <option value="vehicles">{isRTL ? 'سيارات / معدات' : 'Vehicles / equipment'}</option>
+            <option value="containers">{isRTL ? 'حاويات' : 'Containers'}</option>
+            <option value="hazmat">{isRTL ? 'مواد خطرة (HAZMAT)' : 'Hazardous (HAZMAT)'}</option>
+            <option value="other">{isRTL ? 'أخرى' : 'Other'}</option>
+          </select>
+        </div>
+        <div>
+          <label className={labelCls}>{isRTL ? 'عدد الوجهات / الجولات' : 'Destinations / Trips'}</label>
+          <input {...(reg('destinations') as object)} className={inputCls}
+            placeholder={isRTL ? 'مثال: 20 رحلة شهرياً' : 'e.g. 20 trips/month'} />
+        </div>
+      </div>
+
+      <div>
+        <label className={labelCls}>{isRTL ? 'شروط الدفع' : 'Payment Terms'}</label>
+        <select {...(reg('payment_terms') as object)} className={inputCls}>
+          <option value="">{isRTL ? 'اختر' : 'Select'}</option>
+          <option value="on_delivery">{isRTL ? 'عند التسليم' : 'On delivery'}</option>
+          <option value="weekly">{isRTL ? 'أسبوعي' : 'Weekly'}</option>
+          <option value="monthly">{isRTL ? 'شهري' : 'Monthly'}</option>
+          <option value="net30">{isRTL ? '30 يوم' : 'Net 30'}</option>
+          <option value="net60">{isRTL ? '60 يوم' : 'Net 60'}</option>
+          <option value="negotiable">{isRTL ? 'حسب الاتفاق' : 'Negotiable'}</option>
+        </select>
+      </div>
+
       <TitleDescription isRTL={isRTL} reg={reg} errors={errors} />
     </div>
   );
@@ -215,6 +250,23 @@ function JobsFields({ isRTL, reg, errors, watch, setValue }: Props) {
           <option value="3-5">{isRTL ? '3-5 سنوات' : '3-5 years'}</option>
           <option value="5+">{isRTL ? 'أكثر من 5 سنوات' : '5+ years'}</option>
         </select>
+      </div>
+
+      <div>
+        <label className={labelCls}>{isRTL ? 'رخصة القيادة المطلوبة' : 'Required License'}</label>
+        <select {...(reg('license_required') as object)} className={inputCls}>
+          <option value="">{isRTL ? 'لا يشترط' : 'Not required'}</option>
+          <option value="general">{isRTL ? 'عامة (الفئة الأولى)' : 'General (Class 1)'}</option>
+          <option value="class5">{isRTL ? 'فئة خامسة (شاحنة متوسطة ≤12 طن)' : 'Class 5 (medium truck ≤12 t)'}</option>
+          <option value="class6">{isRTL ? 'فئة سادسة (شاحنة ثقيلة >12 طن)' : 'Class 6 (heavy truck >12 t)'}</option>
+          <option value="hazmat">{isRTL ? 'HAZMAT (مواد خطرة)' : 'HAZMAT'}</option>
+          <option value="bus">{isRTL ? 'باص / نقل عام' : 'Bus / Public Transport'}</option>
+        </select>
+        <p className="text-[11px] text-gray-400 mt-1">
+          {isRTL
+            ? 'إلزامية حسب نوع الشاحنة. راجع دليل تراخيص القيادة في مقالاتنا.'
+            : 'Required by truck class. See our driver-licensing guide.'}
+        </p>
       </div>
 
       <div>

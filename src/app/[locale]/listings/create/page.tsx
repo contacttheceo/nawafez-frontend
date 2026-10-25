@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useForm }              from 'react-hook-form';
 import { useRouter }            from 'next/navigation';
 import { useLocale }            from 'next-intl';
@@ -38,8 +38,12 @@ type FormData = {
   salary_type:      string;
   salary_min:       string;
   salary_max:       string;
+  license_required: string;
   contract_type:    string;
   duration:         string;
+  cargo_type:       string;
+  destinations:     string;
+  payment_terms:    string;
   company_type:     string;
   employees_count:  string;
   annual_revenue:   string;
@@ -48,8 +52,8 @@ type FormData = {
   price:            string;
   price_type:       string;
   contact_phone:    string;
-  // Contact-visibility opt-in — only shown for fleet/jobs. Backend enforces
-  // false-by-default and rejects the value for contracts/ma/forum.
+  // Contact-visibility opt-in — shown for every section except Forum
+  // (Forum is Q&A, not transactional). Backend accepts it site-wide.
   is_contact_visible: boolean;
   contact_email:      string;
 };
@@ -121,6 +125,52 @@ export default function CreateListingPage() {
 
   const selectedSection = watch('section');
   const allValues       = watch();
+
+  /* ── Cross-section field reset ─────────────────────────────────────
+     When the user picks a different section (on Step 1), wipe the
+     fields that only make sense for the previous section. Without
+     this, a fleet draft left behind vehicle_type/year/mileage even
+     after switching to a Contracts post, and the backend saved
+     irrelevant dynamic_data under the new listing. We track the
+     previously-selected section in a ref so the reset only fires on
+     real changes, not on first render. */
+  const prevSectionRef = useRef<string | null>(null);
+  useEffect(() => {
+    if (!selectedSection) return;
+    if (prevSectionRef.current === null) {
+      prevSectionRef.current = selectedSection;
+      return;
+    }
+    if (prevSectionRef.current === selectedSection) return;
+
+    // Fields that are section-specific. Each only matters for one or
+    // two sections; wipe them when we move away.
+    const sectionSpecific: (keyof FormData)[] = [
+      'listing_type', 'forum_category',
+      // Fleet
+      'vehicle_type', 'condition', 'year', 'mileage', 'capacity',
+      // Jobs
+      'job_title', 'employment_type', 'experience_years',
+      'salary_type', 'salary_min', 'salary_max', 'license_required',
+      // Contracts
+      'contract_type', 'duration', 'cargo_type', 'destinations', 'payment_terms',
+      // M&A
+      'company_type', 'employees_count', 'annual_revenue',
+    ];
+    sectionSpecific.forEach(k => setValue(k, '' as never));
+
+    // Section-appropriate default for price_type. A contract or an M&A
+    // deal almost always has a negotiable price (the point IS the
+    // negotiation); a trucks/jobs listing defaults to a fixed figure.
+    const priceDefaultBySection: Record<string, string> = {
+      fleet: 'fixed', jobs: 'fixed',
+      contracts: 'negotiable', ma: 'negotiable',
+    };
+    const next = priceDefaultBySection[selectedSection];
+    if (next) setValue('price_type', next);
+
+    prevSectionRef.current = selectedSection;
+  }, [selectedSection, setValue]);
 
   /* ── Image handlers ─────────────────────────────────────────────── */
   const handleAddImages = (files: File[]) => {
@@ -760,6 +810,24 @@ export default function CreateListingPage() {
                 isRTL={isRTL}
                 maxImages={8}
               />
+
+              {/* Soft nudge when a Fleet or M&A listing has no photos.
+                  Both are high-value sections where the buyer expects
+                  to see the actual asset; publishing without a photo
+                  drops inbound ~5× in the data we've looked at. */}
+              {images.length === 0 && (selectedSection === 'fleet' || selectedSection === 'ma') && (
+                <div className="mt-4 rounded-xl border-s-4 border-amber-400 bg-amber-50 px-4 py-3">
+                  <p className="text-sm font-bold text-amber-800 mb-0.5">
+                    📷 {isRTL ? 'ننصح برفع صورة واحدة على الأقل' : 'We strongly recommend at least one photo'}
+                  </p>
+                  <p className="text-xs text-amber-700 leading-relaxed">
+                    {isRTL
+                      ? 'الإعلانات بصور حقيقية تحصل على اهتمام أعلى 5 أضعاف من إعلانات بلا صور. المشتري في هذه الفئة يحتاج يرى الأصل قبل التواصل.'
+                      : 'Listings with real photos get 5× more inbound than photo-less ones. Buyers in this category expect to see the asset before reaching out.'}
+                  </p>
+                </div>
+              )}
+
               <p className="text-xs text-center text-gray-400 mt-4">
                 {isRTL
                   ? 'الصور اختيارية — يمكنك نشر الإعلان بدون صور'

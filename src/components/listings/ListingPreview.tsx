@@ -34,15 +34,19 @@ interface PreviewData {
   mileage?:         string
   capacity?:        string
   // Jobs
-  job_title?:       string
-  employment_type?: string
-  experience_years?:string
-  salary_type?:     string
-  salary_min?:      string
-  salary_max?:      string
+  job_title?:        string
+  employment_type?:  string
+  experience_years?: string
+  salary_type?:      string
+  salary_min?:       string
+  salary_max?:       string
+  license_required?: string
   // Contracts
   contract_type?:   string
   duration?:        string
+  cargo_type?:      string
+  destinations?:    string
+  payment_terms?:   string
   // M&A
   company_type?:    string
   employees_count?: string
@@ -103,6 +107,22 @@ const contractTypeLabel: Record<string, string> = {
   warehousing: 'تخزين', lastmile: 'توصيل أخير', customs: 'تخليص جمركي', other: 'أخرى',
 }
 
+const cargoTypeLabel: Record<string, string> = {
+  general: 'بضائع عامة', food: 'مواد غذائية', pharma: 'أدوية',
+  building: 'مواد بناء', vehicles: 'سيارات / معدات',
+  containers: 'حاويات', hazmat: 'مواد خطرة', other: 'أخرى',
+}
+
+const paymentTermsLabel: Record<string, string> = {
+  on_delivery: 'عند التسليم', weekly: 'أسبوعي', monthly: 'شهري',
+  net30: '30 يوم', net60: '60 يوم', negotiable: 'حسب الاتفاق',
+}
+
+const licenseLabel: Record<string, string> = {
+  general: 'عامة', class5: 'فئة خامسة', class6: 'فئة سادسة',
+  hazmat: 'HAZMAT', bus: 'باص / نقل عام',
+}
+
 const employmentTypeLabel: Record<string, string> = {
   full: 'دوام كامل', part: 'دوام جزئي', contract: 'عقد مؤقت',
 }
@@ -139,6 +159,9 @@ function buildSpecs(data: PreviewData, isRTL: boolean): Array<{ k: string; v: st
   if (data.section === 'contracts') {
     if (data.contract_type) push(isRTL ? 'نوع العقد' : 'Contract', contractTypeLabel[data.contract_type] ?? data.contract_type)
     push(isRTL ? 'المدة' : 'Duration', data.duration)
+    if (data.cargo_type)    push(isRTL ? 'الشحنة'  : 'Cargo',    cargoTypeLabel[data.cargo_type] ?? data.cargo_type)
+    push(isRTL ? 'الوجهات' : 'Destinations', data.destinations)
+    if (data.payment_terms) push(isRTL ? 'الدفع'   : 'Payment',  paymentTermsLabel[data.payment_terms] ?? data.payment_terms)
   }
 
   // Jobs
@@ -146,6 +169,7 @@ function buildSpecs(data: PreviewData, isRTL: boolean): Array<{ k: string; v: st
     push(isRTL ? 'المسمى الوظيفي' : 'Job title', data.job_title)
     if (data.employment_type) push(isRTL ? 'نوع التوظيف' : 'Employment', employmentTypeLabel[data.employment_type] ?? data.employment_type)
     push(isRTL ? 'سنوات الخبرة' : 'Experience', data.experience_years)
+    if (data.license_required) push(isRTL ? 'الرخصة' : 'License', licenseLabel[data.license_required] ?? data.license_required)
     // Salary — a single row when both bounds exist, otherwise whatever we have
     if (data.salary_min && data.salary_max) {
       push(isRTL ? 'الراتب' : 'Salary',
