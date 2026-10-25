@@ -167,6 +167,19 @@ export default async function ListingDetailLayout({ children, params }: Props) {
     ? (isAr ? listing.user.name_ar : listing.user.name_en)
     : 'Nwafiz'
 
+  // Section labels used by both the Product schema (as `category`) and
+  // the breadcrumb below. Declared here so the Product block can
+  // reference `sectionName` without a hoisting bug.
+  const sectionLabels: Record<string, { ar: string; en: string }> = {
+    ma:        { ar: 'الاستحواذ والدمج',  en: 'M&A' },
+    fleet:     { ar: 'الأسطول',            en: 'Fleet' },
+    contracts: { ar: 'العقود',              en: 'Contracts' },
+    jobs:      { ar: 'الوظائف',            en: 'Jobs' },
+    forum:     { ar: 'المنتدى',            en: 'Forum' },
+  }
+  const sectionLabel = sectionLabels[listing.section]
+  const sectionName  = sectionLabel ? (isAr ? sectionLabel.ar : sectionLabel.en) : listing.section
+
   // Decide schema type based on section
   let mainSchema: Record<string, unknown>
 
@@ -215,7 +228,31 @@ export default async function ListingDetailLayout({ children, params }: Props) {
       image:  imageUrl,
     }
   } else {
-    // Product (fleet, contracts, ma)
+    // Product (fleet, contracts, ma). Enhanced beyond the minimum:
+    //  - `brand` names the actual seller (not the marketplace) so
+    //    Google and LLMs attribute the inventory correctly.
+    //  - `category` echoes the section label — gives search engines a
+    //    real taxonomy anchor and lifts "shop by category" eligibility.
+    //  - `itemCondition` surfaces new/used when the seller specified it
+    //    in dynamic_data; the valid schema.org enum improves CTR via
+    //    SERP labels.
+    //  - `offers.priceValidUntil` sets the natural expiry from the
+    //    listing, so Google stops showing a stale offer after the ad
+    //    expires (avoids the "Missing field: priceValidUntil" warning
+    //    in Rich Results Test).
+    const sellerAsBrand = {
+      '@type': 'Brand' as const,
+      name: sellerName || 'نوافذ',
+    }
+    const dyn = (listing as unknown as { dynamic_data?: Record<string, string> }).dynamic_data ?? {}
+    const condStr = (dyn.condition || '').toString().toLowerCase()
+    const itemCondition =
+      condStr.includes('جديد') || condStr === 'new'
+        ? 'https://schema.org/NewCondition'
+        : condStr.includes('مستعمل') || condStr === 'used'
+          ? 'https://schema.org/UsedCondition'
+          : undefined
+
     mainSchema = {
       '@context':  'https://schema.org',
       '@type':     'Product',
@@ -223,7 +260,9 @@ export default async function ListingDetailLayout({ children, params }: Props) {
       description: desc,
       image:       [imageUrl],
       sku:         `nawafez-${listing.id}`,
-      brand:       { '@type': 'Brand', name: 'نوافذ' },
+      brand:       sellerAsBrand,
+      category:    sectionName,
+      ...(itemCondition ? { itemCondition } : {}),
       ...(listing.price ? {
         offers: {
           '@type':         'Offer',
@@ -233,6 +272,8 @@ export default async function ListingDetailLayout({ children, params }: Props) {
           availability:    listing.status === 'active'
             ? 'https://schema.org/InStock'
             : 'https://schema.org/OutOfStock',
+          itemCondition,
+          ...(listing.expires_at ? { priceValidUntil: listing.expires_at.split('T')[0] } : {}),
           seller: {
             '@type': listing.user?.role === 'business' ? 'Organization' : 'Person',
             name:    sellerName,
@@ -242,17 +283,7 @@ export default async function ListingDetailLayout({ children, params }: Props) {
     }
   }
 
-  // BreadcrumbList for all sections
-  const sectionLabels: Record<string, { ar: string; en: string }> = {
-    ma:        { ar: 'الاستحواذ والدمج',  en: 'M&A' },
-    fleet:     { ar: 'الأسطول',            en: 'Fleet' },
-    contracts: { ar: 'العقود',              en: 'Contracts' },
-    jobs:      { ar: 'الوظائف',            en: 'Jobs' },
-    forum:     { ar: 'المنتدى',            en: 'Forum' },
-  }
-  const sectionLabel = sectionLabels[listing.section]
-  const sectionName  = sectionLabel ? (isAr ? sectionLabel.ar : sectionLabel.en) : listing.section
-
+  // BreadcrumbList for all sections — reuses sectionName declared above.
   const breadcrumb = {
     '@context': 'https://schema.org',
     '@type':    'BreadcrumbList',

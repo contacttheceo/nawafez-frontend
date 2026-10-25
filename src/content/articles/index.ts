@@ -180,6 +180,42 @@ export const ARTICLES: Article[] = [
     reading_minutes: 9,
     tags:           ['تراخيص', 'TGA', 'الهيئة العامة للنقل', 'نقل البضائع'],
     primary_section: 'ma',
+    howto: {
+      name_ar: 'كيف تحصل على رخصة نقل بضائع من TGA في 5 خطوات',
+      name_en: 'How to Get a TGA Freight Transport License in 5 Steps',
+      steps: [
+        {
+          name_ar: '1. حدّد الفئة المناسبة',
+          name_en: '1. Choose the right category',
+          text_ar: 'اختر فئة الترخيص بناءً على نوع الشحنات: النقل البري العام للبضائع العادية، الثقيل للمعدات، المبرّد للأغذية والأدوية، أو HAZMAT للمواد الخطرة. كل فئة لها اشتراطات ورسوم مختلفة.',
+          text_en: 'Pick the license category by cargo type: general land for standard goods, heavy for equipment, refrigerated for food and pharma, or HAZMAT for hazardous materials. Each has distinct requirements and fees.',
+        },
+        {
+          name_ar: '2. جهّز المستندات المطلوبة',
+          name_en: '2. Prepare the required documents',
+          text_ar: 'سجل تجاري ساري، شهادة الزكاة والدخل، تأمين على الشاحنات، كشف الأسطول (الاستمارات)، وشهادة فحص فني لكل مركبة. HAZMAT يحتاج شهادة سلامة إضافية.',
+          text_en: 'Valid commercial registration, Zakat/Tax certificate, truck insurance, fleet disclosure (istimara), and a technical inspection certificate per vehicle. HAZMAT also needs a safety certificate.',
+        },
+        {
+          name_ar: '3. قدّم إلكترونياً عبر منصة TGA',
+          name_en: '3. Apply online via the TGA portal',
+          text_ar: 'ادخل على tga.gov.sa، اختر "خدمات المنشآت" ثم "ترخيص نشاط نقل البضائع". ارفع المستندات واملأ البيانات. الرسوم تُدفع إلكترونياً عبر سداد.',
+          text_en: 'Go to tga.gov.sa, pick "Business Services" then "Freight Transport Activity License". Upload documents and fill the form. Fees are paid electronically via SADAD.',
+        },
+        {
+          name_ar: '4. اجتز التفتيش الميداني (للفئات الخاصة)',
+          name_en: '4. Pass the field inspection (specialty classes)',
+          text_ar: 'النقل الثقيل، المبرّد، HAZMAT يتطلب زيارة ميدانية من مفتّش TGA للتحقق من الأسطول والمستودعات. المفتش يراجع المعدات، شهادات السلامة، ومستوى الالتزام.',
+          text_en: 'Heavy, refrigerated, and HAZMAT require a field visit from a TGA inspector to verify fleet and warehouses. The inspector checks equipment, safety certificates, and compliance.',
+        },
+        {
+          name_ar: '5. استلم الرخصة واستخرج بطاقات التشغيل',
+          name_en: '5. Receive the license and issue operating cards',
+          text_ar: 'الرخصة تُصدر خلال 15-30 يوم عمل. بعد الاستلام، استخرج بطاقة تشغيل لكل شاحنة ترتبط بالرخصة الأم. البطاقة يجب أن تكون في الشاحنة طوال الوقت.',
+          text_en: 'The license issues in 15–30 business days. After receipt, issue an operating card per truck linked to the parent license. The card must stay in the truck at all times.',
+        },
+      ],
+    },
     tldr_ar:
       'تُصدر الهيئة العامة للنقل (TGA) أربع فئات رئيسية لتراخيص نقل البضائع في السعودية: ' +
       'النقل البري العام، النقل الثقيل، النقل المبرّد، ونقل المواد الخطرة. كل فئة لها متطلبات ' +
@@ -447,6 +483,42 @@ export const ARTICLES: Article[] = [
     reading_minutes: 6,
     tags:           ['سائقون', 'تراخيص قيادة', 'فئة خامسة', 'HAZMAT'],
     primary_section: 'jobs',
+    howto: {
+      name_ar: 'كيف تستخرج رخصة قيادة شاحنة في السعودية في 5 خطوات',
+      name_en: 'How to Get a Saudi Truck Driver License in 5 Steps',
+      steps: [
+        {
+          name_ar: '1. حدّد الفئة التي تحتاجها',
+          name_en: '1. Decide which class you need',
+          text_ar: 'الفئة الخامسة للشاحنات المتوسطة حتى 12 طن. الفئة السادسة للشاحنات الثقيلة فوق 12 طن والقاطرات. الفئة السادسة تحتاج خبرة سابقة بالخامسة.',
+          text_en: 'Class 5 for medium trucks up to 12 t. Class 6 for heavy trucks over 12 t and articulated semi-trucks. Class 6 requires prior Class 5 experience.',
+        },
+        {
+          name_ar: '2. اعمل الفحص الطبي',
+          name_en: '2. Complete the medical exam',
+          text_ar: 'في عيادة معتمدة من المرور (~300 ر.س). يشمل فحص النظر والسمع واللياقة البدنية. السائقون فوق 60 سنة يحتاجون فحص موسّع.',
+          text_en: 'At a Traffic-approved clinic (~SAR 300). Covers vision, hearing, and physical fitness. Drivers over 60 need an extended exam.',
+        },
+        {
+          name_ar: '3. سجّل في مدرسة قيادة معتمدة',
+          name_en: '3. Enrol in a certified driving school',
+          text_ar: 'الدورة 10-30 ساعة حسب الخبرة السابقة. التكلفة 1,500-3,500 ر.س حسب المدرسة. المدارس المعتمدة متوفرة في كل المدن الرئيسية.',
+          text_en: 'The course runs 10–30 hours depending on prior experience. Cost: SAR 1,500–3,500 by school. Certified schools exist in every major city.',
+        },
+        {
+          name_ar: '4. اجتز الاختبار النظري والعملي',
+          name_en: '4. Pass the theory and practical tests',
+          text_ar: 'النظري: 20 سؤال مرور + إشارات، نسبة النجاح 80٪. العملي: قيادة شاحنة في مسار محدد مع تقييم من مُدرّب المرور. تُعاد المحاولة بعد 7 أيام إذا فشلت.',
+          text_en: 'Theory: 20 traffic/sign questions, 80% pass mark. Practical: driving a truck through a defined course with a Traffic examiner. Retake allowed after 7 days on failure.',
+        },
+        {
+          name_ar: '5. ادفع الرسوم واستلم الرخصة',
+          name_en: '5. Pay the fees and collect the license',
+          text_ar: 'الرسوم 400 ر.س لكل 10 سنوات، تُدفع عبر سداد. الرخصة تُصدر إلكترونياً في أبشر خلال 24 ساعة من اجتياز الاختبار العملي.',
+          text_en: 'Fee: SAR 400 per 10 years, paid via SADAD. The license issues electronically in Absher within 24 hours of passing the practical test.',
+        },
+      ],
+    },
     tldr_ar:
       'تنقسم رخص قيادة الشاحنات في السعودية إلى فئتين رئيسيتين: الفئة الخامسة ' +
       '(شاحنة متوسطة حتى 12 طن) والفئة السادسة (شاحنة ثقيلة فوق 12 طن أو قاطرة). ' +
@@ -877,6 +949,64 @@ export const ARTICLES: Article[] = [
         a_ar: 'الشركات الكبرى (Maersk, MSC, CMA CGM) تعمل عبر وكلائها السعوديين. سجّل كـ Freight Forwarder أو Trucking Partner. العقود السنوية ممكنة مع ضمان حجم شهري (50+ حاوية). التسعير بنظام Spot أو عقد.',
         q_en: 'How do I secure a container-transport contract with a shipping line?',
         a_en: 'The majors (Maersk, MSC, CMA CGM) work through their Saudi agents. Register as a freight forwarder or trucking partner. Annual contracts are possible with a monthly volume guarantee (50+ containers). Pricing is either spot or contracted.',
+      },
+    ],
+  },
+  {
+    // 2026-10-25: decision-guide comparison. "X vs Y" is the second
+    // AI-engine-preferred query shape (after "best X in Y"). Captures
+    // the common buyer-journey question before they commit either way.
+    slug:           'truck-rental-vs-buying-saudi-arabia',
+    title_ar:       'إيجار الشاحنات مقابل الشراء في السعودية 2026: أيهما أفضل لعملك؟',
+    title_en:       'Truck Rental vs Buying in Saudi Arabia 2026: Which Is Right for Your Business?',
+    description_ar: 'مقارنة تفصيلية بين إيجار شاحنة في السعودية وشرائها 2026 — التكاليف الحقيقية، الضرائب، التمويل، نقطة التعادل، ومتى يُفضَّل كل خيار.',
+    description_en: 'Detailed 2026 comparison of truck rental vs buying in Saudi Arabia — real costs, taxes, financing, break-even point, and when each option wins.',
+    icon:           '⚖️',
+    updated_at:     '2026-10-25',
+    reading_minutes: 9,
+    tags:           ['إيجار vs شراء', 'rental vs buying', 'تمويل أسطول', 'TCO', 'Saudi Arabia'],
+    primary_section: 'fleet',
+    tldr_ar:
+      'نقطة التعادل بين الإيجار والشراء في السعودية 2026: إذا استخدمت الشاحنة أكثر من 18 شهراً ' +
+      'متواصلاً، الشراء أرخص إجمالاً. أقل من ذلك، الإيجار أذكى (بلا دفعة مقدمة، بلا صيانة، ' +
+      'بلا بيع لاحق). الشراء بدفعة 50-100 ألف + تمويل بنكي 5-7٪ (شاحنة متوسطة 180-250 ألف). ' +
+      'الإيجار 4,500-7,000 ر.س/شهر. القرار يعتمد على مدة المشروع ومصدر التمويل.',
+    tldr_en:
+      'Rental vs buying break-even in Saudi Arabia (2026): if you will use the truck for 18+ ' +
+      'continuous months, buying is cheaper total. Below that, renting is smarter (no down ' +
+      'payment, no maintenance, no exit sale). Buying needs SAR 50–100k down + bank financing ' +
+      '5–7% (SAR 180–250k mid-size truck). Rental runs SAR 4,500–7,000/month. The decision ' +
+      'hinges on project duration and capital availability.',
+    faq: [
+      {
+        q_ar: 'متى يكون الإيجار أرخص من الشراء؟',
+        a_ar: 'عند استخدام الشاحنة أقل من 18 شهراً. مثال: مشروع بناء محدود 12 شهراً — الإيجار يُوفّر الدفعة المقدمة (50-100 ألف) ومخاطر البيع لاحقاً. الحسبة: شهر إيجار × 18 = ~100-120 ألف، وهو ما يُقارب نقطة التعادل.',
+        q_en: 'When is renting cheaper than buying?',
+        a_en: 'When you need the truck for less than 18 months. Example: a 12-month construction project — rental saves the down payment (SAR 50–100k) and later resale risk. Math: monthly rent × 18 ≈ SAR 100–120k, roughly the break-even point.',
+      },
+      {
+        q_ar: 'ما تكلفة شراء شاحنة متوسطة 10 طن جديدة؟',
+        a_ar: 'شاحنة متوسطة 10 طن جديدة: 180-250 ألف ر.س. دفعة مقدمة 20-30٪ = 36-75 ألف. التمويل البنكي 5-7٪ سنوياً × 4-5 سنوات = قسط شهري 3,000-4,500 ر.س. مجموع 5 سنوات: 230-320 ألف.',
+        q_en: 'What does a new 10-tonne mid-size truck cost to buy?',
+        a_en: 'New 10-tonne mid-size: SAR 180–250k. Down payment 20–30% = SAR 36–75k. Bank financing 5–7% annually × 4–5 years = monthly SAR 3,000–4,500. 5-year total: SAR 230–320k.',
+      },
+      {
+        q_ar: 'ما التكاليف الخفية في شراء شاحنة؟',
+        a_ar: 'التأمين الشامل (1,500-3,000 ر.س/سنة)، الصيانة الدورية (3,000-6,000 ر.س/سنة)، إصلاحات غير متوقعة (متوسط 5,000-10,000/سنة)، استهلاك قيمة الشاحنة (30-40٪ خلال 5 سنوات)، ورسوم تجديد الاستمارة. المجموع ~15-25 ألف إضافية سنوياً.',
+        q_en: 'What are the hidden costs of buying a truck?',
+        a_en: 'Comprehensive insurance (SAR 1,500–3,000/year), routine maintenance (SAR 3,000–6,000), unplanned repairs (average SAR 5,000–10,000/year), depreciation (30–40% over 5 years), and istimara renewal fees. Total: ~SAR 15–25k extra per year.',
+      },
+      {
+        q_ar: 'هل يوجد "إيجار مع خيار الشراء" (Lease-to-Own)؟',
+        a_ar: 'نعم، وهو الأفضل للشركات غير القادرة على الدفعة المقدمة. دفعة مقدمة 10-15٪ فقط + أقساط شهرية لمدة 36-60 شهر، الملكية تنتقل بعد السداد. الكلفة الإجمالية أعلى 15-25٪ من الشراء المباشر لكن أدنى من الإيجار العادي.',
+        q_en: 'Is lease-to-own available in Saudi Arabia?',
+        a_en: 'Yes, and it is best for businesses lacking the down payment. Only 10–15% deposit + monthly instalments over 36–60 months, with ownership transferring on final payment. Total cost is 15–25% higher than outright purchase but lower than open-ended rental.',
+      },
+      {
+        q_ar: 'كيف أحسب نقطة التعادل بين الإيجار والشراء؟',
+        a_ar: 'المعادلة البسيطة: (ثمن الشراء + الصيانة السنوية × سنوات الاستخدام − قيمة البيع لاحقاً) ÷ (الإيجار الشهري × 12) = عدد السنوات حتى التعادل. مثال: شاحنة 200 ألف، 10 ألف صيانة/سنة، تُباع بـ 120 ألف بعد 5 سنوات، إيجار 6,000/شهر = التعادل عند ~17 شهر.',
+        q_en: 'How do I calculate the rental-vs-buy break-even?',
+        a_en: 'Simple formula: (purchase price + annual maintenance × years used − future resale value) ÷ (monthly rent × 12) = years to break even. Example: SAR 200k truck, SAR 10k/year maintenance, SAR 120k resale after 5 years, SAR 6,000/month rent = break-even at ~17 months.',
       },
     ],
   },
