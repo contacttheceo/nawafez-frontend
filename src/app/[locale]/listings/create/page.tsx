@@ -406,6 +406,15 @@ export default function CreateListingPage() {
         if (defaults[data.section]) data.listing_type = defaults[data.section];
       }
 
+      // Jobs: no visible title_ar field (we removed the duplicate). Mirror
+      // the Job Title into title_ar so the backend's required check and
+      // SERP titles still work. Doing it here, not in SectionFields,
+      // sidesteps a react-hook-form bug where a hidden input unmounts
+      // on Step 5 and silently blocks the submit.
+      if (data.section === 'jobs' && !data.title_ar && data.job_title) {
+        data.title_ar = data.job_title;
+      }
+
       // Jobs: Step 3's generic price field is hidden (salary lives in
       // Step 2). Mirror salary_min → price so the backend's price-based
       // search/sort still finds the listing.

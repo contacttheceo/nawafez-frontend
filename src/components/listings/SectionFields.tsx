@@ -205,34 +205,25 @@ function ContractsFields({ isRTL, reg, errors }: Props) {
 /* ════════════════════════════════════════════════════════════════════
    Jobs fields
 ════════════════════════════════════════════════════════════════════ */
-function JobsFields({ isRTL, reg, errors, watch, setValue }: Props) {
-  const salaryType = watch('salary_type');
-
-  // Keep `title_ar` in sync with `job_title`. The old UI asked for both
-  // separately so the user typed almost identical text twice; now there
-  // is one job-title field and the listing title mirrors it. If a user
-  // still wants a different headline, they can edit it after publishing.
-  const syncTitle = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (setValue) setValue('title_ar', e.target.value)
-  }
+function JobsFields({ isRTL, reg, errors }: Props) {
+  // Note on title_ar: Jobs no longer has a visible "Job Listing Title"
+  // field. The backend still expects `title_ar`, so the Create page
+  // mirrors `job_title → title_ar` inside its onSubmit handler. We
+  // intentionally do NOT register a hidden `title_ar` input here: the
+  // field would unmount on Step 3+, and react-hook-form would then
+  // either (a) unregister it along with the hidden input or (b) keep
+  // a stale value — both broke the final Publish click silently.
 
   return (
     <div className="space-y-5">
       <div>
         <label className={labelCls}>{isRTL ? 'المسمى الوظيفي *' : 'Job Title *'}</label>
         <input
-          {...(reg('job_title', {
-            required: true,
-            onChange: syncTitle,
-          }) as object)}
+          {...(reg('job_title', { required: true }) as object)}
           className={inputCls}
           placeholder={isRTL ? 'مثال: سائق شاحنة، مدير مستودع' : 'e.g. Truck Driver, Warehouse Manager'}
         />
         {errors.job_title && <p className={errorCls}>{isRTL ? 'مطلوب' : 'Required'}</p>}
-        {/* Hidden mirror field so the shared validation + submit path
-            continues to see a required title_ar — the backend expects
-            it. Users don't see this input. */}
-        <input type="hidden" {...(reg('title_ar', { required: true }) as object)} />
       </div>
 
       <div>
