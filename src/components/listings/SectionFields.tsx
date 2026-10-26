@@ -205,7 +205,9 @@ function ContractsFields({ isRTL, reg, errors }: Props) {
 /* ════════════════════════════════════════════════════════════════════
    Jobs fields
 ════════════════════════════════════════════════════════════════════ */
-function JobsFields({ isRTL, reg, errors }: Props) {
+function JobsFields({ isRTL, reg, errors, watch }: Props) {
+  const salaryType = watch('salary_type');
+
   // Note on title_ar: Jobs no longer has a visible "Job Listing Title"
   // field. The backend still expects `title_ar`, so the Create page
   // mirrors `job_title → title_ar` inside its onSubmit handler. We
