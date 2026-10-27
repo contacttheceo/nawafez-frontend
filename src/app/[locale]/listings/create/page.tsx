@@ -611,7 +611,30 @@ export default function CreateListingPage() {
           <>
         <StepIndicator current={step} isRTL={isRTL} />
 
-        <form onSubmit={handleSubmit(onSubmit)}>
+        <form onSubmit={handleSubmit(onSubmit, (errs) => {
+          // Diagnostic: surface silent RHF validation blocks to the user
+          // instead of letting Publish do nothing. Prints which fields
+          // failed and jumps the user to the first offending step.
+          // Shows a toast too, in case console is hidden on mobile.
+          const errFields = Object.keys(errs);
+          console.warn('[submit blocked] RHF errors:', errs);
+          if (errFields.length) {
+            try {
+              // Figure out which step the first failing field belongs to.
+              const sec = watch('section') as ListingSection | undefined;
+              let targetStep = 2;
+              const step2Fields = sec ? fieldsFor(2, sec) : [];
+              const step3Fields = sec ? fieldsFor(3, sec) : [];
+              const first = errFields[0];
+              if ((step3Fields as string[]).includes(first)) targetStep = 3;
+              else if ((step2Fields as string[]).includes(first)) targetStep = 2;
+              setStep(targetStep);
+              toast.error(
+                (isRTL ? 'حقل مطلوب ناقص: ' : 'Missing required field: ') + errFields.join(', ')
+              );
+            } catch {}
+          }
+        })}>
 
           {/* ══════════ STEP 1 — Section ══════════ */}
           {step === 1 && (
