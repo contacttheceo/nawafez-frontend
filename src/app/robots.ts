@@ -21,12 +21,13 @@ export default function robots(): MetadataRoute.Robots {
   return {
     rules: [
       // Baseline for all search crawlers (Google, Bing, DuckDuckGo, …).
+      // /api/og/ is intentionally left crawlable (not Disallowed) so
+      // social-card crawlers can still fetch previews; the OG route
+      // itself sends X-Robots-Tag: noindex so Google fetches but does
+      // not add the PNG URL to the web index.
       {
         userAgent: '*',
-        allow: [
-          '/',
-          '/api/og/',   // dynamic OG images — social previews need these
-        ],
+        allow: '/',
         disallow: PRIVATE_DISALLOW,
       },
 

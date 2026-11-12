@@ -179,6 +179,12 @@ export async function GET(_req: NextRequest, ctx: { params: Promise<{ id: string
       height: 630,
       headers: {
         'Cache-Control': 'public, max-age=3600, s-maxage=3600',
+        // Google Search was indexing these PNG endpoints as standalone
+        // pages (most of GSC's "Crawled - not indexed" bucket). See the
+        // matching note in /api/og/route.tsx — social crawlers ignore
+        // this header, Google honors it and drops the URL from the web
+        // index while still letting pages reference it in og:image.
+        'X-Robots-Tag': 'noindex, nofollow',
       },
     }
   )

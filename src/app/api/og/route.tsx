@@ -129,6 +129,13 @@ export async function GET(req: NextRequest) {
       height: 630,
       headers: {
         'Cache-Control': 'public, max-age=3600, s-maxage=3600',
+        // Google Search was pulling this endpoint into its web index as a
+        // standalone page (25 showed up under "Crawled - not indexed" in
+        // GSC). The URL is a PNG for social-card previews, not a page.
+        // X-Robots-Tag keeps Facebook/X/LinkedIn/WhatsApp previews working
+        // (they ignore robots directives) while telling Google's crawler
+        // to drop it from the web index.
+        'X-Robots-Tag': 'noindex, nofollow',
       },
     }
   )
